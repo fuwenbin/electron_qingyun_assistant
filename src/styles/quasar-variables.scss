@@ -1,0 +1,56 @@
+@use 'quasar/src/css/variables' as quasar;
+
+// 导出所有 Quasar 变量
+:root {
+  // 主题颜色
+  --q-primary: #{quasar.$primary};
+  --q-secondary: #{quasar.$secondary};
+  --q-accent: #{quasar.$accent};
+  --q-positive: #{quasar.$positive};
+  --q-negative: #{quasar.$negative};
+  --q-info: #{quasar.$info};
+  --q-warning: #{quasar.$warning};
+  --q-dark: #{quasar.$dark};
+  
+  // 灰色系列
+  --q-grey-1: #{quasar.$grey-1};
+  --q-grey-2: #{quasar.$grey-2};
+  --q-grey-3: #{quasar.$grey-3};
+  --q-grey-4: #{quasar.$grey-4};
+  --q-grey-5: #{quasar.$grey-5};
+  --q-grey-6: #{quasar.$grey-6};
+  --q-grey-7: #{quasar.$grey-7};
+  --q-grey-8: #{quasar.$grey-8};
+  --q-grey-9: #{quasar.$grey-9};
+  
+  // 主色调变体
+  --q-primary-1: #f0f3fe;
+  --q-primary-2: #e6ebfd;
+  --q-primary-3: #dce3fc;
+  --q-primary-4: #d2dbfb;
+  --q-primary-5: #c8d3fa;
+  
+  // 字体大小
+  --q-font-size-xs: 12px;
+  --q-font-size-sm: 14px;
+  --q-font-size-md: 16px;
+  --q-font-size-lg: 18px;
+  --q-font-size-xl: 20px;
+  
+  // 间距
+  --q-space-xs: 4px;
+  --q-space-sm: 8px;
+  --q-space-md: 16px;
+  --q-space-lg: 24px;
+  --q-space-xl: 32px;
+  
+  // 圆角
+  --q-border-radius-sm: 4px;
+  --q-border-radius-md: 8px;
+  --q-border-radius-lg: 12px;
+  
+  // 阴影
+  --q-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --q-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --q-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+} 
