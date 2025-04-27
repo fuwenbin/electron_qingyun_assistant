@@ -1,6 +1,13 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, IpcMainEvent } from 'electron'
 import path from 'path'
+import initShowSaveDialog from './show-save-dialog';
+import { setupFFmpeg, initMergeMedia } from './merge-media';
+import initOpenFile from './open-file';
+import { initAliyunTTS } from './services/aliyun-tts';
+import { electronCrypto } from './utils/crypto-polyfill';
+import { setupLogger } from './services/logger';
 
+global.crypto = electronCrypto;
 // The built directory structure
 //
 // ├─┬─┬ dist
@@ -10,6 +17,13 @@ import path from 'path'
 // │ │ ├── main.js
 // │ │ └── preload.js
 // │
+process.env.LANG = 'zh_CN.UTF-8';
+process.env.LC_ALL = 'zh_CN.UTF-8';
+
+// 对于Windows特别设置
+if (process.platform === 'win32') {
+  process.env.CHCP = '65001';
+}
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.env.DIST, '../public')
 
@@ -22,7 +36,8 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     },
   })
 
@@ -39,6 +54,12 @@ function createWindow() {
   }
 }
 
+setupLogger();
+initMergeMedia();
+initShowSaveDialog();
+initOpenFile();
+initAliyunTTS();
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
@@ -46,10 +67,15 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  setupFFmpeg();
+  createWindow();
+})
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
 }) 
+
+

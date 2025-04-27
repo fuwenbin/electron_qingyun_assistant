@@ -90,40 +90,10 @@
 
       <!-- 右侧面板 -->
       <div class="right-panel">
-        <div class="panel-section">
-          <h3 class="section-title">全局设置</h3>
-          <div class="settings-list">
-            <div class="setting-item">
-              <label>视频比例</label>
-              <div class="ratio-options">
-                <q-btn
-                  v-for="ratio in ratioOptions"
-                  :key="ratio.value"
-                  :label="ratio.label"
-                  :color="aspectRatio === ratio.value ? 'primary' : 'grey-7'"
-                  :flat="aspectRatio !== ratio.value"
-                  @click="aspectRatio = ratio.value"
-                />
-              </div>
-            </div>
-            <div class="setting-item">
-              <label>分辨率</label>
-              <q-select
-                v-model="resolution"
-                :options="resolutionOptions"
-                dense
-              />
-            </div>
-            <div class="setting-item">
-              <label>背景音乐</label>
-              <q-select
-                v-model="backgroundMusic"
-                :options="musicOptions"
-                dense
-              />
-            </div>
-          </div>
-        </div>
+        <template v-for="(clip, index) in clips" :key="index">
+          <ZimuConfig :visible="selectedRightConfigIndex === `zimu-${index}`" 
+            :title="clip.name" v-model="clip.zimuConfig" />
+        </template>
       </div>
     </div>
   </div>
@@ -138,6 +108,9 @@ import VideoChooser from '@/components/VideoChooser.vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { VideoMerger } from '@/services/video-service'
+import ZimuConfig from '@/components/video/ZimuConfig.vue'
+import GlobalConfig from '@/components/video/GlobalConfig.vue'
+
 const router = useRouter()
 
 // 状态
@@ -147,13 +120,15 @@ const backgroundMusic = ref('none')
 const videoTitle = ref('批量混剪_' + dayjs().format('YYYY_MM_DD_HH_mm'))
 const estimateGenerateNum = ref(0)
 const estimateGenerateTime = ref(0)
-const clips = ref<VideoClipConfig[]>([
+const clips = ref<any[]>([
   {
     name: '镜头1',
     isNameEditing: false,
     useOriginVoice: true,
     fileList: [],
-    zimuConfig: undefined,
+    zimuConfig: {
+      datas: []
+    },
     videoTitleConfig: undefined,
     videoDurationConfig: {
       type: 'origin',
@@ -162,6 +137,8 @@ const clips = ref<VideoClipConfig[]>([
     transitionFromLastClipConfig: undefined
   }
 ])
+const clickedZimuConfigIndex = ref<number | undefined>(undefined)
+const selectedRightConfigIndex = ref('zimu-0')
 const audioFile = ref<File>();
 const handleAudioChange = (e: any) => {
   audioFile.value = e.target.files[0]

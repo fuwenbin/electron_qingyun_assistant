@@ -51,17 +51,15 @@
   gap: 24px;
   flex: 1;
   min-height: 0;
-  padding: 24px;
 }
 
 .left-panel, .right-panel {
   background-color: white;
-  padding: 24px;
-  overflow-y: auto;
 }
 
 .left-panel {
   flex: 2;
+  padding: 0 16px;
   .panel-section {
     .panel-header {
       display: flex;

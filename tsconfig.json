@@ -27,7 +27,11 @@
     },
 
     /* Node.js */
-    "types": ["node"],
+    "types": [
+      "node",
+      "vite/client",
+      "electron"
+    ],
 
     /* Type Declarations */
     "typeRoots": [
@@ -41,6 +45,6 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "electron/**/*.ts"
-  ],
+, "electron/services/logger.js"  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 

@@ -4,6 +4,7 @@ import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
 import { resolve } from 'path'
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,24 +19,16 @@ export default defineConfig({
       {
         // Main process entry file
         entry: 'electron/main.ts',
-        onstart(options: any) {
-          options.reload = (path) => {
-            if (path.endsWith('.worker.js')) {
-              // 特殊处理worker文件
-              options.mainWindow.webContents.session.webRequest.onBeforeRequest(
-                { urls: [`${process.env.VITE_DEV_SERVER_URL}*.worker.js`] },
-                (details, callback) => {
-                  const filePath = path.join(__dirname, details.url.replace(process.env.VITE_DEV_SERVER_URL, ''))
-                  callback({ redirectURL: `file://${filePath}` })
-                }
-              )
-            }
-          }
-        },
         vite: {
           build: {
             outDir: 'dist-electron',
             sourcemap: true,
+            rollupOptions: {
+              external: ['ws'], // 确保 ws 只在主进程使用
+              output: {
+                inlineDynamicImports: true,
+              },
+            },
           },
         },
       },
@@ -57,6 +50,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      util: 'util',
+      ws: resolve(__dirname, 'src/utils/ws-polyfill.js')
+    },
+  },
+  build: {
+    rollupOptions: {
+      external: ['ws', 'electron']
     },
   },
   server: {
@@ -72,4 +74,23 @@ export default defineConfig({
       },
     },
   },
+  worker: {
+    // 明确指定 worker 格式
+    format: 'es',
+    plugins: [
+      {
+        name: 'worker-relative-path',
+        resolveId(source) {
+          if (source.startsWith('node_modules')) {
+            return path.resolve(__dirname, source)
+          }
+          return null
+        }
+      }
+    ]
+  },
+  base: './', // 确保相对路径
+  optimizeDeps: {
+    exclude: ['electron']
+  }
 }) 

@@ -33,6 +33,11 @@ const router = createRouter({
           path: '/video/edit',
           name: 'videoEdit',
           component: () => import('../views/video/VideoEdit/index.vue')
+        },
+        {
+          path: '/video/create',
+          name: 'videoCreate',
+          component: () => import('../views/video/VideoCreate.vue')
         }
       ]
     },
