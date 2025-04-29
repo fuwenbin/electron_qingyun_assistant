@@ -1,44 +1,42 @@
 <template>
   <config-panel :title="props.title + ' - 字幕与配音'" 
     @close="emit('close')">
-    <template #body>
-      <div class="config-content">
-        <div class="content-header">
-          <div class="content-header-title">
-            <span class="title-text">添加字幕内容</span>
-            <span class="title-description">shift + enter 折行，enter 添加字幕中台词</span>
-          </div>
-          <div class="content-header-description">
-            <ExclamationCircleOutlined />
-            <span>若添加多条字幕，最终每条成片会随机选其一来使用</span>
-          </div>
+    <div class="config-content">
+      <div class="content-header">
+        <div class="content-header-title">
+          <span class="title-text">添加字幕内容</span>
+          <span class="title-description">shift + enter 折行，enter 添加字幕中台词</span>
         </div>
-        <div class="content-body">
-          <div v-for="(data, index) in _value.datas" :key="index" class="zimu-input-box">
-            <div class="box-header">
-              <div class="header-left">
-                <div class="header-left-title">{{ data.title }}</div>
-                <div class="header-left-duration">
-                  <span>口播时长：</span>
-                  <span>{{ data.duration || '未知' }}</span>
-                </div>
-                <a-tooltip title="点击下方合成配音按钮生成口播时长">
-                  <ExclamationCircleOutlined />
-                </a-tooltip>
+        <div class="content-header-description">
+          <ExclamationCircleOutlined />
+          <span>若添加多条字幕，最终每条成片会随机选其一来使用</span>
+        </div>
+      </div>
+      <div class="content-body">
+        <div v-for="(data, index) in _value.datas" :key="index" class="zimu-input-box">
+          <div class="box-header">
+            <div class="header-left">
+              <div class="header-left-title">{{ data.title }}</div>
+              <div class="header-left-duration">
+                <span>口播时长：</span>
+                <span>{{ data.duration || '未知' }}</span>
               </div>
-              <div class="header-right">
-                <a-button v-if="_value.datas.length > 1 && selectedZimuInputIndex === index" type="text" 
-                  @click="handleDeleteZimuInput(index)">删除</a-button>
-              </div>
+              <a-tooltip title="点击下方合成配音按钮生成口播时长">
+                <ExclamationCircleOutlined />
+              </a-tooltip>
             </div>
-            <div class="box-content">
-              <a-textarea :value="data.text" placeholder="请输入字幕内容" show-count  
-                :auto-size="{ minRows: 5 }" :maxlength="300" @update:value="(value: string) => handleChangeZimuInput(index, value)"/>
+            <div class="header-right">
+              <a-button v-if="_value.datas.length > 1 && selectedZimuInputIndex === index" type="text" 
+                @click="handleDeleteZimuInput(index)">删除</a-button>
             </div>
+          </div>
+          <div class="box-content">
+            <a-textarea :value="data.text" placeholder="请输入字幕内容" show-count  
+              :auto-size="{ minRows: 5 }" :maxlength="300" @update:value="(value: string) => handleChangeZimuInput(index, value)"/>
           </div>
         </div>
       </div>
-    </template>
+    </div>
     <template #footer>
       <a-button @click="handleReset">重置</a-button>
       <a-button type="primary" @click="handleSynthesize">合成配音</a-button>
@@ -103,10 +101,11 @@ const handleSynthesize = async() => {
       _value.datas[index].duration = res.duration;
       emit('update:modelValue', _value);
     });
-  } catch (err) {
-    console.error('语音合成失败:', err);
+    message.success('合成配音成功');
+  } catch (err: any) {
+    console.error('合成配音失败:', err);
+    message.error('合成配音失败:' + err.message);
   }
-  console.log('合成配音');
 }
 
 const handleChangeZimuInput = (index: number, value: string) => {

@@ -79,7 +79,7 @@
                 <div class="clip-settings">
                   <div style="width: 70px;font-size:16px;">镜头配置</div>
                   <a-button @click="openZimuConfig(index)">字幕与配音</a-button>
-                  <a-button>文字标题</a-button>
+                  <a-button @click="openTitleConfig(index)">文字标题</a-button>
                   <a-button>素材原始时长</a-button>
                 </div>
               </div>
@@ -100,6 +100,9 @@
           <ZimuConfig v-if="selectedRightConfigIndex === `zimu-${index}`" 
             :rootName="videoTitle" :title="clip.name" v-model="clip.zimuConfig" 
             @close="closeConfigPanel" />
+          <VideoTitleConfig v-if="selectedRightConfigIndex === `title-${index}`" 
+            :rootName="videoTitle" :title="clip.name" v-model="clip.videoTitleConfig" 
+            @close="closeConfigPanel" />
         </template>
       </div>
     </div>
@@ -115,6 +118,7 @@ import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import ZimuConfig from '@/components/video/ZimuConfig.vue'
 import GlobalConfig from '@/components/video/GlobalConfig.vue'
+import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
 
 const router = useRouter()
 
@@ -231,6 +235,11 @@ const previewClip = (clip: any) => {
 
 const openZimuConfig = (index: number) => {
   selectedRightConfigIndex.value = `zimu-${index}`
+  console.log(selectedRightConfigIndex.value)
+}
+
+const openTitleConfig = (index: number) => {  
+  selectedRightConfigIndex.value = `title-${index}`
   console.log(selectedRightConfigIndex.value)
 }
 

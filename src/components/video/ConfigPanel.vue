@@ -13,7 +13,7 @@
       </div>
     </slot>
     <div class="config-panel-body custom-scroll">
-      <slot name="body"></slot>
+      <slot></slot>
     </div>
     <div class="config-panel-footer">
       <slot name="footer"></slot>

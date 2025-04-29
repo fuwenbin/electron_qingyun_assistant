@@ -26,6 +26,8 @@ export function initAliyunTTS() {
   ipcMain.handle('text2voice', async (event, paramsStr: string) => {
     try {
       const params = JSON.parse(decodeArg(paramsStr));
+      log.log('accept params:')
+      log.log(JSON.stringify(params));
       const options = params;
       const outputDir = params.outputDir || getPlatformAppDataPath();
       const outputFileName = params.outputFileName || `tts_${Date.now()}`;

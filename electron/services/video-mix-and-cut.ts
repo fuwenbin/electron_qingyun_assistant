@@ -1,15 +1,17 @@
 import ffmpeg from 'fluent-ffmpeg'
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
+// import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
-import { getDurationWithFfmpeg } from '../utils/ffmpeg-utils'
+import { getDurationWithFfmpeg, hasAudio } from '../utils/ffmpeg-utils'
 import { ensureAppDataSaveDir } from './default-save-path'
-import { randomUUID } from 'crypto'
 import { ipcMain } from 'electron'
 import { decodeArg } from '../utils'
 import log from 'electron-log';
+import { generateSrtFile } from '../utils/ffmpeg-utils'
 
 // 设置ffmpeg路径
 // ffmpeg.setFfmpegPath(ffmpegInstaller.path)
+
+
 
 
 // 处理单个视频分段
@@ -19,55 +21,58 @@ async function processSegment(
   isOpenVideoOriginAudio: boolean = true,
   startTime: number,
   segmentDuration: number,
-  outputPath: string
+  outputPath: string,
+  subtitles: any[]
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const command = ffmpeg();
-    if (isOpenVideoOriginAudio) {
-      command
+  return new Promise(async (resolve, reject) => {
+
+    // 生成临时字幕文件
+    const srtPath = path.join(path.dirname(outputPath), 'subtitles.srt');
+    generateSrtFile(srtPath, subtitles);
+    
+    const command = ffmpeg()
       .input(videoPath)
-      .input(audioPath)
-      .inputOptions([
-        `-ss ${startTime}`,
-        `-t ${segmentDuration}`
-      ])
-      .outputOptions([
-        '-map 0:v',      // 使用第一个输入的视频流
-        '-map 1:a',      // 使用第二个输入的音频流
-        '-c:v libx264',  // 视频编码
-        '-c:a aac',      // 音频编码
-        '-shortest'      // 以最短的输入流结束
-      ])
+      .input(audioPath);
+    if (isOpenVideoOriginAudio && await hasAudio(videoPath)) {
+      command
+        .complexFilter([
+          `[0:v]trim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS[v]`,
+          `[0:a]atrim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS,volume=1.0[original]`,
+          `[1:a]start=0:duration=${segmentDuration},asetpts=PTS-STARTPTS,volume=1.0[newaudio]`,
+          `[original][newaudio]amix=inputs=2:duration=longest[a]`
+        ])
+        .outputOptions([
+          '-map [v]',
+          '-map [a]',
+          '-c:v libx264',
+          '-c:a aac'
+        ])
     } else {
       command
-      .input(videoPath)
-      .inputOptions([
-        `-ss ${startTime}`,
-        `-t ${segmentDuration}`
-      ])
-      // 关闭视频原声 - 不映射原始音频流
-      .outputOptions([
-        '-map 0:v',      // 只映射视频流
-        '-map 1:a',      // 映射新音频
-        '-c:v libx264',  // 视频编码
-        '-c:a aac',      // 音频编码
-        '-shortest'      // 以最短的输入流结束
-      ])
-      .input(audioPath)  // 添加新音频
+        .complexFilter([
+          `[0:v]trim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS[v]`,
+          `[1:a]atrim=start=0:duration=${segmentDuration},asetpts=PTS-STARTPTS,volume=1.0[newaudio]`
+        ])
+        .outputOptions([
+          '-map [v]',
+          '-map [newaudio]',
+          '-c:v libx264',
+          '-c:a aac'
+        ])
     }
     command
       .on('start', (commandLine) => {
-        console.log('执行命令: ' + commandLine)
+        console.log('start to execute command: ' + commandLine)
       })
       .on('progress', (progress) => {
-        console.log(`处理中: ${Math.round(progress.percent)}%`)
+        console.log(`processing: ${Math.round(progress.percent)}%`)
       })
       .on('end', () => {
-        console.log(`分段处理完成: ${outputPath}`)
+        console.log(`segment process done: ${outputPath}`)
         resolve()
       })
       .on('error', (err) => {
-        console.error(`处理错误: ${err.message}`)
+        console.error(`segment process error: ${err.message}`)
         reject(err)
       })
       .save(outputPath)
@@ -77,17 +82,18 @@ async function processSegment(
 async function splitClipToSegments(clip: any, outputDir: string, outputFileName: string) {
   const audio = clip.zimuConfig.datas[0]
   const audioPath = audio.path;
-  const audioDuration = audio.duration ?? await getDurationWithFfmpeg(audioPath);
+  let audioDuration = audio.duration ?? await getDurationWithFfmpeg(audioPath);
+  audioDuration = Math.ceil(audioDuration * 100) / 100;
   const videoList = clip.videoList;
   const isOpenOriginAudio = clip.isOpenOriginAudio ?? true;
   const clipSegments: any[] = [];
-  const tempBaseName = `${outputFileName}_t${Date.now()}_`;
+  const tempBaseName = `${outputFileName}_${clip.name}_`;
   for (const video of videoList) {
     const videoPath = video.path;
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);
     const segmentDuration = audioDuration;
     const segmentCount = Math.ceil(videoDuration / segmentDuration)
-    const baseName = tempBaseName +path.basename(videoPath, path.extname(videoPath))
+    const baseName = tempBaseName + path.basename(videoPath, path.extname(videoPath))
     for (let i = 0; i < segmentCount; i++) {
       const startTime = i * segmentDuration
       const remainingDuration = video.duration - startTime
@@ -119,19 +125,29 @@ async function concatVideos(videos: string[], outputPath: string): Promise<void>
       command.input(video)
     })
 
-    // 构建filter_complex参数
-    let filter = ''
-    const inputs = videos.map((_, i) => `[${i}:v] [${i}:a]`).join(' ')
-    filter += `${inputs} concat=n=${videos.length}:v=1:a=1 [v] [a]`
+    const filterComplex = [];
+
+    for (let i = 0; i < videos.length; i++) {
+      filterComplex.push(`[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
+      filterComplex.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`);
+    }
+    const concatInput = videos.map((_, i) => `[v${i}][a${i}]`).join('')
+    filterComplex.push(`${concatInput} concat=n=${videos.length}:v=1:a=1[v][a]`);
 
     command
-      .complexFilter([filter])
+      .complexFilter(filterComplex)
       .outputOptions([
         '-map [v]', // 映射视频流
         '-map [a]', // 映射音频流
         '-c:v libx264', // 重新编码视频
-        '-c:a aac'     // 重新编码音频
+        '-preset fast',
+        '-crf 23',
+        '-c:a aac',     // 重新编码音频
+        '-b:a 128k',
+        '-movflags +faststart' //便于网络播放
       ])
+      .on('start', (cmd) => console.log('执行命令:', cmd))
+      .on('progress', (progress) => console.log(`处理进度: ${Math.round(progress.percent)}%`))
       .on('end', resolve)
       .on('error', reject)
       .save(outputPath)
@@ -144,7 +160,6 @@ async function processVideoClipList(params) {
   const clipList = params.clips;
   const outputFileName = params.outputFileName;
   const outputDir = params.outputDir ?? ensureAppDataSaveDir();
-  const batchNo = randomUUID().replace(/-/g, '');
   for (const clip of clipList) {
     // 单镜头分片
     clip.segments = await splitClipToSegments(clip, outputDir, outputFileName);
@@ -160,12 +175,15 @@ async function processVideoClipList(params) {
   log.log('segment process done：')
   log.log(JSON.stringify(segments));
   // 镜头合成
-  let segmentMinCount = 0;
+  let segmentMinCount = 1;
   for (const clip of clipList) {
-    if (clip.segments.length !== 1 && clip.segments.length < segmentMinCount) {
+    if (segmentMinCount === 1) {
+      segmentMinCount = clip.segments.length;
+    } else if (clip.segments.length > 1 && clip.segments.length < segmentMinCount) {
       segmentMinCount = clip.segments.length;
     }
   }
+  log.log(`we can generate ${segmentMinCount} videos`)
   const outputSegmentList = [];
   for (let i = 0; i < segmentMinCount; i++) {
     const segmentsForOutput = [];
@@ -183,7 +201,7 @@ async function processVideoClipList(params) {
     }
     outputSegmentList.push({
       videos: segmentsForOutput,
-      outputPath: path.join(outputDir, `${outputFileName}_${i}.mp4`),
+      outputPath: path.join(outputDir, `${outputFileName}_${i + 1}.mp4`),
       duration: segmentsDurationSum
     });
   }

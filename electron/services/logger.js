@@ -4,6 +4,7 @@ import path from 'path';
 
 export function setupLogger() {
   // 1. 设置文件日志
+  log.transports.file.encoding = 'utf8';
   log.transports.file.level = 'info';
   log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
   log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
