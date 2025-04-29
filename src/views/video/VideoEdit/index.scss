@@ -1,3 +1,5 @@
+@import '@/assets/styles/custom-scroll.scss';
+
 .video-edit {
   display: flex;
   flex-direction: column;
@@ -8,8 +10,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 60px;
   padding: 0 16px;
   background-color: white;
+  border-bottom: 1px solid var(--q-grey-3);
 
   .left-actions {
     display: flex;
@@ -60,6 +64,7 @@
 .left-panel {
   flex: 2;
   padding: 0 16px;
+  height: calc(100vh - 120px);
   .panel-section {
     .panel-header {
       display: flex;

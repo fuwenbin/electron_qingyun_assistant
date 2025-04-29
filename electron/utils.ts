@@ -1,4 +1,4 @@
-import app from 'electron';
+import { app } from 'electron';
 const iconv = require('iconv-lite'); 
 import path from 'path';
 import fs from 'fs';
@@ -92,4 +92,44 @@ export function encodeArg(args: string) {
 
 export function decodeArg(args: string) {
   return Buffer.from(args, 'base64').toString('utf-8');
+}
+
+// 辅助函数：根据文件扩展名获取MIME类型
+export function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case '.mp4': return 'video/mp4';
+    case '.webm': return 'video/webm';
+    case '.mov': return 'video/quicktime';
+    case '.avi': return 'video/x-msvideo';
+    case '.mkv': return 'video/x-matroska';
+    case '.mp3': return 'audio/mpeg';
+    case '.wav': return 'audio/wav';
+    case '.ogg': return 'audio/ogg';
+    case '.aac': return 'audio/aac';
+    case '.flac': return 'audio/flac';
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.png': return 'image/png';
+    default: return 'application/octet-stream';
+  }
+}
+
+export function createWebReadableStream(fileStream: fs.ReadStream): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      fileStream.on('data', (chunk: Buffer) => {
+        controller.enqueue(chunk);
+      });
+      fileStream.on('end', () => {
+        controller.close();
+      });
+      fileStream.on('error', (err: Error) => {
+        controller.error(err);
+      });
+    },
+    cancel() {
+      fileStream.destroy();
+    }
+  });
 }

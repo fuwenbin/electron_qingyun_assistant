@@ -36,7 +36,12 @@ declare global {
       openFile(path: string): Promise<void>;
       
       onProgress(callback: (progress: number) => void): () => void;
-      text2voice(options: TTSRequestParams, outputDir: string): Promise<any>;
+      text2voice(params: any): Promise<any>;
+      videoMixAndCut(params: any): Promise<any>;
+      getMediaDuration(path: string): Promise<number>;
+      openFileDialog(options: any): Promise<any>;
+      readFile(filePath: string): Promise<ArrayBuffer>;
+      readFileBase64(filePath: string): Promise<string>;
     };
   }
 }

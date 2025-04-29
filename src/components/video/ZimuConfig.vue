@@ -1,71 +1,68 @@
 <template>
-  <div class="zimu-config">
-    <div class="config-header">
-      <div class="config-title">
-        <span>{{ props.title }}</span>
-        <span>-字幕与配音</span>
-      </div>
-      <div class="config-close">
-        <CloseOutlined @click="handleClose" />
-      </div>
-    </div>
-    <div class="config-content">
-      <div class="content-header">
-        <div class="content-header-title">
-          <span class="title-text">添加字幕内容</span>
-          <span class="title-description">shift + enter 折行，enter 添加字幕中台词</span>
+  <config-panel :title="props.title + ' - 字幕与配音'" 
+    @close="emit('close')">
+    <template #body>
+      <div class="config-content">
+        <div class="content-header">
+          <div class="content-header-title">
+            <span class="title-text">添加字幕内容</span>
+            <span class="title-description">shift + enter 折行，enter 添加字幕中台词</span>
+          </div>
+          <div class="content-header-description">
+            <ExclamationCircleOutlined />
+            <span>若添加多条字幕，最终每条成片会随机选其一来使用</span>
+          </div>
         </div>
-        <div class="content-header-description">
-          <ExclamationCircleOutlined />
-          <span>若添加多条字幕，最终每条成片会随机选其一来使用</span>
-        </div>
-      </div>
-      <div class="content-body">
-        <div v-for="(data, index) in _value.datas" :key="index" class="zimu-input-box">
-          <div class="box-header">
-            <div class="header-left">
-              <div class="header-left-title">{{ data.title }}</div>
-              <div class="header-left-duration">
-                <span>口播时长：</span>
-                <span>{{ data.duration || '未知' }}</span>
+        <div class="content-body">
+          <div v-for="(data, index) in _value.datas" :key="index" class="zimu-input-box">
+            <div class="box-header">
+              <div class="header-left">
+                <div class="header-left-title">{{ data.title }}</div>
+                <div class="header-left-duration">
+                  <span>口播时长：</span>
+                  <span>{{ data.duration || '未知' }}</span>
+                </div>
+                <a-tooltip title="点击下方合成配音按钮生成口播时长">
+                  <ExclamationCircleOutlined />
+                </a-tooltip>
               </div>
-              <a-tooltip title="点击下方合成配音按钮生成口播时长">
-                <ExclamationCircleOutlined />
-              </a-tooltip>
+              <div class="header-right">
+                <a-button v-if="_value.datas.length > 1 && selectedZimuInputIndex === index" type="text" 
+                  @click="handleDeleteZimuInput(index)">删除</a-button>
+              </div>
             </div>
-            <div class="header-right">
-              <a-button v-if="props.modelValue.datas.length > 1 && selectedZimuInputIndex === index" type="text" 
-                @click="handleDeleteZimuInput(index)">删除</a-button>
+            <div class="box-content">
+              <a-textarea :value="data.text" placeholder="请输入字幕内容" show-count  
+                :auto-size="{ minRows: 5 }" :maxlength="300" @update:value="(value: string) => handleChangeZimuInput(index, value)"/>
             </div>
-          </div>
-          <div class="box-content">
-            <a-textarea v-model:value="data.text" placeholder="请输入字幕内容" show-count  
-              :auto-size="{ minRows: 5 }" :maxlength="300" />
           </div>
         </div>
       </div>
-    </div>
-    <div class="config-footer">
-      <a-button>重置</a-button>
+    </template>
+    <template #footer>
+      <a-button @click="handleReset">重置</a-button>
       <a-button type="primary" @click="handleSynthesize">合成配音</a-button>
-    </div>
-  </div>
+    </template>
+  </config-panel>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
-import { CloseOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
-
+import ConfigPanel from './ConfigPanel.vue';
+import dayjs from 'dayjs';
 const props = defineProps<{
-  visible: boolean;
+  rootName: string;
   title: string;
   modelValue: any;
 }>();
 
-const _value = reactive(props.modelValue);
+const _value = reactive(props.modelValue || {
+  datas: []
+});
 
-const emit = defineEmits(['update:visible', 'update:modelValue']);
+const emit = defineEmits(['close', 'update:modelValue']);
 let zimuInputIndex = 0;
 const selectedZimuInputIndex = ref<number>(0);
 
@@ -73,42 +70,36 @@ const getZimuInputTitle = () => {
   return '字幕' + (++zimuInputIndex);
 }
 
-const handleClose = () => {
-  emit('update:visible', false);
-};
 const handleDeleteZimuInput = (index: number) => {
   _value.datas.splice(index, 1);
   emit('update:modelValue', _value);
 }
 
 const handleReset = () => {
-  _value.datas = [];
-  _value.datas.push({
+  _value.datas = [{
       title: getZimuInputTitle(),
       text: '',
       duration: 0
-  });
-  emit('update:modelValue', _value);
+  }];
+  _value.selectedIndex = 0;
+  emit('update:modelValue', undefined);
 }
 
 const handleSynthesize = async() => {
   try {
-    const filePath = await window.electronAPI.selectDirectory();
-    if (!filePath) {
-      message.error('请选择保存路径');
-      return;
-    }
     const resList = await Promise.all(_value.datas.map(async (data: any) => {
-      return await window.electronAPI.text2voice({
+      const outputFileName = `${props.rootName}_${props.title}_${data.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+      const params = JSON.parse(JSON.stringify({
         text: data.text,
         voice: 'xiaoyun',
         format: 'mp3',
-        sampleRate: 16000
-      }, filePath);
+        sampleRate: 16000,
+        outputFileName: outputFileName
+      }))
+      return await window.electronAPI.text2voice(params);
     }));
     resList.forEach((res: any, index: number) => {
-      console.log(res);
-      _value.datas[index].file = res.outputFile;
+      _value.datas[index].path = res.outputFile;
       _value.datas[index].duration = res.duration;
       emit('update:modelValue', _value);
     });
@@ -117,62 +108,39 @@ const handleSynthesize = async() => {
   }
   console.log('合成配音');
 }
-if (_value.datas.length === 0) {
+
+const handleChangeZimuInput = (index: number, value: string) => {
+  _value.datas[index].text = value;
+  emit('update:modelValue', _value);
+}
+
+if (_value?.datas.length === 0) {
   handleReset();
 }
 </script>
 
 <style scoped lang="scss">
-.zimu-config {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  .config-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #f0f0f0;
-    height: 60px;
-    .config-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #000;
+.config-content {
+  .content-header {
+    .content-header-title {
+      height: 32px;
+      align-items: center;
+      .title-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: #000;
+      }
+      .title-description {
+        font-size: 12px;
+        color: #999;
+        margin-left: 8px;
+      }
     }
-  }
-  .config-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    .content-header {
-      .content-header-title {
-        height: 32px;
-        align-items: center;
-        .title-text {
-          font-size: 16px;
-          font-weight: 600;
-          color: #000;
-        }
-        .title-description {
-          font-size: 12px;
-          color: #999;
-          margin-left: 8px;
-        }
-      }
-      .content-header-description {
-        color: #1677ff;
-        
-      }
-    } 
-  }
-  .config-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 16px;
-    border-top: 1px solid #f0f0f0;
-    gap: 16px;
-    height: 65px;
-  }
+    .content-header-description {
+      color: #1677ff;
+      
+    }
+  } 
 }
 
 .zimu-input-box {

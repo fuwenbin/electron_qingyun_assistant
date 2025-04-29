@@ -1,8 +1,11 @@
 export interface VideoClipConfig {
   name: string;
   isNameEditing: boolean;
-  fileList: File[];
-  useOriginVoice: boolean;
+  videoList: {
+    path: string;
+    duration?: number;
+  }[];
+  isOpenOriginVoice: boolean;
   zimuConfig?: ZimuConfig;
   videoTitleConfig?: VideoTitleConfig;
   videoDurationConfig?: VideoDurationConfig;

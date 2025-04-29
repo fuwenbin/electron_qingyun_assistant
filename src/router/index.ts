@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -7,7 +6,15 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView
+      component: () => import('../views/HomeView.vue'),
+      redirect: '/video/edit',
+      children: [
+        {
+          path: '/video/edit',
+          name: 'videoEdit',
+          component: () => import('../views/video/VideoEdit/index.vue')
+        }
+      ]
     },
     {
       path: '/workspace',

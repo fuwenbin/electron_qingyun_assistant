@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, IpcMainEvent } from 'electron'
+import { app, BrowserWindow, globalShortcut } from 'electron'
 import path from 'path'
 import initShowSaveDialog from './show-save-dialog';
 import { setupFFmpeg, initMergeMedia } from './merge-media';
@@ -6,7 +6,11 @@ import initOpenFile from './open-file';
 import { initAliyunTTS } from './services/aliyun-tts';
 import { electronCrypto } from './utils/crypto-polyfill';
 import { setupLogger } from './services/logger';
-
+import { ensureAppDataSaveDir, initAppDataSaveDir } from './services/default-save-path';
+import { initVideoMixAndCut } from './services/video-mix-and-cut';
+import { initOpenFileDialog } from './services/open-file-dialog';
+import { initProtocolCustom } from './services/protocol-custom';
+import { initGlobalShortcutRegister } from './services/global-shortcut-register';
 global.crypto = electronCrypto;
 // The built directory structure
 //
@@ -59,6 +63,20 @@ initMergeMedia();
 initShowSaveDialog();
 initOpenFile();
 initAliyunTTS();
+initAppDataSaveDir();
+initVideoMixAndCut();
+
+
+
+
+app.whenReady().then(() => {
+  ensureAppDataSaveDir();
+  setupFFmpeg();
+  initProtocolCustom();
+  createWindow();
+  initOpenFileDialog(win);
+  initGlobalShortcutRegister(win);
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -67,15 +85,14 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.whenReady().then(() => {
-  setupFFmpeg();
-  createWindow();
-})
-
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
 }) 
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+})
 
 

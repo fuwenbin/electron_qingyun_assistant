@@ -5,6 +5,7 @@ import { VideoCompositionOptions } from './common/types';
 import { TTSRequestParams } from './services/aliyun-tts';
 import { encodeArg } from './utils';
 import crypto from 'crypto';
+import fs from 'fs';
 
 window.addEventListener('DOMContentLoaded', () => {
   const replaceText = (selector: string, text: string) => {
@@ -49,8 +50,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   composeVideo: (options: VideoCompositionOptions) => ipcRenderer.invoke('compose-video', options),
 
-  text2voice: (options: TTSRequestParams, outputDir: string) => ipcRenderer.invoke('text2voice', encodeArg(JSON.stringify({
-    options,
-    outputDir
+  getDefaultSavePath: () => ipcRenderer.invoke('get-default-save-path'),
+
+  text2voice: (params: any) => ipcRenderer.invoke('text2voice', encodeArg(JSON.stringify(params))),
+
+  videoMixAndCut: (params: any) => ipcRenderer.invoke('video-mix-and-cut', encodeArg(JSON.stringify(params))),
+
+  openFileDialog: (options: any) => ipcRenderer.invoke('open-file-dialog', options),
+
+  getMediaDuration: (path: string) => ipcRenderer.invoke('get-media-duration', encodeArg(JSON.stringify({
+    path
   }))),
+
+  readFile: (filePath: string) => {
+    return new Promise((resolve, reject) => {
+      fs.readFile(filePath, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+      });
+    });
+  },
+
+  readFileBase64: (filePath: string) => {
+    return new Promise((resolve, reject) => {
+      fs.readFile(filePath, (err, data) => {
+        if (err) reject(err);
+        resolve(Buffer.from(data).toString('base64'));
+      });
+    });
+  },
 });

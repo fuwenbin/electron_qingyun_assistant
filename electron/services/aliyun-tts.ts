@@ -8,6 +8,7 @@ import path from 'path';
 import { decodeArg, sleep } from '../utils';
 import { getToken } from './aliyun-token';
 import { getDurationWithFfmpeg } from '../utils/ffmpeg-utils';
+import { getPlatformAppDataPath } from './default-save-path';
 
 // 语音合成参数
 export interface TTSRequestParams {
@@ -22,9 +23,12 @@ export interface TTSRequestParams {
 
 
 export function initAliyunTTS() {
-  ipcMain.handle('text2voice', async (event, params: string) => {
+  ipcMain.handle('text2voice', async (event, paramsStr: string) => {
     try {
-      const { options, outputDir } = JSON.parse(decodeArg(params));
+      const params = JSON.parse(decodeArg(paramsStr));
+      const options = params;
+      const outputDir = params.outputDir || getPlatformAppDataPath();
+      const outputFileName = params.outputFileName || `tts_${Date.now()}`;
       const token = await getToken();
       // 确保输出目录存在
       if (!fs.existsSync(outputDir)) {
@@ -35,7 +39,7 @@ export function initAliyunTTS() {
         appkey: COMMON_CONFIG.appkey,
         token: token
       });
-      const outputFile = path.join(outputDir, `tts_${Date.now()}.${options.format || 'mp3'}`);
+      const outputFile = path.join(outputDir, `${outputFileName}.${options.format || 'mp3'}`);
       const fileStream = fs.createWriteStream(outputFile);
       log.log(outputFile);
       return new Promise((resolve, reject) => {

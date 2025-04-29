@@ -24,12 +24,10 @@
       </div>
     </div>
 
-    <q-separator />
-
     <!-- 编辑区域 -->
     <div class="edit-area">
       <!-- 左侧面板 -->
-      <div class="left-panel">
+      <div class="left-panel custom-scroll">
         <div class="panel-section">
           <div class="panel-header">
             <div class="left-actions">
@@ -46,10 +44,11 @@
             </div>
           </div>
           <div class="clip-list">
-            <div v-for="(clip, index) in clips" :key="index" class="clip-item">
+            <div v-for="(clip, index) in state.clips" :key="index" class="clip-item">
               <div class="clip-header">
                 <div v-if="clip.isNameEditing" class="clip-header-editing">
-                  <q-input autofocus v-model="clip.name" class="clip-name-input" style="width: 100%;" 
+                  <q-input autofocus v-model="clip.name" class="clip-name-input" 
+                    style="width: 100%;" 
                     @blur="() => clip.isNameEditing = false"/>
                 </div>
                 <div v-else class="clip-header-static">
@@ -57,28 +56,29 @@
                     <span class="clip-title">{{ clip.name }}</span>
                     <q-icon name="edit" class="clip-edit-icon" 
                       @click="editClipName(index)" />
-                    <span style="margin-left: 10px;">素材数量：{{ clip.fileList.length }}</span>
+                    <span style="margin-left: 10px;">素材数量：{{ clip.videoList.length }}</span>
                   </div>
                   <div class="clip-header-right-actions">
-                    <q-icon v-if="clip.useOriginVoice" name="mic" class="action-item mic-active"
-                      @click="clip.useOriginVoice = false" />
+                    <q-icon v-if="clip.isOpenOriginAudio" name="mic" class="action-item mic-active"
+                      @click="clip.isOpenOriginAudio = false" />
                     <q-icon v-else name="mic_off" class="action-item" 
-                      @click="clip.useOriginVoice = true" />
-                    <q-icon v-show="clips.length > 1" name="delete" class="action-item" @click="deleteClip(index)" />
+                      @click="clip.isOpenOriginAudio = true" />
+                    <q-icon v-show="state.clips.length > 1" name="delete" class="action-item" 
+                      @click="deleteClip(index)" />
                   </div>
                 </div>
                 
               </div>
               <div class="clip-content">
                 <div class="clip-file-list">
-                  <VideoChooser v-model="clip.fileList" />
+                  <VideoChooser v-model="clip.videoList" />
                 </div>
                 <div class="audio-chooser">
                   <input type="file" @change="handleAudioChange" />
                 </div>
                 <div class="clip-settings">
                   <div style="width: 70px;font-size:16px;">镜头配置</div>
-                  <a-button>字幕与配音</a-button>
+                  <a-button @click="openZimuConfig(index)">字幕与配音</a-button>
                   <a-button>文字标题</a-button>
                   <a-button>素材原始时长</a-button>
                 </div>
@@ -89,10 +89,17 @@
       </div>
 
       <!-- 右侧面板 -->
-      <div class="right-panel">
-        <template v-for="(clip, index) in clips" :key="index">
-          <ZimuConfig :visible="selectedRightConfigIndex === `zimu-${index}`" 
-            :title="clip.name" v-model="clip.zimuConfig" />
+      <div class="right-panel custom-scroll">
+        <GlobalConfig v-if="selectedRightConfigIndex === ''" 
+          v-model="globalConfig" :closeable="false"
+          @changeConfigIndex="(value) => selectedRightConfigIndex = value"/>
+        <ZimuConfig v-if="selectedRightConfigIndex === `globalZimuConfig`" 
+          :rootName="videoTitle" title="全局字幕与配音" v-model="globalConfig.zimuConfig" 
+          @close="closeConfigPanel" />
+        <template v-for="(clip, index) in state.clips" :key="clip.name">
+          <ZimuConfig v-if="selectedRightConfigIndex === `zimu-${index}`" 
+            :rootName="videoTitle" :title="clip.name" v-model="clip.zimuConfig" 
+            @close="closeConfigPanel" />
         </template>
       </div>
     </div>
@@ -100,78 +107,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { VideoClipConfig } from '@/types/video'
 import VideoChooser from '@/components/VideoChooser.vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { VideoMerger } from '@/services/video-service'
 import ZimuConfig from '@/components/video/ZimuConfig.vue'
 import GlobalConfig from '@/components/video/GlobalConfig.vue'
 
 const router = useRouter()
 
 // 状态
-const aspectRatio = ref('16:9')
-const resolution = ref('1080p')
-const backgroundMusic = ref('none')
-const videoTitle = ref('批量混剪_' + dayjs().format('YYYY_MM_DD_HH_mm'))
+const videoTitle = ref('批量混剪_' + dayjs().format('YYYYMMDDHHmm'))
 const estimateGenerateNum = ref(0)
 const estimateGenerateTime = ref(0)
-const clips = ref<any[]>([
-  {
-    name: '镜头1',
-    isNameEditing: false,
-    useOriginVoice: true,
-    fileList: [],
-    zimuConfig: {
-      datas: []
-    },
-    videoTitleConfig: undefined,
-    videoDurationConfig: {
-      type: 'origin',
-      duration: undefined
-    },
-    transitionFromLastClipConfig: undefined
-  }
-])
-const clickedZimuConfigIndex = ref<number | undefined>(undefined)
-const selectedRightConfigIndex = ref('zimu-0')
+const state = reactive<any>({
+  clips: []
+})
+const globalConfig = reactive<any>({
+  ZimuConfig: undefined,
+  titleConfig: undefined,
+  backgroundMusic: undefined,
+  videoRatio: '9:16',
+  videoResolution: '1080x1920'
+})
+const selectedRightConfigIndex = ref('')
 const audioFile = ref<File>();
 const handleAudioChange = (e: any) => {
   audioFile.value = e.target.files[0]
 }
-
-// 选项数据
-const ratioOptions = [
-  { label: '16:9', value: '16:9' },
-  { label: '9:16', value: '9:16' },
-  { label: '1:1', value: '1:1' }
-]
-
-const resolutionOptions = [
-  { label: '1080p', value: '1080p' },
-  { label: '720p', value: '720p' },
-  { label: '480p', value: '480p' }
-]
-
-const transitionOptions = [
-  { label: '无', value: 'none' },
-  { label: '淡入淡出', value: 'fade' },
-  { label: '滑动', value: 'slide' }
-]
-
-const musicOptions = [
-  { label: '无', value: 'none' },
-  { label: '欢快', value: 'upbeat' },
-  { label: '轻松', value: 'relaxing' },
-  { label: '史诗', value: 'epic' }
-]
+let clipNo = 0;
 
 const editClipName = (index: number) => {
-  clips.value[index].isNameEditing = true
+  state.clips.value[index].isNameEditing = true
 }
 
 // 方法
@@ -183,26 +152,65 @@ const saveVideo = () => {
   console.log('保存视频')
 }
 
+const checkVideoList = (clips: any) => {
+  let isVideoListOk = true;
+  for(const clip of clips) {
+    if (clip.videoList.length === 0) {
+      isVideoListOk = false;
+      message.error('请先为镜头【' + clip.name + '】添加素材')
+      break;
+    }
+  }
+  return isVideoListOk;
+}
+
+const checkZimuConfig = (clips: any) => {
+  let isZimuConfigOk = true;
+  for(const clip of clips) {
+    if (!(clip.zimuConfig && clip.zimuConfig.datas[0].path)) {
+      isZimuConfigOk = false;
+      message.error('请先为镜头【' + clip.name + '】合成配音')
+      break;
+    }
+  }
+  return isZimuConfigOk;
+}
+
 const generateVideo = async () => {
-  if (clips.value.length === 0) {
+  if (state.clips.length === 0) {
     message.error('请至少添加一个镜头')
     return
   }
-  const videoFiles = clips.value[0].fileList;
-  const videoMerger = new VideoMerger();
-  console.log(12222)
-  const result = await videoMerger.mergeVideosWithAudio(videoFiles, audioFile.value)
-  console.log(result);
-  await window.electronAPI.saveVideo(result.output);
-  console.log('合成视频')
+  if (!checkVideoList(state.clips)) {
+    return;
+  }
+  if (!checkZimuConfig(state.clips)) {
+    return;
+  }
+  try {
+    console.log('开始合成视频')
+    const params = JSON.parse(JSON.stringify({
+      clips: state.clips,
+      outputFileName: videoTitle.value,
+    }))
+    console.log(params)
+    const result = await window.electronAPI.videoMixAndCut(params);
+    console.log(result);
+    message.success('合成视频成功')
+  } catch (error: any) {
+    console.log(error)
+    message.error('合成视频失败：' + error.message)
+  } finally {
+    console.log('合成视频结束')
+  }
 }
 
 const addClip = () => {
-  clips.value.push({
-    name: '镜头' + (clips.value.length + 1),
+  state.clips.push({
+    name: '镜头' + (++clipNo),
     isNameEditing: false,
-    useOriginVoice: true,
-    fileList: [],
+    isOpenOriginAudio: true,
+    videoList: [],
     zimuConfig: undefined,
     videoTitleConfig: undefined,
     videoDurationConfig: {
@@ -214,12 +222,26 @@ const addClip = () => {
 }
 
 const deleteClip = (index: number) => {
-  clips.value.splice(index, 1)
+  state.clips.splice(index, 1)
 }
 
 const previewClip = (clip: any) => {
   console.log('预览片段', clip)
 }
+
+const openZimuConfig = (index: number) => {
+  selectedRightConfigIndex.value = `zimu-${index}`
+  console.log(selectedRightConfigIndex.value)
+}
+
+const closeConfigPanel = () => {
+  selectedRightConfigIndex.value = ''
+}
+
+addClip();
+onMounted(async () => {
+  // do nothing
+});
 </script>
 
 <style lang="scss" scoped>

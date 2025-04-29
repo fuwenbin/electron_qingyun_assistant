@@ -1,63 +1,33 @@
 <template>
   <div class="video-chooser" style="display: flex; gap: 10px; flex-wrap: wrap;">
-    <video v-for="(item, index) in selectedFileUrls" :key="index" :src="item" class="video-preview"/>
-    <a-upload v-model:file-list="fileList"
-      name="avatar"
-      list-type="picture-card"
-      class="avatar-uploader"
-      :accept="videoMimeTypes"
-      :before-upload="beforeUpload"
-      :show-upload-list="false"
-    >
-      <div>
-        <loading-outlined v-if="loading"></loading-outlined>
-        <plus-outlined v-else></plus-outlined>
-        <div class="ant-upload-text">添加素材</div>
-      </div>
-    </a-upload>
-
-    
+    <template v-for="item in props.modelValue">
+      <video :src="item.url" class="video-box" />
+    </template>
+    <div class="video-chooser-box video-box" @click="selectFiles">
+      <PlusOutlined class="video-chooser-icon" />
+      <div class="video-chooser-title">添加素材</div>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
-import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
+import { PlusOutlined } from '@ant-design/icons-vue';
 
 const props = defineProps<{
-  modelValue: File[]
+  modelValue: any[]
 }>()
 
 const emit = defineEmits(['update:modelValue'])
-const fileList = ref([]);
-const loading = ref<boolean>(false);
-const selectedFileUrls = computed(() => {
-  return props.modelValue.map(file => URL.createObjectURL(file));
-});
-const videoMimeTypes = 'video/*';
-const allowedExtensions = ['.mp4', '.mov', '.avi', '.mkv'];
-const maxSizeMB = 100;
 
-const beforeUpload = (file: any) => {
-  const isValidType = allowedExtensions.some(ext => 
-    file.name.toLowerCase().endsWith(ext)
-  );
-  const isValidSize = file.size / 1024 / 1024 <= maxSizeMB;
-
-  if (!isValidType) {
-    console.error('不支持的文件类型');
-    return false;
-  }
-
-  if (!isValidSize) {
-    console.error('文件大小超过限制');
-    return false;
-  }
-
-  emit('update:modelValue', [...props.modelValue, file]);
-  return false
-};
+const selectFiles = async () => {
+  const resultList = await window.electronAPI.openFileDialog({
+    multiple: true,
+    filters: [
+      { name: 'Videos', extensions: ['mkv', 'avi', 'mp4'] }
+    ]
+  })
+  emit('update:modelValue', resultList)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -66,20 +36,27 @@ const beforeUpload = (file: any) => {
   height: 100px;
 }
 .video-chooser {
-  :deep(.ant-upload-wrapper) {
-    &, & .ant-upload {
-      width: 100px;
-      height: 100px;
-    }
+}
+.video-box {
+  width: 100px;
+  height: 100px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+}
+.video-chooser-box {
+ 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: pointer;
+  .video-chooser-icon { 
+    font-size: 32px;
+    color: #999;
   }
-}
-.ant-upload-select-picture-card i {
-  font-size: 32px;
-  color: #999;
-}
-
-.ant-upload-select-picture-card .ant-upload-text {
-  margin-top: 8px;
-  color: #666;
+  .video-chooser-title {
+    margin-top: 8px;
+    color: #666;
+  }
 }
 </style>
