@@ -194,6 +194,7 @@ const generateVideo = async () => {
   try {
     console.log('开始合成视频')
     const params = JSON.parse(JSON.stringify({
+      globalConfig: globalConfig,
       clips: state.clips,
       outputFileName: videoTitle.value,
     }))
@@ -227,10 +228,6 @@ const addClip = () => {
 
 const deleteClip = (index: number) => {
   state.clips.splice(index, 1)
-}
-
-const previewClip = (clip: any) => {
-  console.log('预览片段', clip)
 }
 
 const openZimuConfig = (index: number) => {

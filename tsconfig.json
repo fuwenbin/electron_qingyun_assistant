@@ -29,8 +29,8 @@
     /* Node.js */
     "types": [
       "node",
-      "vite/client",
-      "electron"
+      "electron",
+      "vite/client"
     ],
 
     /* Type Declarations */
@@ -44,7 +44,7 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "electron/**/*.ts"
-, "electron/services/logger.js"  ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+    "src/vite-env.d.ts"
+  ],
+  "exclude": ["electron"]
 } 

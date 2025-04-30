@@ -1,7 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg'
 // import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
-import { getDurationWithFfmpeg, hasAudio } from '../utils/ffmpeg-utils'
+import { getDurationWithFfmpeg, getFontPath, hasAudio } from '../utils/ffmpeg-utils'
 import { ensureAppDataSaveDir } from './default-save-path'
 import { ipcMain } from 'electron'
 import { decodeArg } from '../utils'
@@ -12,54 +12,211 @@ import { generateSrtFile } from '../utils/ffmpeg-utils'
 // ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
 
-
-
 // 处理单个视频分段
-async function processSegment(
-  videoPath: string,
-  audioPath: string,
-  isOpenVideoOriginAudio: boolean = true,
-  startTime: number,
-  segmentDuration: number,
-  outputPath: string,
-  subtitles: any[]
-): Promise<void> {
+async function processSegment(segment: any): Promise<void>  {
+  const { videoPath, audioPath, isOpenOriginAudio, startTime, currentDuration, outputPath, subtitles, 
+    subtitlePath, titleConfig, videoWidth, videoHeight } = segment;
+
   return new Promise(async (resolve, reject) => {
 
     // 生成临时字幕文件
-    const srtPath = path.join(path.dirname(outputPath), 'subtitles.srt');
+    const srtPath = subtitlePath;
     generateSrtFile(srtPath, subtitles);
     
     const command = ffmpeg()
       .input(videoPath)
       .input(audioPath);
-    if (isOpenVideoOriginAudio && await hasAudio(videoPath)) {
-      command
-        .complexFilter([
-          `[0:v]trim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS[v]`,
-          `[0:a]atrim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS,volume=1.0[original]`,
-          `[1:a]start=0:duration=${segmentDuration},asetpts=PTS-STARTPTS,volume=1.0[newaudio]`,
-          `[original][newaudio]amix=inputs=2:duration=longest[a]`
-        ])
-        .outputOptions([
-          '-map [v]',
-          '-map [a]',
-          '-c:v libx264',
-          '-c:a aac'
-        ])
+
+    // 处理路径中的特殊字符
+    const escapedVideoPath = videoPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    const escapedAudioPath = audioPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    const escapedOutputPath = outputPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+
+    // 基础视频滤镜链
+    const videoFilters: any[] = [
+      {
+        filter: 'trim',
+        options: {
+          start: startTime,
+          duration: currentDuration
+        },
+        inputs: '0:v',
+        outputs: 'trimmed_video'
+      },
+      {
+        filter: 'setpts',
+        options: 'PTS-STARTPTS',
+        inputs: 'trimmed_video',
+        outputs: 'video_pts'
+      },
+      // 添加缩放滤镜
+      {
+        filter: 'scale',
+        options: {
+          w: videoWidth,
+          h: videoHeight,
+          // 保持宽高比，不足部分填充黑边
+          force_original_aspect_ratio: 'decrease',
+          eval: 'frame'
+        },
+        inputs: 'video_pts',
+        outputs: 'scaled_video'
+      },
+      // 添加填充滤镜确保精确分辨率
+      {
+        filter: 'pad',
+        options: {
+          width: videoWidth,
+          height: videoHeight,
+          x: `(ow-iw)/2`,
+          y: `(oh-ih)/2`,
+          color: 'black'
+        },
+        inputs: 'scaled_video',
+        outputs: 'padded_video'
+      }
+    ];
+    
+    // 添加标题滤镜
+    if (titleConfig) {
+      const titleDuration = titleConfig.duration || currentDuration;
+      const positionMap = {
+        top: '10',
+        middle: '(h-text_h)/2',
+        bottom: 'h-text_h-10'
+      };
+      // 处理字体路径
+      const fontPath = await getFontPath('arial.ttf');
+      
+      videoFilters.push({
+        filter: 'drawtext',
+        options: {
+          text: titleConfig.text,
+          fontfile: fontPath, // 确保字体文件存在或使用系统字体
+          fontsize: titleConfig.fontSize || 36,
+          fontcolor: titleConfig.fontColor || 'white',
+          x: '(w-text_w)/2', // 水平居中
+          y: positionMap[titleConfig.position || 'top'],
+          shadowcolor: 'black',
+          shadowx: 2,
+          shadowy: 2,
+          enable: `between(t,0,${titleDuration})`
+        },
+        inputs: 'padded_video',
+        outputs: 'video_with_title'
+      });
     } else {
-      command
-        .complexFilter([
-          `[0:v]trim=start=${startTime}:duration=${segmentDuration},setpts=PTS-STARTPTS[v]`,
-          `[1:a]atrim=start=0:duration=${segmentDuration},asetpts=PTS-STARTPTS,volume=1.0[newaudio]`
-        ])
-        .outputOptions([
-          '-map [v]',
-          '-map [newaudio]',
-          '-c:v libx264',
-          '-c:a aac'
-        ])
+      videoFilters.push({
+        filter: 'null',
+        inputs: 'padded_video',
+        outputs: 'video_with_title'
+      });
     }
+    
+    // 添加字幕滤镜
+    const subtitleFilter = titleConfig ? 
+        `[video_with_title]subtitles='${escapedSrtPath}':force_style='Fontsize=36,PrimaryColour=&HFFFFFF&'[video_with_subtitles]` :
+        `[padded_video]subtitles='${escapedSrtPath}':force_style='Fontsize=36,PrimaryColour=&HFFFFFF&'[video_with_subtitles]`;
+      
+      videoFilters.push(subtitleFilter);
+    
+    // 音频滤镜链
+    const audioFilters = [];
+    let audioOutput = '';
+
+    if (isOpenOriginAudio && await hasAudio(videoPath)) {
+      audioFilters.push(
+        {
+          filter: 'atrim',
+          options: {
+            start: startTime,
+            duration: currentDuration
+          },
+          inputs: '0:a',
+          outputs: 'trimmed_original'
+        },
+        {
+          filter: 'asetpts',
+          options: 'PTS-STARTPTS',
+          inputs: 'trimmed_original',
+          outputs: 'original_pts'
+        },
+        {
+          filter: 'volume',
+          options: '1.0',
+          inputs: 'original_pts',
+          outputs: 'original_audio'
+        },
+        {
+          filter: 'atrim',
+          options: {
+            start: 0,
+            duration: currentDuration
+          },
+          inputs: '1:a',
+          outputs: 'trimmed_new'
+        },
+        {
+          filter: 'asetpts',
+          options: 'PTS-STARTPTS',
+          inputs: 'trimmed_new',
+          outputs: 'new_pts'
+        },
+        {
+          filter: 'volume',
+          options: '1.0',
+          inputs: 'new_pts',
+          outputs: 'new_audio'
+        },
+        {
+          filter: 'amix',
+          options: {
+            inputs: 2,
+            duration: 'longest'
+          },
+          inputs: ['original_audio', 'new_audio'],
+          outputs: 'mixed_audio'
+        }
+      );
+      audioOutput = 'mixed_audio';
+    } else {
+      audioFilters.push(
+        {
+          filter: 'atrim',
+          options: {
+            start: 0,
+            duration: currentDuration
+          },
+          inputs: '1:a',
+          outputs: 'trimmed_new'
+        },
+        {
+          filter: 'asetpts',
+          options: 'PTS-STARTPTS',
+          inputs: 'trimmed_new',
+          outputs: 'new_pts'
+        },
+        {
+          filter: 'volume',
+          options: '1.0',
+          inputs: 'new_pts',
+          outputs: 'new_audio'
+        }
+      );
+      audioOutput = 'new_audio';
+    }
+    
+    command
+      .complexFilter([...videoFilters, ...audioFilters])
+      .outputOptions([
+        '-map [video_with_subtitles]',
+        `-map [${audioOutput}]`,
+        '-c:v libx264',
+        '-c:a aac',
+        '-preset fast'
+      ]);
+    
     command
       .on('start', (commandLine) => {
         console.log('start to execute command: ' + commandLine)
@@ -79,15 +236,35 @@ async function processSegment(
   })
 }
 
-async function splitClipToSegments(clip: any, outputDir: string, outputFileName: string) {
+async function splitClipToSegments(clip: any, outputDir: string, outputFileName: string, globalConfig: any) {
+  // 获取视频宽高
+  const videoRatio = globalConfig.videoRatio;
+  const videoResolution = globalConfig.videoResolution;
+  const videoResolutonPart = videoResolution.split('x').map(v => parseInt(v));
+  const videoWidth = videoRatio === '9:16' ? videoResolutonPart[0] : videoResolutonPart[1];
+  const videoHeight = videoRatio === '9:16' ? videoResolutonPart[1] : videoResolutonPart[0];
+  // 获取音频
   const audio = clip.zimuConfig.datas[0]
   const audioPath = audio.path;
   let audioDuration = audio.duration ?? await getDurationWithFfmpeg(audioPath);
   audioDuration = Math.ceil(audioDuration * 100) / 100;
+  // 获取视频列表
   const videoList = clip.videoList;
+  // 获取是否开启原声
   const isOpenOriginAudio = clip.isOpenOriginAudio ?? true;
+  // 获取分段列表
   const clipSegments: any[] = [];
   const tempBaseName = `${outputFileName}_${clip.name}_`;
+  // 获取字幕列表
+  const subtitles = clip.zimuConfig.datas.map(v => ({
+    text: v.text,
+    start: 0,
+    duration: audioDuration
+  }));
+  // 获取字幕文件路径
+  const subtitlePath = path.join(outputDir, `${outputFileName}_${clip.name}_subtitles.srt`);
+  // 获取标题配置
+  const titleConfig = clip.videoTitleConfig.datas[0];
   for (const video of videoList) {
     const videoPath = video.path;
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);
@@ -110,6 +287,11 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
         startTime: startTime,
         currentDuration: currentDuration,
         isOpenOriginAudio: isOpenOriginAudio,
+        subtitles: subtitles,
+        subtitlePath: subtitlePath,
+        titleConfig: titleConfig,
+        videoWidth: videoWidth,
+        videoHeight: videoHeight
       })
     }
   }
@@ -160,16 +342,22 @@ async function processVideoClipList(params) {
   const clipList = params.clips;
   const outputFileName = params.outputFileName;
   const outputDir = params.outputDir ?? ensureAppDataSaveDir();
+  const globalConfig = params.globalConfig;
   for (const clip of clipList) {
     // 单镜头分片
-    clip.segments = await splitClipToSegments(clip, outputDir, outputFileName);
+    clip.segments = await splitClipToSegments(clip, outputDir, outputFileName, globalConfig);
   }
   log.log('split clip to segments done：')
   log.log(JSON.stringify(clipList));
   // 分片并发处理
-  const segments = clipList.flatMap(clip => clip.segments);
+  const segments = [];
+  for (const clip of clipList) {
+    segments.push(...clip.segments);
+  }
+  log.info('segments:')
+  log.info(JSON.stringify(segments));
   const segmentProcessPromiseList = segments.map(segment => {
-    return processSegment(segment.videoPath, segment.audioPath, segment.isOpenOriginAudio, segment.startTime, segment.currentDuration, segment.outputPath);
+    return processSegment(segment);
   })
   await Promise.all(segmentProcessPromiseList);
   log.log('segment process done：')

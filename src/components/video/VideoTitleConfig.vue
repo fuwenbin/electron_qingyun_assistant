@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { reactive } from 'vue';
 import ConfigPanel from './ConfigPanel.vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 

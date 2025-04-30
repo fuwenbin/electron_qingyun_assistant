@@ -3,8 +3,11 @@
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true
+    "moduleResolution": "node",  // 改为node而非bundler
+    "allowSyntheticDefaultImports": true,
+    "types": ["node", "electron"],
+    "outDir": "./dist-electron"
   },
-  "include": ["vite.config.ts", "electron"]
-} 
+  "include": ["vite.config.ts", "electron/**/*.ts"],
+  "exclude": ["src"]
+}

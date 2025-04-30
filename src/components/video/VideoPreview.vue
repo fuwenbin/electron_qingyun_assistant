@@ -1,6 +1,6 @@
 <template>
   <div class="video-preview">
-    <div class="preview-container" :class="{ 'aspect-9-16': aspectRatio === '9:16' }">
+    <div class="preview-container" :class="{ 'aspect-9-16': props.aspectRatio === '9:16' }">
       <video
         ref="videoRef"
         class="preview-video"
@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{
   aspectRatio?: '9:16' | '16:9'

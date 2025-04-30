@@ -119,19 +119,19 @@ const deleteGlobalZimuConfig = () => {
   })
 }
 
-const deleteGlobalTitleConfig = () => {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    titleConfig: undefined
-  })
-}
+// const deleteGlobalTitleConfig = () => {
+//   emit('update:modelValue', {
+//     ...props.modelValue,
+//     titleConfig: undefined
+//   })
+// }
 
-const deleteGlobalBackgroundMusicConfig = () => {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    backgroundMusicConfig: undefined
-  })
-}
+// const deleteGlobalBackgroundMusicConfig = () => {
+//   emit('update:modelValue', {
+//     ...props.modelValue,
+//     backgroundMusicConfig: undefined
+//   })
+// }
 </script>
 
 <style scoped lang="scss">

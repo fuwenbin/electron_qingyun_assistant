@@ -19,7 +19,7 @@ export function initOpenFileDialog(mainWindow: BrowserWindow) {
     if (options?.multiple && !properties.includes('multiSelections')) {
       properties.push('multiSelections');
     }
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const result: any = await dialog.showOpenDialog(mainWindow, {
       title,
       defaultPath,
       buttonLabel,

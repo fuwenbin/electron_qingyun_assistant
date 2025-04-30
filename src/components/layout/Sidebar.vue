@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar">
     <div class="menu-list">
-      <template v-for="item in menuItems" :key="item.path">
+      <template v-for="item in props.menuItems" :key="item.path">
         <!-- 普通菜单项 -->
         <router-link 
           v-if="!item.children" 

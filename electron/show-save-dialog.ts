@@ -16,7 +16,7 @@ export default function initShowSaveDialog() {
 
   
 ipcMain.handle('select-directory', async () => {
-  const result = await dialog.showOpenDialog({
+  const result: any = await dialog.showOpenDialog({
     properties: ['openDirectory'],
     title: '选择保存目录',
     defaultPath: app.getPath('documents') // 默认从文档目录开始
