@@ -37,6 +37,11 @@
         </div>
       </div>
     </div>
+    <TextConfig v-if="_value.textConfig" v-model="_value.textConfig" />
+    <div class="audio-config-box" style="margin-top: 10px;">
+      <div class="audio-config-box-title" style="margin-bottom: 10px;">配音设置</div>
+      <AudioConfig v-if="_value.audioConfig" v-model="_value.audioConfig" />
+    </div>
     <template #footer>
       <a-button @click="handleReset">重置</a-button>
       <a-button type="primary" @click="handleSynthesize">合成配音</a-button>
@@ -50,6 +55,9 @@ import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import ConfigPanel from './ConfigPanel.vue';
 import dayjs from 'dayjs';
+import TextConfig from '@/components/media/text/TextConfig.vue';
+import AudioConfig from '@/components/media/audio/AudioConfig.vue';
+
 const props = defineProps<{
   rootName: string;
   title: string;
@@ -80,6 +88,22 @@ const handleReset = () => {
       duration: 0
   }];
   _value.selectedIndex = 0;
+  _value.textConfig = {
+    fontFamily: '微软雅黑',
+    fontSize: 36,
+    fontColor: '#FF9C20',
+    fontWeight: 'normal',
+    fontIsUnderline: false,
+    fontIsItalic: false,
+    textAlign: 'center',
+    customStyle: 'none'
+  }
+  _value.audioConfig = {
+    voice: 'xiaoyun',
+    speech_rate: 0,
+    volume: 50,
+    pitch_rate: 0
+  }
   emit('update:modelValue', undefined);
 }
 
@@ -89,9 +113,12 @@ const handleSynthesize = async() => {
       const outputFileName = `${props.rootName}_${props.title}_${data.title}_${dayjs().format('YYYYMMDDHHmmss')}`
       const params = JSON.parse(JSON.stringify({
         text: data.text,
-        voice: 'xiaoyun',
+        voice: _value.audioConfig.voice,
         format: 'mp3',
         sampleRate: 16000,
+        speech_rate: _value.audioConfig.speech_rate,
+        volume: _value.audioConfig.volume,
+        pitch_rate: _value.audioConfig.pitch_rate,
         outputFileName: outputFileName
       }))
       return await window.electronAPI.text2voice(params);

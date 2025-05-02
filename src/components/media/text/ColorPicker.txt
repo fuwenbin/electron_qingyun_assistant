@@ -1,0 +1,325 @@
+<template>
+  <div class="color-picker-container">
+    <div class="color-preview" :style="{ backgroundColor: currentColor }"></div>
+    
+    <div class="hue-slider">
+      <input 
+        type="range" 
+        min="0" 
+        max="360" 
+        v-model.number="hue" 
+        @input="updateFromHsl" 
+      />
+    </div>
+    
+    <div class="saturation-lightness-picker">
+      <div 
+        class="sl-area" 
+        :style="{ backgroundColor: `hsl(${hue}, 100%, 50%)` }"
+        @mousedown="startDragging"
+        @mousemove="dragHandler"
+        @mouseup="stopDragging"
+        @mouseleave="stopDragging"
+      >
+        <div 
+          class="sl-cursor" 
+          :style="{ 
+            left: `${saturation}%`, 
+            top: `${100 - lightness}%`,
+            backgroundColor: currentColor
+          }"
+        ></div>
+      </div>
+    </div>
+    
+    <div class="color-inputs">
+      <div class="input-group">
+        <label>HEX</label>
+        <input type="text" v-model="hex" @input="updateFromHex" />
+      </div>
+      
+      <div class="input-group">
+        <label>RGB</label>
+        <input type="number" min="0" max="255" v-model.number="rgb.r" @input="updateFromRgb" />
+        <input type="number" min="0" max="255" v-model.number="rgb.g" @input="updateFromRgb" />
+        <input type="number" min="0" max="255" v-model.number="rgb.b" @input="updateFromRgb" />
+      </div>
+      
+      <div class="input-group">
+        <label>HSL</label>
+        <input type="number" min="0" max="360" v-model.number="hsl.h" @input="updateFromHsl" />
+        <input type="number" min="0" max="100" v-model.number="hsl.s" @input="updateFromHsl" />
+        <input type="number" min="0" max="100" v-model.number="hsl.l" @input="updateFromHsl" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+interface HSL {
+  h: number;
+  s: number;
+  l: number;
+}
+
+// Color values
+const hue = ref<number>(0);
+const saturation = ref<number>(100);
+const lightness = ref<number>(50);
+const hex = ref<string>('#ff0000');
+const rgb = ref<RGB>({ r: 255, g: 0, b: 0 });
+const hsl = ref<HSL>({ h: 0, s: 100, l: 50 });
+const isDragging = ref<boolean>(false);
+
+// Current color
+const currentColor = computed<string>(() => {
+  return `hsl(${hue.value}, ${saturation.value}%, ${lightness.value}%)`;
+});
+
+// Color conversion functions
+function hslToRgb(h: number, s: number, l: number): RGB {
+  s /= 100;
+  l /= 100;
+  
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  
+  let r: number, g: number, b: number;
+  
+  if (h >= 0 && h < 60) {
+    [r, g, b] = [c, x, 0];
+  } else if (h >= 60 && h < 120) {
+    [r, g, b] = [x, c, 0];
+  } else if (h >= 120 && h < 180) {
+    [r, g, b] = [0, c, x];
+  } else if (h >= 180 && h < 240) {
+    [r, g, b] = [0, x, c];
+  } else if (h >= 240 && h < 300) {
+    [r, g, b] = [x, 0, c];
+  } else {
+    [r, g, b] = [c, 0, x];
+  }
+  
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255)
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255, g /= 255, b /= 255;
+  
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h: number, s: number, l = (max + min) / 2;
+  
+  if (max === min) {
+    h = s = 0; // grayscale
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    
+    h /= 6;
+  }
+  
+  return [
+    Math.round(h * 360),
+    Math.round(s * 100),
+    Math.round(l * 100)
+  ];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('')}`;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  hex = hex.replace('#', '');
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  return [r, g, b];
+}
+
+// Update functions
+function updateFromHsl(): void {
+  hue.value = hsl.value.h;
+  saturation.value = hsl.value.s;
+  lightness.value = hsl.value.l;
+  updateAllValues();
+}
+
+function updateFromRgb(): void {
+  const [h, s, l] = rgbToHsl(rgb.value.r, rgb.value.g, rgb.value.b);
+  hue.value = h;
+  saturation.value = s;
+  lightness.value = l;
+  updateAllValues();
+}
+
+function updateFromHex(): void {
+  const hexValue = hex.value.startsWith('#') ? hex.value : `#${hex.value}`;
+  if (/^#[0-9A-F]{6}$/i.test(hexValue)) {
+    const [r, g, b] = hexToRgb(hexValue);
+    rgb.value = { r, g, b };
+    updateFromRgb();
+  }
+}
+
+function updateAllValues(): void {
+  const { r, g, b } = hslToRgb(hue.value, saturation.value, lightness.value);
+  rgb.value = { r, g, b };
+  hex.value = rgbToHex(r, g, b);
+  hsl.value = { 
+    h: hue.value, 
+    s: saturation.value, 
+    l: lightness.value 
+  };
+}
+
+// Saturation/Lightness picker interaction
+function startDragging(e: MouseEvent): void {
+  isDragging.value = true;
+  updateSlPosition(e);
+}
+
+function dragHandler(e: MouseEvent): void {
+  if (isDragging.value) {
+    updateSlPosition(e);
+  }
+}
+
+function stopDragging(): void {
+  isDragging.value = false;
+}
+
+function updateSlPosition(e: MouseEvent): void {
+  const target = e.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+  const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+  
+  saturation.value = Math.round((x / rect.width) * 100);
+  lightness.value = Math.round(100 - (y / rect.height) * 100);
+  updateAllValues();
+}
+</script>
+
+<style>
+.color-picker-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-width: 300px;
+  background: white;
+}
+
+.color-preview {
+  width: 100%;
+  height: 60px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.hue-slider {
+  width: 100%;
+  height: 20px;
+  background: linear-gradient(
+    to right,
+    #ff0000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0000ff,
+    #ff00ff,
+    #ff0000
+  );
+  border-radius: 10px;
+  position: relative;
+}
+
+.hue-slider input[type="range"] {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.saturation-lightness-picker {
+  width: 100%;
+  aspect-ratio: 1;
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sl-area {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  position: relative;
+}
+
+.sl-cursor {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.color-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.input-group label {
+  width: 40px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.input-group input[type="number"] {
+  width: 50px;
+}
+</style>

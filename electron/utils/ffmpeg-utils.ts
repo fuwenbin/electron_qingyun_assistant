@@ -58,5 +58,3 @@ export async function getFontPath(fontName: string): Promise<string> {
     return fontName; // 回退到字体名称
   }
 }
-
-

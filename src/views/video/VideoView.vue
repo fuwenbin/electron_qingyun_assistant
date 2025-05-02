@@ -35,11 +35,6 @@ const menuItems = ref<MenuItem[]>([
         path: '/video/edit',
         title: 'AI混剪',
         icon: 'fas fa-comments'
-      },
-      {
-        path: '/video/create',
-        title: '测试',
-        icon: 'fas fa-comments'
       }
     ]
   }

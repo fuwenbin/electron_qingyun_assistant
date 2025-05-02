@@ -28,9 +28,17 @@ export function initAliyunTTS() {
       const params = JSON.parse(decodeArg(paramsStr));
       log.log('accept params:')
       log.log(JSON.stringify(params));
-      const options = params;
-      const outputDir = params.outputDir || getPlatformAppDataPath();
-      const outputFileName = params.outputFileName || `tts_${Date.now()}`;
+      const options = {
+        text: params.text,
+        voice: params.voice || 'xiaoyun',
+        format: params.format || 'mp3',
+        sample_rate: params.sample_rate || 16000,
+        volume: params.volume || 50,
+        speech_rate: params.speech_rate || 0,
+        pitch_rate: params.pitch_rate || 0
+      };
+      const outputDir = params.output_dir || getPlatformAppDataPath();
+      const outputFileName = params.output_file_name || `tts_${Date.now()}`;
       const token = await getToken();
       // 确保输出目录存在
       if (!fs.existsSync(outputDir)) {

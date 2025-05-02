@@ -7,7 +7,7 @@ import { ipcMain } from 'electron'
 import { decodeArg } from '../utils'
 import log from 'electron-log';
 import { generateSrtFile } from '../utils/ffmpeg-utils'
-
+import { buildStyleString, defaultSubtitleStyle, boxStyle, outlineStyle, topStyle } from './video-subtitle'
 // 设置ffmpeg路径
 // ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
@@ -15,7 +15,7 @@ import { generateSrtFile } from '../utils/ffmpeg-utils'
 // 处理单个视频分段
 async function processSegment(segment: any): Promise<void>  {
   const { videoPath, audioPath, isOpenOriginAudio, startTime, currentDuration, outputPath, subtitles, 
-    subtitlePath, titleConfig, videoWidth, videoHeight } = segment;
+    subtitlePath, titleConfig, videoWidth, videoHeight, zimuConfig } = segment;
 
   return new Promise(async (resolve, reject) => {
 
@@ -86,22 +86,29 @@ async function processSegment(segment: any): Promise<void>  {
         middle: '(h-text_h)/2',
         bottom: 'h-text_h-10'
       };
+      const alignMap = {
+        left: '10',
+        center: '(w-text_w)/2',
+        right: 'w-text_w-10'
+      };
       // 处理字体路径
       const fontPath = await getFontPath('arial.ttf');
+      const titleTextConfig = titleConfig.textConfig;
       
       videoFilters.push({
         filter: 'drawtext',
         options: {
           text: titleConfig.text,
           fontfile: fontPath, // 确保字体文件存在或使用系统字体
-          fontsize: titleConfig.fontSize || 36,
-          fontcolor: titleConfig.fontColor || 'white',
-          x: '(w-text_w)/2', // 水平居中
-          y: positionMap[titleConfig.position || 'top'],
+          fontsize: titleTextConfig.fontSize || 36,
+          fontcolor: titleTextConfig.fontColor || 'white',
+          x: alignMap[titleTextConfig.textAlign || 'center'],
+          y: positionMap[titleTextConfig.position || 'top'],
+          backgroundColor: titleTextConfig.backgroundColor || undefined,
           shadowcolor: 'black',
           shadowx: 2,
           shadowy: 2,
-          enable: `between(t,0,${titleDuration})`
+          enable: `between(t,${titleConfig.start},${titleConfig.start + titleDuration})`
         },
         inputs: 'padded_video',
         outputs: 'video_with_title'
@@ -114,15 +121,28 @@ async function processSegment(segment: any): Promise<void>  {
       });
     }
     
+    const subtitleStyle = buildStyleString({
+      ...defaultSubtitleStyle,
+      ...{
+        Fontname: zimuConfig.textConfig.fontFamily || defaultSubtitleStyle.Fontname,
+        Fontsize: zimuConfig.textConfig.fontSize || defaultSubtitleStyle.Fontsize,
+        PrimaryColour: (zimuConfig.textConfig.color && `&H${zimuConfig.textConfig.color}&`) || defaultSubtitleStyle.PrimaryColour,
+        BackColour: (zimuConfig.textConfig.backgroundColor && `&H${zimuConfig.textConfig.backgroundColor}&`) || defaultSubtitleStyle.BackColour,
+        BorderStyle: zimuConfig.textConfig.borderStyle || defaultSubtitleStyle.BorderStyle,
+        Outline: zimuConfig.textConfig.outline || defaultSubtitleStyle.Outline,
+        Alignment: zimuConfig.textConfig.alignment || defaultSubtitleStyle.Alignment,
+
+      }
+    });
     // 添加字幕滤镜
     const subtitleFilter = titleConfig ? 
-        `[video_with_title]subtitles='${escapedSrtPath}':force_style='Fontsize=36,PrimaryColour=&HFFFFFF&'[video_with_subtitles]` :
-        `[padded_video]subtitles='${escapedSrtPath}':force_style='Fontsize=36,PrimaryColour=&HFFFFFF&'[video_with_subtitles]`;
+        `[video_with_title]subtitles='${escapedSrtPath}':force_style='${subtitleStyle}'[video_with_subtitles]` :
+        `[padded_video]subtitles='${escapedSrtPath}':force_style='${subtitleStyle}'[video_with_subtitles]`;
       
       videoFilters.push(subtitleFilter);
     
     // 音频滤镜链
-    const audioFilters = [];
+    const audioFilters: any[] = [];
     let audioOutput = '';
 
     if (isOpenOriginAudio && await hasAudio(videoPath)) {
@@ -291,7 +311,8 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
         subtitlePath: subtitlePath,
         titleConfig: titleConfig,
         videoWidth: videoWidth,
-        videoHeight: videoHeight
+        videoHeight: videoHeight,
+        zimuConfig: clip.zimuConfig
       })
     }
   }
@@ -350,7 +371,7 @@ async function processVideoClipList(params) {
   log.log('split clip to segments done：')
   log.log(JSON.stringify(clipList));
   // 分片并发处理
-  const segments = [];
+  const segments: any[] = [];
   for (const clip of clipList) {
     segments.push(...clip.segments);
   }

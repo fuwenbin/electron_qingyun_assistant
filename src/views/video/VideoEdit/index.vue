@@ -73,9 +73,6 @@
                 <div class="clip-file-list">
                   <VideoChooser v-model="clip.videoList" />
                 </div>
-                <div class="audio-chooser">
-                  <input type="file" @change="handleAudioChange" />
-                </div>
                 <div class="clip-settings">
                   <div style="width: 70px;font-size:16px;">镜头配置</div>
                   <a-button @click="openZimuConfig(index)">字幕与配音</a-button>
@@ -137,10 +134,6 @@ const globalConfig = reactive<any>({
   videoResolution: '1080x1920'
 })
 const selectedRightConfigIndex = ref('')
-const audioFile = ref<File>();
-const handleAudioChange = (e: any) => {
-  audioFile.value = e.target.files[0]
-}
 let clipNo = 0;
 
 const editClipName = (index: number) => {
