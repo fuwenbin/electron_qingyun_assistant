@@ -126,8 +126,8 @@ async function processSegment(segment: any): Promise<void>  {
       ...{
         Fontname: zimuConfig.textConfig.fontFamily || defaultSubtitleStyle.Fontname,
         Fontsize: zimuConfig.textConfig.fontSize || defaultSubtitleStyle.Fontsize,
-        PrimaryColour: (zimuConfig.textConfig.color && `&H${zimuConfig.textConfig.color}&`) || defaultSubtitleStyle.PrimaryColour,
-        BackColour: (zimuConfig.textConfig.backgroundColor && `&H${zimuConfig.textConfig.backgroundColor}&`) || defaultSubtitleStyle.BackColour,
+        PrimaryColour: (zimuConfig.textConfig.color && `&H${zimuConfig.textConfig.color.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.PrimaryColour,
+        BackColour: (zimuConfig.textConfig.backgroundColor && `&H${zimuConfig.textConfig.backgroundColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.BackColour,
         BorderStyle: zimuConfig.textConfig.borderStyle || defaultSubtitleStyle.BorderStyle,
         Outline: zimuConfig.textConfig.outline || defaultSubtitleStyle.Outline,
         Alignment: zimuConfig.textConfig.alignment || defaultSubtitleStyle.Alignment,
