@@ -26,3 +26,6 @@ dist-ssr
 # Electron
 dist-electron 
 dist_electron
+# 本地资源文件
+bin
+fonts
