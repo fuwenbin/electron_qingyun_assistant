@@ -37,7 +37,7 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC as string, 'vite.svg'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
@@ -54,7 +54,7 @@ function createWindow() {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
     // win.loadFile('dist/index.html')
-    win.loadFile(path.join(process.env.DIST, 'index.html'))
+    win.loadFile(path.join(process.env.DIST as string, 'index.html'))
   }
 }
 
@@ -74,7 +74,7 @@ app.whenReady().then(() => {
   setupFFmpeg();
   initProtocolCustom();
   createWindow();
-  initOpenFileDialog(win);
+  initOpenFileDialog(win as BrowserWindow);
   initGlobalShortcutRegister(win);
 })
 

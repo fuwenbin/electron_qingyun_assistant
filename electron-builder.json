@@ -1,6 +1,6 @@
 {
   "appId": "com.vue3-electron.app",
-  "productName": "Vue3 Electron App",
+  "productName": "剪辑助手",
   "directories": {
     "output": "dist_electron"
   },

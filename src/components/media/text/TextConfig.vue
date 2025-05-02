@@ -74,9 +74,6 @@ const handleFontLevelChange = (value: any) => {
 const handleCustomStyleChange = (value: any) => {
   _value.customStyle = value;
 }
-const handleFontColorChange = (value: string) => {
-  _value.fontColor = value;
-}
 </script>
 
 <style lang="scss" scoped>

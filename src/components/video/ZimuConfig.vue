@@ -93,8 +93,8 @@ const handleReset = () => {
     fontSize: 36,
     fontColor: '#FF9C20',
     fontWeight: 'normal',
-    fontIsUnderline: false,
-    fontIsItalic: false,
+    underline: false,
+    italic: false,
     textAlign: 'center',
     customStyle: 'none'
   }

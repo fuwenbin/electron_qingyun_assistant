@@ -92,7 +92,7 @@ async function processSegment(segment: any): Promise<void>  {
         right: 'w-text_w-10'
       };
       // 处理字体路径
-      const fontPath = await getFontPath('arial.ttf');
+      const fontPath = await getFontPath(titleConfig.textConfig.fontFamily || 'arial');
       const titleTextConfig = titleConfig.textConfig;
       
       videoFilters.push({
@@ -104,7 +104,6 @@ async function processSegment(segment: any): Promise<void>  {
           fontcolor: titleTextConfig.fontColor || 'white',
           x: alignMap[titleTextConfig.textAlign || 'center'],
           y: positionMap[titleTextConfig.position || 'top'],
-          backgroundColor: titleTextConfig.backgroundColor || undefined,
           shadowcolor: 'black',
           shadowx: 2,
           shadowy: 2,
@@ -126,11 +125,11 @@ async function processSegment(segment: any): Promise<void>  {
       ...{
         Fontname: zimuConfig.textConfig.fontFamily || defaultSubtitleStyle.Fontname,
         Fontsize: zimuConfig.textConfig.fontSize || defaultSubtitleStyle.Fontsize,
-        PrimaryColour: (zimuConfig.textConfig.color && `&H${zimuConfig.textConfig.color.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.PrimaryColour,
+        PrimaryColour: (zimuConfig.textConfig.fontColor && `&H${zimuConfig.textConfig.fontColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.PrimaryColour,
         BackColour: (zimuConfig.textConfig.backgroundColor && `&H${zimuConfig.textConfig.backgroundColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.BackColour,
         BorderStyle: zimuConfig.textConfig.borderStyle || defaultSubtitleStyle.BorderStyle,
         Outline: zimuConfig.textConfig.outline || defaultSubtitleStyle.Outline,
-        Alignment: zimuConfig.textConfig.alignment || defaultSubtitleStyle.Alignment,
+        Alignment: zimuConfig.textConfig.textAlign || defaultSubtitleStyle.Alignment,
 
       }
     });
@@ -284,7 +283,7 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   // 获取字幕文件路径
   const subtitlePath = path.join(outputDir, `${outputFileName}_${clip.name}_subtitles.srt`);
   // 获取标题配置
-  const titleConfig = clip.videoTitleConfig.datas[0];
+  const titleConfig = clip.videoTitleConfig?.datas[0];
   for (const video of videoList) {
     const videoPath = video.path;
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);

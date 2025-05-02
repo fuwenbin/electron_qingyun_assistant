@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
+import { app } from 'electron';
 
 export function getDurationWithFfmpeg(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -42,19 +43,38 @@ export function formatTime(seconds: number): string {
 
 // 辅助函数：获取字体路径
 export async function getFontPath(fontName: string): Promise<string> {
-  const systemFonts = {
-    win32: 'C:/Windows/Fonts/',
-    darwin: '/System/Library/Fonts/',
-    linux: '/usr/share/fonts/'
-  };
+  const fontNamePathMap = {
+    'Microsoft YaHei': 'msyh.ttc',
+    '微软雅黑': 'msyh.ttc',
+    'SimHei': 'simhei.ttf',
+    '黑体': 'simhei.ttf',
+    'SimSun': 'simsun.ttc',
+    '宋体': 'simsun.ttc',
+    'SimKai': 'simkai.ttf',
+    '楷体': 'simkai.ttf',
+    '仿宋': 'simfang.ttf',
+    'FangSong': 'simfang.ttf',
+    'Arial': 'arial.ttf',
+  }
+  const fontPathName = fontNamePathMap[fontName] || 'arial.ttf';
+ 
   
-  const platform = process.platform;
-  const fontPath = path.join(systemFonts[platform] || '', fontName);
-  
-  try {
-    await fs.promises.access(fontPath);
-    return fontPath;
-  } catch {
-    return fontName; // 回退到字体名称
+  // 打包后使用应用内字体
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'fonts', fontPathName);
+  } else {
+    // 开发环境：使用项目内字体或系统字体
+    const localFont = path.join(__dirname, '../../fonts', fontPathName);
+    if (fs.existsSync(localFont)) {
+      return localFont;
+    } else {
+      const systemFonts = {
+        win32: 'C:/Windows/Fonts/',
+        darwin: '/System/Library/Fonts/',
+        linux: '/usr/share/fonts/'
+      };
+      const platform = process.platform;
+      return path.join(systemFonts[platform] || '', fontPathName);
+    }
   }
 }

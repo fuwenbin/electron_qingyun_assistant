@@ -17,7 +17,7 @@
         <div class="style-config-title">
           <span>{{ item.title }}</span>
         </div>
-        <TextConfig :modelValue="item.textConfig" @update:model-value="handleChangeTextConfig"/>
+        <TextConfig :modelValue="item.textConfig" @update:model-value="(value: any) => handleChangeTextConfig(index, value)"/>
         <div class="style-config-item">
           <div class="item-label">开始时间</div>
           <div class="item-content">
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, watch } from 'vue';
 import ConfigPanel from './ConfigPanel.vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import TextConfig from '@/components/media/text/TextConfig.vue';
@@ -68,13 +68,22 @@ const _value = reactive(props.modelValue || {
   datas: []
 });
 
+watch(() => _value, (newVal) => {
+  emit('update:modelValue', newVal);
+}, { deep: true });
+
 const getDefaultConfig = () => {
   return {
     text: '',
     textConfig: {
-      fontFamily: 'Microsoft YaHei',
+      fontFamily: '微软雅黑',
       fontSize: 36,
-      fontWeight: 'bold'
+      fontWeight: 'normal',
+      fontColor: '#FF9C20',
+      underline: false,
+      italic: false,
+      customStyle: 'none',
+      textAlign: 'center',
     },
     start: 0,
     duration: 0

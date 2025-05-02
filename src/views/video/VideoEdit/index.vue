@@ -20,7 +20,7 @@
           <span>{{ estimateGenerateTime || '--' }}</span>
           <span>秒</span>
         </div>
-        <a-button type="primary" @click="generateVideo">合成视频</a-button>
+        <a-button type="primary" @click="generateVideo" :loading="isGeneratingVideo">合成视频</a-button>
       </div>
     </div>
 
@@ -135,6 +135,7 @@ const globalConfig = reactive<any>({
 })
 const selectedRightConfigIndex = ref('')
 let clipNo = 0;
+const isGeneratingVideo = ref(false);
 
 const editClipName = (index: number) => {
   state.clips.value[index].isNameEditing = true
@@ -186,6 +187,7 @@ const generateVideo = async () => {
   }
   try {
     console.log('开始合成视频')
+    isGeneratingVideo.value = true;
     const params = JSON.parse(JSON.stringify({
       globalConfig: globalConfig,
       clips: state.clips,
@@ -200,6 +202,7 @@ const generateVideo = async () => {
     message.error('合成视频失败：' + error.message)
   } finally {
     console.log('合成视频结束')
+    isGeneratingVideo.value = false;
   }
 }
 

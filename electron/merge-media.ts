@@ -1,9 +1,9 @@
 import { app, ipcMain } from "electron";
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
 import log from 'electron-log';
 import { validateFile } from './utils';
+import fs from 'fs';
 
 
 // 动态设置FFmpeg路径
@@ -14,22 +14,38 @@ export function setupFFmpeg() {
     let ffprobePath: string;
 
     if (app.isPackaged) {
-      // 生产环境路径 - 假设你已经将ffmpeg可执行文件打包到正确位置
-      const basePath = path.join(
-        process.resourcesPath,
-        'app.asar.unpacked',
-        'bin' // 建议将可执行文件放在单独的bin目录
-      );
+      // 生产环境路径
+      const basePath = path.join(process.resourcesPath, 'bin'); // 修改为直接使用resources/bin
       
-      ffmpegPath = path.join(basePath, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
-      ffprobePath = path.join(basePath, process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe');
+      // 检查路径是否存在
+      if (!fs.existsSync(basePath)) {
+        throw new Error(`FFmpeg目录不存在: ${basePath}`);
+      }
+
+      const exeExt = process.platform === 'win32' ? '.exe' : '';
+      ffmpegPath = path.join(basePath, `ffmpeg${exeExt}`);
+      ffprobePath = path.join(basePath, `ffprobe${exeExt}`);
+
+      // 验证文件是否存在
+      if (!fs.existsSync(ffmpegPath)) {
+        throw new Error(`FFmpeg可执行文件不存在: ${ffmpegPath}`);
+      }
+      if (!fs.existsSync(ffprobePath)) {
+        throw new Error(`FFprobe可执行文件不存在: ${ffprobePath}`);
+      }
     } else {
       // 开发环境路径
-      const ffmpegStatic = require('ffmpeg-static');
-      const ffprobeStatic = require('ffprobe-static');
+      // const ffmpegStatic = require('ffmpeg-static');
+      // const ffprobeStatic = require('ffprobe-static');
       
-      ffmpegPath = ffmpegStatic;
-      ffprobePath = ffprobeStatic.path;
+      // ffmpegPath = ffmpegStatic;
+      // ffprobePath = ffprobeStatic.path;
+      // 开发环境路径
+      const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+      const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+      
+      ffmpegPath = ffmpegInstaller.path;
+      ffprobePath = ffprobeInstaller.path;
     }
 
     console.log('FFmpeg路径:', ffmpegPath);
