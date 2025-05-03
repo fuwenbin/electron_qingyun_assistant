@@ -5,7 +5,7 @@ import { SpeechSynthesizer } from "alibabacloud-nls"
 import { COMMON_CONFIG } from './aliyun-config';
 import * as fs from 'fs';
 import path from 'path';
-import { decodeArg, sleep } from '../utils';
+import { decodeArg } from '../utils';
 import { getToken } from './aliyun-token';
 import { getDurationWithFfmpeg } from '../utils/ffmpeg-utils';
 import { getPlatformAppDataPath } from './default-save-path';
@@ -20,7 +20,6 @@ export interface TTSRequestParams {
   speechRate?: number;    // 语速，默认：0
   pitchRate?: number;     // 语调，默认：0
 }
-
 
 export function initAliyunTTS() {
   ipcMain.handle('text2voice', async (event, paramsStr: string) => {
@@ -38,7 +37,7 @@ export function initAliyunTTS() {
         pitch_rate: params.pitch_rate || 0
       };
       const outputDir = params.output_dir || getPlatformAppDataPath();
-      const outputFileName = params.output_file_name || `tts_${Date.now()}`;
+      const outputFileName = params.outputFileName || `tts_${Date.now()}`;
       const token = await getToken();
       // 确保输出目录存在
       if (!fs.existsSync(outputDir)) {

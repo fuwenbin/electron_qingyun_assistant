@@ -1,8 +1,7 @@
-import { ipcMain, BrowserWindow, dialog } from "electron";
+import { ipcMain, BrowserWindow, dialog, app } from "electron";
 import { getPlatformAppDataPath } from "./default-save-path";
 import path from 'path';
 import { getDurationWithFfmpeg } from '../utils/ffmpeg-utils'
-import fs from 'fs';
 import { getMimeType } from "../utils";
 
 export function initOpenFileDialog(mainWindow: BrowserWindow) {

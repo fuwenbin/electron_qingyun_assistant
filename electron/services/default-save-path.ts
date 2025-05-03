@@ -4,17 +4,38 @@ import { app, ipcMain } from 'electron'
 
 const APP_NAME = 'zhushou'
 
+function getInstallationDirectory() {
+  // 对于打包后的应用
+  if (app.isPackaged) {
+    return path.dirname(process.execPath);
+  }
+  // 开发环境下返回项目根目录
+  return app.getAppPath();
+}
+
 // 获取平台特定的路径
 export function getPlatformAppDataPath() {
-  switch (process.platform) {
-    case 'win32':
-      return path.join(app.getPath('appData'), APP_NAME)
-    case 'darwin':
-      return path.join(app.getPath('appData'), APP_NAME)
-    case 'linux':
-      return path.join(app.getPath('appData'), APP_NAME)
-    default:
-      return path.join(app.getPath('documents'), APP_NAME)
+  try {
+    const appRootPath = getInstallationDirectory();
+    const appDataPath = path.join(appRootPath, 'data');
+    if (!fs.existsSync(appDataPath)) {
+      fs.mkdirSync(appDataPath, { recursive: true });
+      return appDataPath;
+    } else {
+      return appDataPath;
+    }
+  } catch (error) {
+    console.error('Failed to create zhushou directory:', error)
+    switch (process.platform) {
+      case 'win32':
+        return path.join(app.getPath('appData'), APP_NAME)
+      case 'darwin':
+        return path.join(app.getPath('appData'), APP_NAME)
+      case 'linux':
+        return path.join(app.getPath('appData'), APP_NAME)
+      default:
+        return path.join(app.getPath('documents'), APP_NAME)
+    }
   }
 }
 

@@ -318,7 +318,13 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   return clipSegments;
 }
 
-async function concatVideos(videos: string[], outputPath: string): Promise<void> {
+async function concatVideos(videos: string[], outputPath: string, globalConfig: any): Promise<void> {
+  // 获取视频宽高
+  const videoRatio = globalConfig.videoRatio;
+  const videoResolution = globalConfig.videoResolution;
+  const videoResolutonPart = videoResolution.split('x').map(v => parseInt(v));
+  const videoWidth = videoRatio === '9:16' ? videoResolutonPart[0] : videoResolutonPart[1];
+  const videoHeight = videoRatio === '9:16' ? videoResolutonPart[1] : videoResolutonPart[0];
   return new Promise((resolve, reject) => {
     const command = ffmpeg()
     
@@ -330,7 +336,7 @@ async function concatVideos(videos: string[], outputPath: string): Promise<void>
     const filterComplex: any[] = [];
 
     for (let i = 0; i < videos.length; i++) {
-      filterComplex.push(`[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
+      filterComplex.push(`[${i}:v]scale=${videoWidth}:${videoHeight}:force_original_aspect_ratio=decrease,pad=${videoWidth}:${videoHeight}:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
       filterComplex.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`);
     }
     const concatInput = videos.map((_, i) => `[v${i}][a${i}]`).join('')
@@ -416,7 +422,7 @@ async function processVideoClipList(params) {
   log.log('concat videos start')
   log.log(JSON.stringify(outputSegmentList));
   const outputPromiseList = outputSegmentList.map(segments => {
-    return concatVideos(segments.videos, segments.outputPath);
+    return concatVideos(segments.videos, segments.outputPath, globalConfig);
   })
   await Promise.all(outputPromiseList);
   
