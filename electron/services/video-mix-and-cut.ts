@@ -327,7 +327,7 @@ async function concatVideos(videos: string[], outputPath: string): Promise<void>
       command.input(video)
     })
 
-    const filterComplex = [];
+    const filterComplex: any[] = [];
 
     for (let i = 0; i < videos.length; i++) {
       filterComplex.push(`[${i}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
@@ -392,9 +392,9 @@ async function processVideoClipList(params) {
     }
   }
   log.log(`we can generate ${segmentMinCount} videos`)
-  const outputSegmentList = [];
+  const outputSegmentList: any[] = [];
   for (let i = 0; i < segmentMinCount; i++) {
-    const segmentsForOutput = [];
+    const segmentsForOutput: any[] = [];
     let segmentsDurationSum = 0;
     for (const clip of clipList) {
       const segments = clip.segments;

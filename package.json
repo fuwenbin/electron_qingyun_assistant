@@ -30,7 +30,7 @@
     "crypto-browserify": "^3.12.1",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.13",
-    "electron-log": "^5.3.4",
+    "electron-log": "^5.4.0",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
     "file-saver": "^2.0.5",
@@ -85,7 +85,15 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "public/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": false
     },
     "linux": {
       "target": [
@@ -96,12 +104,16 @@
       {
         "from": "bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "fonts",
         "to": "fonts",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   }

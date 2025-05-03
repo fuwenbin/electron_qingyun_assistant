@@ -12,12 +12,6 @@ declare global {
       send(channel: string, ...args: any[]): void;
       on(channel: string, listener: (...args: any[]) => void): () => void;
       removeAllListeners(channel: string): void;
-      mergeMedia(params: {
-        videoPaths: string[];
-        audioPaths: string[];
-        outputPath: string;
-        audioVolumes?: number[];
-      }): Promise<string>;
       
       showSaveDialog(options: {
         title?: string;
@@ -34,8 +28,6 @@ declare global {
       selectDirectory(): Promise<string | null>;
       
       openFile(path: string): Promise<void>;
-      
-      onProgress(callback: (progress: number) => void): () => void;
       text2voice(params: any): Promise<any>;
       videoMixAndCut(params: any): Promise<any>;
       getMediaDuration(path: string): Promise<number>;

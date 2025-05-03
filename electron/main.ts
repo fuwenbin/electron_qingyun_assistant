@@ -1,7 +1,6 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
 import path from 'path'
 import initShowSaveDialog from './show-save-dialog';
-import { setupFFmpeg, initMergeMedia } from './merge-media';
 import initOpenFile from './open-file';
 import { initAliyunTTS } from './services/aliyun-tts';
 import { electronCrypto } from './utils/crypto-polyfill';
@@ -11,6 +10,7 @@ import { initVideoMixAndCut } from './services/video-mix-and-cut';
 import { initOpenFileDialog } from './services/open-file-dialog';
 import { initProtocolCustom } from './services/protocol-custom';
 import { initGlobalShortcutRegister } from './services/global-shortcut-register';
+import { setupFFmpeg } from './utils/ffmpeg-utils';
 global.crypto = electronCrypto;
 // The built directory structure
 //
@@ -59,7 +59,6 @@ function createWindow() {
 }
 
 setupLogger();
-initMergeMedia();
 initShowSaveDialog();
 initOpenFile();
 initAliyunTTS();
