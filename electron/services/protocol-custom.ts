@@ -16,20 +16,6 @@ async function checkFileSafety(filePath: string): Promise<boolean> {
     return false;
   }
   
-  // 3. 限制访问特定目录（示例：只允许用户文档和下载目录）
-  const allowedDirs = [
-    app.getPath('documents'),
-    app.getPath('downloads'),
-    app.getPath('videos'),
-    getPlatformAppDataPath(),
-  ].map(dir => path.normalize(dir));
-
-  const isAllowed = allowedDirs.some(dir => 
-    normalized.startsWith(dir + path.sep)
-  );
-  
-  if (!isAllowed) return false;
-  
   // 4. 检查文件是否存在且可读
   try {
     await fs.promises.access(normalized, fs.constants.R_OK);

@@ -81,3 +81,78 @@ export const topStyle: SubtitleStyle = {
   Alignment: 8, // 顶部居中
   MarginV: 20
 };
+
+export function generateSubtitleStyleFromTextConfig(textConfig: any) {
+  const alignmentMap = {
+    'left': 1,
+    'center': 2,
+    'right': 3
+  }
+  const subtitleStyleObj = {
+    ...defaultSubtitleStyle,
+    ...{
+      Fontname: textConfig.fontFamily || defaultSubtitleStyle.Fontname,
+      Fontsize: textConfig.fontSize || defaultSubtitleStyle.Fontsize,
+      PrimaryColour: (textConfig.fontColor && `&H${textConfig.fontColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.PrimaryColour,
+      Alignment: (textConfig.textAlign && alignmentMap[textConfig.textAlign]) || defaultSubtitleStyle.Alignment
+    }
+  }
+  if (textConfig.customStyle === 'custom-style-1') {
+    subtitleStyleObj.OutlineColour = '&H001A1A1A&';
+    subtitleStyleObj.PrimaryColour = '&H00FFFFFF&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-2') {
+    subtitleStyleObj.OutlineColour = '&H001A1A1A&';
+    subtitleStyleObj.PrimaryColour = '&H00627EE9&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-3') {
+    subtitleStyleObj.OutlineColour = '&H001A1A1A&';
+    subtitleStyleObj.PrimaryColour = '&H001A1A1A&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-4') {
+    subtitleStyleObj.OutlineColour = '&H00B463FE&';
+    subtitleStyleObj.PrimaryColour = '&H00B463FE&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-5') {
+    subtitleStyleObj.OutlineColour = '&H00FF9C20&';
+    subtitleStyleObj.PrimaryColour = '&H00FF9C20&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-6') {
+    subtitleStyleObj.OutlineColour = '&H002278FF&';
+    subtitleStyleObj.PrimaryColour = '&H002278FF&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-7') {
+    subtitleStyleObj.PrimaryColour = '&H001A1A1A&';
+    subtitleStyleObj.BackColour = '&H00FFE306&';
+    subtitleStyleObj.BorderStyle = 3;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-8') {
+    subtitleStyleObj.OutlineColour = '&H001A1A1A&';
+    subtitleStyleObj.PrimaryColour = '&H00FAF5B0&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-9') {
+    subtitleStyleObj.OutlineColour = '&H001A1A1A&';
+    subtitleStyleObj.PrimaryColour = '&H00FF9C20&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-10') {
+    subtitleStyleObj.OutlineColour = '&H00F09CAF&';
+    subtitleStyleObj.PrimaryColour = '&H00FFFFFF&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  } else if (textConfig.customStyle === 'custom-style-11') {
+    subtitleStyleObj.OutlineColour = '&H00F86F32&';
+    subtitleStyleObj.PrimaryColour = '&H00FDDC63&';
+    subtitleStyleObj.BorderStyle = 1;
+    subtitleStyleObj.Outline = 1;
+  }
+  
+  return buildStyleString(subtitleStyleObj);
+}

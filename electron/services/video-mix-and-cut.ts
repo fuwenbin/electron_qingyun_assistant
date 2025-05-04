@@ -7,7 +7,9 @@ import { ipcMain } from 'electron'
 import { decodeArg } from '../utils'
 import log from 'electron-log';
 import { generateSrtFile } from '../utils/ffmpeg-utils'
-import { buildStyleString, defaultSubtitleStyle, boxStyle, outlineStyle, topStyle } from './video-subtitle'
+import { buildStyleString, defaultSubtitleStyle, boxStyle, outlineStyle, topStyle, generateSubtitleStyleFromTextConfig } from './video-subtitle'
+import { generateTitleFilterOPtions } from './video-title'
+import { title } from 'process'
 // 设置ffmpeg路径
 // ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
@@ -81,34 +83,14 @@ async function processSegment(segment: any): Promise<void>  {
     // 添加标题滤镜
     if (titleConfig) {
       const titleDuration = titleConfig.duration || currentDuration;
-      const positionMap = {
-        top: '10',
-        middle: '(h-text_h)/2',
-        bottom: 'h-text_h-10'
-      };
-      const alignMap = {
-        left: '10',
-        center: '(w-text_w)/2',
-        right: 'w-text_w-10'
-      };
       // 处理字体路径
       const fontPath = await getFontPath(titleConfig.textConfig.fontFamily || 'arial');
       const titleTextConfig = titleConfig.textConfig;
+      const titleFilterOptions = generateTitleFilterOPtions(titleConfig.text, fontPath, titleTextConfig, titleConfig.start, titleDuration);
       
       videoFilters.push({
         filter: 'drawtext',
-        options: {
-          text: titleConfig.text,
-          fontfile: fontPath, // 确保字体文件存在或使用系统字体
-          fontsize: titleTextConfig.fontSize || 36,
-          fontcolor: titleTextConfig.fontColor || 'white',
-          x: alignMap[titleTextConfig.textAlign || 'center'],
-          y: positionMap[titleTextConfig.position || 'top'],
-          shadowcolor: 'black',
-          shadowx: 2,
-          shadowy: 2,
-          enable: `between(t,${titleConfig.start},${titleConfig.start + titleDuration})`
-        },
+        options: titleFilterOptions,
         inputs: 'padded_video',
         outputs: 'video_with_title'
       });
@@ -120,19 +102,7 @@ async function processSegment(segment: any): Promise<void>  {
       });
     }
     
-    const subtitleStyle = buildStyleString({
-      ...defaultSubtitleStyle,
-      ...{
-        Fontname: zimuConfig.textConfig.fontFamily || defaultSubtitleStyle.Fontname,
-        Fontsize: zimuConfig.textConfig.fontSize || defaultSubtitleStyle.Fontsize,
-        PrimaryColour: (zimuConfig.textConfig.fontColor && `&H${zimuConfig.textConfig.fontColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.PrimaryColour,
-        BackColour: (zimuConfig.textConfig.backgroundColor && `&H${zimuConfig.textConfig.backgroundColor.replace('#', '').toUpperCase()}&`) || defaultSubtitleStyle.BackColour,
-        BorderStyle: zimuConfig.textConfig.borderStyle || defaultSubtitleStyle.BorderStyle,
-        Outline: zimuConfig.textConfig.outline || defaultSubtitleStyle.Outline,
-        Alignment: zimuConfig.textConfig.textAlign || defaultSubtitleStyle.Alignment,
-
-      }
-    });
+    const subtitleStyle = generateSubtitleStyleFromTextConfig(zimuConfig.textConfig);
     // 添加字幕滤镜
     const subtitleFilter = titleConfig ? 
         `[video_with_title]subtitles='${escapedSrtPath}':force_style='${subtitleStyle}'[video_with_subtitles]` :
@@ -382,10 +352,9 @@ async function processVideoClipList(params) {
   }
   log.info('segments:')
   log.info(JSON.stringify(segments));
-  const segmentProcessPromiseList = segments.map(segment => {
-    return processSegment(segment);
-  })
-  await Promise.all(segmentProcessPromiseList);
+  for (const segment of segments) {
+    await processSegment(segment);
+  }
   log.log('segment process done：')
   log.log(JSON.stringify(segments));
   // 镜头合成
@@ -421,10 +390,9 @@ async function processVideoClipList(params) {
   }
   log.log('concat videos start')
   log.log(JSON.stringify(outputSegmentList));
-  const outputPromiseList = outputSegmentList.map(segments => {
-    return concatVideos(segments.videos, segments.outputPath, globalConfig);
-  })
-  await Promise.all(outputPromiseList);
+  for (const segments of outputSegmentList) {
+    await concatVideos(segments.videos, segments.outputPath, globalConfig);
+  }
   
   log.log('concat videos done：')
   log.log(JSON.stringify(outputSegmentList));
