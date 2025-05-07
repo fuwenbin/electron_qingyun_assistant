@@ -8,11 +8,11 @@ import { decodeArg, escapedFilePath } from '../utils'
 import log from 'electron-log';
 import { generateAudio } from './aliyun-tts'
 import dayjs from 'dayjs'
-import { generateAssFile, generateAssFileContent } from './video-ass'
+import { generateAssFile, generateAssFileContent, generateAssFromText } from './video-ass'
 import pLimit from 'p-limit'
 
 // 限制并发数为 CPU 核心数 -1（根据机器性能调整）
-const limit = pLimit(Math.max(1, require('os').cpus().length - 1));
+const limit = pLimit(Math.max(1, Math.floor(require('os').cpus().length * 0.8) - 1));
 
 // 处理单个视频分段
 async function processSegment(segment: any): Promise<void>  {
@@ -238,10 +238,10 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   const assDialogueList: string[] = [];
   // 生成字幕文件内容
   const selectedSubtitle = clip.zimuConfig.datas[0];
-  const subtitleContent = generateAssFileContent(selectedSubtitle.text, clip.zimuConfig.textConfig, 0, 
-    audioDuration, 'subtitles', videoWidth, videoHeight);
-  assStyleList.push(subtitleContent.style);
-  assDialogueList.push(subtitleContent.dialogue);
+  const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, clip.zimuConfig.textConfig,
+    videoWidth, videoHeight);
+  assStyleList.push(...subtitlesContentList.map(v => v.style));
+  assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
 
   if (clip.videoTitleConfig) {
     // 获取标题配置
@@ -249,7 +249,7 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
     // 生成标题文件内容
     const titleDuration = titleConfig.duration || audioDuration;
     const titleContent = generateAssFileContent(titleConfig.text, titleConfig.textConfig, titleConfig.start, 
-      titleDuration, 'title', videoWidth, videoHeight);
+      titleDuration, 'title', videoWidth, videoHeight, 'title');
     assStyleList.push(titleContent.style);
     assDialogueList.push(titleContent.dialogue);
   }

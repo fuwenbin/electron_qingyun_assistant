@@ -19,7 +19,7 @@
               <div class="header-left-title">{{ data.title }}</div>
               <div class="header-left-duration">
                 <span>口播时长：</span>
-                <span>{{ data.duration || '未知' }}</span>
+                <span v-if="data.duration">{{ data.duration || '未知' }}秒</span>
               </div>
               <a-tooltip title="点击下方合成配音按钮生成口播时长">
                 <ExclamationCircleOutlined />

@@ -12,13 +12,12 @@
             <ColorPicker v-model:value="_value.fontColor"/>
             <a-divider type="vertical" class="divider" />
             <FontStyleConfig v-model:fontWeight="_value.fontWeight" v-model:underline="_value.underline" 
-              v-model:italic="_value.italic" style="width: 50px;"/>
+              v-model:italic="_value.italic" />
           </div>
           <div class="right-part part-box">
             <TextAlignChooser v-model="_value.textAlign" />
           </div>
         </div>
-        
       </div>
     </div>
     <div class="text-config-item">
@@ -77,6 +76,11 @@ const handleCustomStyleChange = (value: any) => {
 </script>
 
 <style lang="scss" scoped>
+.text-config {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .font-basic-config {
   display: flex;
   justify-content: space-between;
@@ -91,6 +95,7 @@ const handleCustomStyleChange = (value: any) => {
     border-radius: 4px;
     flex-wrap: wrap;
     gap: 4px;
+    height: 44px;
     .divider {
       height: 20px;
     }

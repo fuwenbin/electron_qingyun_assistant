@@ -162,6 +162,41 @@ const checkVideoList = (clips: any) => {
   return isVideoListOk;
 }
 
+
+const generateAudios = async () => {
+  for (let i = 0; i < state.clips.length; i++) {
+    const clip = state.clips[i];
+    const audio = clip.zimuConfig.datas[0];
+    if (audio.path && audio.duration) {
+      continue;
+    }
+    const audioConfig = clip.zimuConfig.audioConfig;
+    const outputFileName = `${videoTitle.value}_${clip.title}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+      const params = JSON.parse(JSON.stringify({
+        text: audio.text,
+        voice: audioConfig.voice,
+        speech_rate: audioConfig.speech_rate,
+        volume: audioConfig.volume,
+        pitch_rate: audioConfig.pitch_rate,
+        outputFileName: outputFileName
+      }))
+      const generateRes = await window.electronAPI.text2voice(params);
+      clip.zimuConfig.datas[0].path = generateRes.outputPath;
+      clip.zimuConfig.datas[0].duration = generateRes.duration;
+  }
+}
+
+const checkZimuList = (clips: any[]) => {
+  let isZimuListOk = true;
+  for(const clip of clips) {
+    if (!clip.zimuConfig?.datas[0].text) {
+      isZimuListOk = false;
+      message.error('请先为镜头【' + clip.name + '】添加字幕与配音')
+      break;
+    }
+  }
+  return isZimuListOk;
+}
 const generateVideo = async () => {
   if (state.clips.length === 0) {
     message.error('请至少添加一个镜头')
@@ -170,7 +205,12 @@ const generateVideo = async () => {
   if (!checkVideoList(state.clips)) {
     return;
   }
+  if (!checkZimuList(state.clips)) {
+    return;
+  }
   try {
+    // 为没有合成配音的字幕合成配音
+    await generateAudios();
     console.log('开始合成视频')
     isGeneratingVideo.value = true;
     const params = JSON.parse(JSON.stringify({

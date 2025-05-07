@@ -97,7 +97,7 @@ Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},Default,,0,0,0,
 }
 
 export function generateAssFileContent(text: string, textConfig: any, start: number, duration: number, 
-  titleType: string, videoWidth: number, videoHeight: number) {
+  titleType: string, videoWidth: number, videoHeight: number, name: string) {
   const { fontFamily, fontSize, fontWeight, underline, italic, textAlign, customStyle } = textConfig;
   let fontColor = textConfig.fontColor.replace('#', '');
   let OutlineColour = '000000';
@@ -168,8 +168,8 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
   // 确保PlayRes与视频分辨率比例一致
   const playResX = 384;
   const playResY = Math.round(playResX * (videoHeight / videoWidth));
-  const assStyle = `Style: ${titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},30,30,${MarginV},0`;
-  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${titleType},,0,0,0,${Effect},${text}`;
+  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},30,30,${MarginV},0`;
+  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,${Effect},${text}`;
   return {
     style: assStyle,
     dialogue: assDialogue
@@ -220,3 +220,97 @@ function calculateOptimalSpeed(videoWidth: number, duration: number): number {
   // 假设我们希望字幕在持续时间结束时完全滚出屏幕
   return (videoWidth * 1.2) / duration;
 }
+
+export function generateAssFromText(text: string, duration: number, textConfig: any, videoWidth: number, videoHeight: number) {
+  const sentences = splitTextToSentences(text);
+  const segments = calculateSegments(sentences, duration);
+  const result: any[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const name = `subtitles-${i}`;
+    const segmentDuration = segment.end - segment.start;
+    const segmentContent = generateAssFileContent(segment.text, textConfig, segment.start, segmentDuration, 
+      "subtitles", videoWidth, videoHeight, name);
+    result.push({
+      style: segmentContent.style,
+      dialogue: segmentContent.dialogue
+    })
+  }
+  return result;
+}
+
+/**
+   * 将文本拆分为适合字幕显示的句子
+   */
+function splitTextToSentences(text: string): string[] {
+  // 按标点符号拆分，但确保句子不会太长
+  const sentences: string[] = [];
+  const maxCharsPerLine = 30;
+  const maxLines = 2;
+  
+  // 首先按标点符号拆分
+  const roughSentences = text.split(/([。！？；\n])/).filter(s => s.trim());
+  
+  // 进一步拆分过长的句子
+  for (let i = 0; i < roughSentences.length; i++) {
+    let sentence = roughSentences[i];
+    
+    // 如果句子太长，按逗号或空格拆分
+    if (sentence.length > maxCharsPerLine * maxLines) {
+      const parts = sentence.split(/([,，])/).filter(s => s.trim());
+      for (const part of parts) {
+        if (part.length > maxCharsPerLine * maxLines) {
+          // 如果部分仍然太长，按单词拆分
+          const words = part.split(/\s+/);
+          let currentLine = '';
+          for (const word of words) {
+            if (currentLine.length + word.length > maxCharsPerLine) {
+              if (currentLine) sentences.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine += (currentLine ? ' ' : '') + word;
+            }
+          }
+          if (currentLine) sentences.push(currentLine);
+        } else {
+          sentences.push(part);
+        }
+      }
+    } else {
+      sentences.push(sentence);
+    }
+  }
+  
+  return sentences;
+}
+
+/**
+   * 计算每个句子的开始和结束时间
+   */
+function calculateSegments(sentences: string[], totalDuration: number): any[] {
+  const segments: any[] = [];
+  const totalChars = sentences.reduce((sum, s) => sum + s.length, 0);
+  const charPerSecond = totalChars / totalDuration;
+  
+  let currentTime = 0;
+  for (const sentence of sentences) {
+    const duration = sentence.length / charPerSecond;
+    const endTime = Math.min(currentTime + duration, totalDuration);
+    
+    segments.push({
+      text: sentence,
+      start: currentTime,
+      end: endTime
+    });
+    
+    currentTime = endTime;
+    
+    // 添加最小间隔
+    if (currentTime < totalDuration) {
+      currentTime += 0.2; // 200ms 间隔
+    }
+  }
+  
+  return segments;
+}
+

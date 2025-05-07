@@ -12,14 +12,14 @@
       <div class="video-chooser-title">添加素材</div>
     </div>
   </div>
-  <a-modal v-model:open="previewDialogOpen" title="视频信息" :footer="null" :width="800">
-    <video v-if="selectedPreviewItem" :src="selectedPreviewItem.url" controls 
-      style="width: 100%;" controlslist="nodownload"/>
+  <a-modal v-model:open="previewDialogOpen" title="视频信息" :footer="null" :width="800" @cancel="closePreviewDialog">
+    <video ref="videoRef" v-if="selectedPreviewItem" :src="selectedPreviewItem.url" controls 
+      style="width: 100%;max-height: 80vh;" controlslist="nodownload"/>
   </a-modal>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, onBeforeUnmount } from 'vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import VideoChooserPreviewItem from './VideoChooserPreviewItem.vue';
 
@@ -29,6 +29,7 @@ const props = defineProps<{
 
 const previewDialogOpen = ref(false)
 const selectedPreviewItem = ref<any>(null)
+const videoRef = ref<HTMLVideoElement | null>(null)
 
 const emit = defineEmits(['update:modelValue'])
 
@@ -64,6 +65,19 @@ const handleUpdateDuration = (index: number, duration: number) => {
 const deleteItem = (index: number) => {
   emit('update:modelValue', props.modelValue.filter((_, i) => i !== index))
 }
+
+const closePreviewDialog = () => {
+  previewDialogOpen.value = false
+  if (videoRef.value) {
+    videoRef.value.pause()
+  }
+}
+
+onBeforeUnmount(() => {
+  if (videoRef.value) {
+    videoRef.value.pause()
+  }
+})
 </script>
 
 <style lang="scss" scoped>
