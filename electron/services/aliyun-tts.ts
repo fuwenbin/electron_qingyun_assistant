@@ -21,75 +21,79 @@ export interface TTSRequestParams {
   pitchRate?: number;     // 语调，默认：0
 }
 
+export async function generateAudio(params: any) {
+  try {
+    const options = {
+      text: params.text,
+      voice: params.voice || 'xiaoyun',
+      format: params.format || 'mp3',
+      sample_rate: params.sample_rate || 16000,
+      volume: params.volume || 50,
+      speech_rate: params.speech_rate || 0,
+      pitch_rate: params.pitch_rate || 0
+    };
+    const outputDir = params.output_dir || getPlatformAppDataPath();
+    const outputFileName = params.outputFileName || `tts_${Date.now()}`;
+    const token = await getToken();
+    // 确保输出目录存在
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const tts = new SpeechSynthesizer({
+      url: COMMON_CONFIG.ttsUrl,
+      appkey: COMMON_CONFIG.appkey,
+      token: token
+    });
+    const outputFile = path.join(outputDir, `${outputFileName}.${options.format || 'mp3'}`);
+    const fileStream = fs.createWriteStream(outputFile);
+    log.log(outputFile);
+    return new Promise((resolve, reject) => {
+      
+        tts.on("meta", (msg)=>{
+          log.info("接收到元信息:", msg);
+        })
+      
+        tts.on("data", (msg)=>{
+          try {
+            fileStream.write(msg);
+            log.debug(`接收到数据块，大小: ${msg.length} bytes`);
+          } catch (error) {
+            log.error('写入文件失败:', error);
+            reject(error);
+          }
+        })
+      
+        tts.on("completed", async ()=>{
+          fileStream.end();
+          log.info('语音合成完成');
+          const duration = await getDurationWithFfmpeg(outputFile);
+          log.info(`语音合成完成，时长: ${duration}秒`);
+          resolve({ success: true, outputFile, duration });
+        })
+      
+        tts.on("closed", () => {
+          log.info('连接已关闭');
+        })
+      
+        tts.on("failed", (error: any)=>{
+          fileStream.end();
+          log.error('语音合成失败:', error);
+          reject(error);
+        })
+        tts.start(options, true, 6000);
+      
+    });
+  } catch (error: any) {
+    log.error('语音合成初始化失败:', error);
+    throw error;
+  }
+}
+
 export function initAliyunTTS() {
   ipcMain.handle('text2voice', async (event, paramsStr: string) => {
-    try {
-      const params = JSON.parse(decodeArg(paramsStr));
-      log.log('accept params:')
-      log.log(JSON.stringify(params));
-      const options = {
-        text: params.text,
-        voice: params.voice || 'xiaoyun',
-        format: params.format || 'mp3',
-        sample_rate: params.sample_rate || 16000,
-        volume: params.volume || 50,
-        speech_rate: params.speech_rate || 0,
-        pitch_rate: params.pitch_rate || 0
-      };
-      const outputDir = params.output_dir || getPlatformAppDataPath();
-      const outputFileName = params.outputFileName || `tts_${Date.now()}`;
-      const token = await getToken();
-      // 确保输出目录存在
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-      const tts = new SpeechSynthesizer({
-        url: COMMON_CONFIG.ttsUrl,
-        appkey: COMMON_CONFIG.appkey,
-        token: token
-      });
-      const outputFile = path.join(outputDir, `${outputFileName}.${options.format || 'mp3'}`);
-      const fileStream = fs.createWriteStream(outputFile);
-      log.log(outputFile);
-      return new Promise((resolve, reject) => {
-        
-          tts.on("meta", (msg)=>{
-            log.info("接收到元信息:", msg);
-          })
-        
-          tts.on("data", (msg)=>{
-            try {
-              fileStream.write(msg);
-              log.debug(`接收到数据块，大小: ${msg.length} bytes`);
-            } catch (error) {
-              log.error('写入文件失败:', error);
-              reject(error);
-            }
-          })
-        
-          tts.on("completed", async ()=>{
-            fileStream.end();
-            log.info('语音合成完成');
-            const duration = await getDurationWithFfmpeg(outputFile);
-            log.info(`语音合成完成，时长: ${duration}秒`);
-            resolve({ success: true, outputFile, duration });
-          })
-        
-          tts.on("closed", () => {
-            log.info('连接已关闭');
-          })
-        
-          tts.on("failed", (error: any)=>{
-            fileStream.end();
-            log.error('语音合成失败:', error);
-            reject(error);
-          })
-          tts.start(options, true, 6000);
-        
-      });
-    } catch (error: any) {
-      log.error('语音合成初始化失败:', error);
-      throw error;
-    }
+    const params = JSON.parse(decodeArg(paramsStr));
+    log.log('accept params:')
+    log.log(JSON.stringify(params));
+    return generateAudio(params);
   });
 }

@@ -1,39 +1,29 @@
 import ffmpeg from 'fluent-ffmpeg'
 // import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
-import { getDurationWithFfmpeg, getFontPath, hasAudio } from '../utils/ffmpeg-utils'
-import { ensureAppDataSaveDir } from './default-save-path'
+import { getDurationWithFfmpeg, getFontsdir, hasAudio } from '../utils/ffmpeg-utils'
+import { getPlatformAppDataPath } from './default-save-path'
 import { ipcMain } from 'electron'
-import { decodeArg } from '../utils'
+import { decodeArg, escapedFilePath } from '../utils'
 import log from 'electron-log';
-import { generateSrtFile } from '../utils/ffmpeg-utils'
-import { buildStyleString, defaultSubtitleStyle, boxStyle, outlineStyle, topStyle, generateSubtitleStyleFromTextConfig } from './video-subtitle'
-import { generateTitleFilterOPtions } from './video-title'
-import { title } from 'process'
-// 设置ffmpeg路径
-// ffmpeg.setFfmpegPath(ffmpegInstaller.path)
+import { generateAudio } from './aliyun-tts'
+import dayjs from 'dayjs'
+import { generateAssFile, generateAssFileContent } from './video-ass'
+import pLimit from 'p-limit'
 
+// 限制并发数为 CPU 核心数 -1（根据机器性能调整）
+const limit = pLimit(Math.max(1, require('os').cpus().length - 1));
 
 // 处理单个视频分段
 async function processSegment(segment: any): Promise<void>  {
-  const { videoPath, audioPath, isOpenOriginAudio, startTime, currentDuration, outputPath, subtitles, 
-    subtitlePath, titleConfig, videoWidth, videoHeight, zimuConfig } = segment;
+  const { videoPath, audioPath, isOpenOriginAudio, startTime, currentDuration, outputPath, 
+    videoWidth, videoHeight, assFilePath } = segment;
 
   return new Promise(async (resolve, reject) => {
-
-    // 生成临时字幕文件
-    const srtPath = subtitlePath;
-    generateSrtFile(srtPath, subtitles);
     
     const command = ffmpeg()
       .input(videoPath)
       .input(audioPath);
-
-    // 处理路径中的特殊字符
-    const escapedVideoPath = videoPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-    const escapedAudioPath = audioPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-    const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-    const escapedOutputPath = outputPath.replace(/\\/g, '/').replace(/:/g, '\\:');
 
     // 基础视频滤镜链
     const videoFilters: any[] = [
@@ -80,35 +70,18 @@ async function processSegment(segment: any): Promise<void>  {
       }
     ];
     
-    // 添加标题滤镜
-    if (titleConfig) {
-      const titleDuration = titleConfig.duration || currentDuration;
-      // 处理字体路径
-      const fontPath = await getFontPath(titleConfig.textConfig.fontFamily || 'arial');
-      const titleTextConfig = titleConfig.textConfig;
-      const titleFilterOptions = generateTitleFilterOPtions(titleConfig.text, fontPath, titleTextConfig, titleConfig.start, titleDuration);
-      
-      videoFilters.push({
-        filter: 'drawtext',
-        options: titleFilterOptions,
-        inputs: 'padded_video',
-        outputs: 'video_with_title'
-      });
-    } else {
-      videoFilters.push({
-        filter: 'null',
-        inputs: 'padded_video',
-        outputs: 'video_with_title'
-      });
-    }
-    
-    const subtitleStyle = generateSubtitleStyleFromTextConfig(zimuConfig.textConfig);
-    // 添加字幕滤镜
-    const subtitleFilter = titleConfig ? 
-        `[video_with_title]subtitles='${escapedSrtPath}':force_style='${subtitleStyle}'[video_with_subtitles]` :
-        `[padded_video]subtitles='${escapedSrtPath}':force_style='${subtitleStyle}'[video_with_subtitles]`;
-      
-      videoFilters.push(subtitleFilter);
+    const fontsdir = getFontsdir();
+    videoFilters.push({
+      filter: 'subtitles',
+      options: {
+        filename: `'${escapedFilePath(assFilePath)}'`,
+        fontsdir: `'${escapedFilePath(fontsdir)}'`,
+        original_size: `${videoWidth}x${videoHeight}`
+      },
+      inputs: 'padded_video',
+      outputs: 'video_with_subtitles'
+    })
+    // videoFilters.push(`[padded_video]ass=filename='${escapedFilePath(assFilePath)}':original_size=${videoWidth}:${videoHeight}[video_with_subtitles]`);
     
     // 音频滤镜链
     const audioFilters: any[] = [];
@@ -203,7 +176,7 @@ async function processSegment(segment: any): Promise<void>  {
         `-map [${audioOutput}]`,
         '-c:v libx264',
         '-c:a aac',
-        '-preset fast'
+        '-preset fast',
       ]);
     
     command
@@ -234,6 +207,21 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   const videoHeight = videoRatio === '9:16' ? videoResolutonPart[1] : videoResolutonPart[0];
   // 获取音频
   const audio = clip.zimuConfig.datas[0]
+  if (!audio.path) {
+    // 如果还没有合成配音，则需要合成配音
+    const audioConfig = clip.zimuConfig.audioConfig;
+    const audioOutputFileName = `${outputFileName}_${clip.name}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+    const generateAudioRes: any = await generateAudio({
+      text: audio.text,
+      voice: audioConfig.voice,
+      speech_rate: audioConfig.speech_rate,
+      volume: audioConfig.volume,
+      pitch_rate: audioConfig.pitch_rate,
+      outputFileName: audioOutputFileName
+    })
+    audio.path = generateAudioRes.outputFile;
+    audio.duration = generateAudioRes.duration;
+  }
   const audioPath = audio.path;
   let audioDuration = audio.duration ?? await getDurationWithFfmpeg(audioPath);
   audioDuration = Math.ceil(audioDuration * 100) / 100;
@@ -244,16 +232,29 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   // 获取分段列表
   const clipSegments: any[] = [];
   const tempBaseName = `${outputFileName}_${clip.name}_`;
-  // 获取字幕列表
-  const subtitles = clip.zimuConfig.datas.map(v => ({
-    text: v.text,
-    start: 0,
-    duration: audioDuration
-  }));
   // 获取字幕文件路径
-  const subtitlePath = path.join(outputDir, `${outputFileName}_${clip.name}_subtitles.srt`);
-  // 获取标题配置
-  const titleConfig = clip.videoTitleConfig?.datas[0];
+  const assFilePath = path.join(outputDir, `${outputFileName}_${clip.name}.ass`);
+  const assStyleList: string[] = [];
+  const assDialogueList: string[] = [];
+  // 生成字幕文件内容
+  const selectedSubtitle = clip.zimuConfig.datas[0];
+  const subtitleContent = generateAssFileContent(selectedSubtitle.text, clip.zimuConfig.textConfig, 0, 
+    audioDuration, 'subtitles', videoWidth, videoHeight);
+  assStyleList.push(subtitleContent.style);
+  assDialogueList.push(subtitleContent.dialogue);
+
+  if (clip.videoTitleConfig) {
+    // 获取标题配置
+    const titleConfig = clip.videoTitleConfig?.datas[0];
+    // 生成标题文件内容
+    const titleDuration = titleConfig.duration || audioDuration;
+    const titleContent = generateAssFileContent(titleConfig.text, titleConfig.textConfig, titleConfig.start, 
+      titleDuration, 'title', videoWidth, videoHeight);
+    assStyleList.push(titleContent.style);
+    assDialogueList.push(titleContent.dialogue);
+  }
+  
+  generateAssFile(assFilePath, assStyleList, assDialogueList, videoWidth, videoHeight);
   for (const video of videoList) {
     const videoPath = video.path;
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);
@@ -276,12 +277,9 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
         startTime: startTime,
         currentDuration: currentDuration,
         isOpenOriginAudio: isOpenOriginAudio,
-        subtitles: subtitles,
-        subtitlePath: subtitlePath,
-        titleConfig: titleConfig,
         videoWidth: videoWidth,
         videoHeight: videoHeight,
-        zimuConfig: clip.zimuConfig
+        assFilePath: assFilePath
       })
     }
   }
@@ -337,10 +335,9 @@ async function processVideoClipList(params) {
   log.log(JSON.stringify(params));
   const clipList = params.clips;
   const outputFileName = params.outputFileName;
-  const outputDir = params.outputDir ?? ensureAppDataSaveDir();
+  const outputDir = params.outputDir ?? getPlatformAppDataPath();
   const globalConfig = params.globalConfig;
   for (const clip of clipList) {
-    // 单镜头分片
     clip.segments = await splitClipToSegments(clip, outputDir, outputFileName, globalConfig);
   }
   log.log('split clip to segments done：')
@@ -352,9 +349,8 @@ async function processVideoClipList(params) {
   }
   log.info('segments:')
   log.info(JSON.stringify(segments));
-  for (const segment of segments) {
-    await processSegment(segment);
-  }
+  const processPromiseList = segments.map(segment => limit(() =>processSegment(segment)));
+  await Promise.all(processPromiseList);
   log.log('segment process done：')
   log.log(JSON.stringify(segments));
   // 镜头合成
@@ -390,10 +386,9 @@ async function processVideoClipList(params) {
   }
   log.log('concat videos start')
   log.log(JSON.stringify(outputSegmentList));
-  for (const segments of outputSegmentList) {
-    await concatVideos(segments.videos, segments.outputPath, globalConfig);
-  }
-  
+  const concatPromiseList = outputSegmentList.map(segments => 
+    limit(() => concatVideos(segments.videos, segments.outputPath, globalConfig)));
+  await Promise.all(concatPromiseList);
   log.log('concat videos done：')
   log.log(JSON.stringify(outputSegmentList));
   return outputSegmentList.map(v => {
@@ -415,4 +410,5 @@ export function initVideoMixAndCut() {
     return getDurationWithFfmpeg(params.path);
   })
 }
+
 

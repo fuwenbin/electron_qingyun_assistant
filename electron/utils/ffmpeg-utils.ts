@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import log from 'electron-log'
 
 export function setupFFmpeg() {
   try {
@@ -33,29 +34,24 @@ export function setupFFmpeg() {
       }
     } else {
       // 开发环境路径
-      // const ffmpegStatic = require('ffmpeg-static');
-      // const ffprobeStatic = require('ffprobe-static');
+      const basePath = path.join(app.getAppPath(), 'bin');
       
-      // ffmpegPath = ffmpegStatic;
-      // ffprobePath = ffprobeStatic.path;
-      // 开发环境路径
-      const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-      const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-      
-      ffmpegPath = ffmpegInstaller.path;
-      ffprobePath = ffprobeInstaller.path;
-    }
+      const exeExt = process.platform === 'win32' ? '.exe' : '';
+      ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+      ffprobePath = require('@ffprobe-installer/ffprobe').path;
 
-    console.log('FFmpeg路径:', ffmpegPath);
-    console.log('FFprobe路径:', ffprobePath);
+    }
     
     // 设置路径
     ffmpeg.setFfmpegPath(ffmpegPath);
     ffmpeg.setFfprobePath(ffprobePath);
+
+    log.info('FFmpeg路径:', ffmpegPath);
+    log.info('FFprobe路径:', ffprobePath);
     
     return { ffmpegPath, ffprobePath };
   } catch (error) {
-    console.error('FFmpeg初始化失败:', error);
+    log.error('FFmpeg初始化失败:', error);
     throw new Error(`视频处理引擎初始化失败: ${error.message}`);
   }
 }
@@ -70,14 +66,24 @@ export function getDurationWithFfmpeg(filePath: string): Promise<number> {
 }
 
 export async function hasAudio(filePath: string): Promise<boolean> {
-  try {
-    const execAsync = promisify(exec);
-    const { stdout } = await execAsync(`ffprobe -v error -show_streams -select_streams a "${filePath}"`);
-    return stdout.includes('codec_type=audio');
-  } catch (e) {
-    console.error(`hasAudio error: ${e}`);
-    return false;
-  }
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        log.error('FFprobe检测音频流失败:', {
+          filePath,
+          error: err.message
+        });
+        return resolve(false);
+      }
+      
+      const hasAudio = metadata.streams.some(
+        stream => stream.codec_type === 'audio'
+      );
+      
+      log.verbose(`音频流检测结果: ${filePath} -> ${hasAudio ? '有' : '无'}音频`);
+      resolve(hasAudio);
+    });
+  });
 }
 
 export function generateSrtFile(filePath: string, subtitles: any[]) {
@@ -97,7 +103,7 @@ export function formatTime(seconds: number): string {
 }
 
 // 辅助函数：获取字体路径
-export async function getFontPath(fontName: string): Promise<string> {
+export function getFontPath(fontName: string): string {
   const fontNamePathMap = {
     'Microsoft YaHei': 'msyh.ttc',
     '微软雅黑': 'msyh.ttc',
@@ -130,6 +136,27 @@ export async function getFontPath(fontName: string): Promise<string> {
       };
       const platform = process.platform;
       return path.join(systemFonts[platform] || '', fontPathName);
+    }
+  }
+}
+
+export function getFontsdir(): string {
+  // 打包后使用应用内字体
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'fonts');
+  } else {
+    // 开发环境：使用项目内字体或系统字体
+    const localFont = path.join(__dirname, '../../fonts');
+    if (fs.existsSync(localFont)) {
+      return localFont;
+    } else {
+      const systemFonts = {
+        win32: 'C:/Windows/Fonts/',
+        darwin: '/System/Library/Fonts/',
+        linux: '/usr/share/fonts/'
+      };
+      const platform = process.platform;
+      return path.join(systemFonts[platform] || '');
     }
   }
 }

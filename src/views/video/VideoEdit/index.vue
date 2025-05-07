@@ -88,10 +88,10 @@
       <!-- 右侧面板 -->
       <div class="right-panel custom-scroll">
         <GlobalConfig v-if="selectedRightConfigIndex === ''" 
-          v-model="globalConfig" :closeable="false"
+          v-model="state.globalConfig" :closeable="false"
           @changeConfigIndex="(value) => selectedRightConfigIndex = value"/>
         <ZimuConfig v-if="selectedRightConfigIndex === `globalZimuConfig`" 
-          :rootName="videoTitle" title="全局字幕与配音" v-model="globalConfig.zimuConfig" 
+          :rootName="videoTitle" title="全局字幕与配音" v-model="state.globalConfig.zimuConfig" 
           @close="closeConfigPanel" />
         <template v-for="(clip, index) in state.clips" :key="clip.name">
           <ZimuConfig v-if="selectedRightConfigIndex === `zimu-${index}`" 
@@ -124,14 +124,14 @@ const videoTitle = ref('批量混剪_' + dayjs().format('YYYYMMDDHHmm'))
 const estimateGenerateNum = ref(0)
 const estimateGenerateTime = ref(0)
 const state = reactive<any>({
-  clips: []
-})
-const globalConfig = reactive<any>({
-  ZimuConfig: undefined,
-  titleConfig: undefined,
-  backgroundMusic: undefined,
-  videoRatio: '9:16',
-  videoResolution: '1080x1920'
+  clips: [],
+  globalConfig: {
+    zimuConfig: undefined,
+    titleConfig: undefined,
+    backgroundMusic: undefined,
+    videoRatio: '9:16',
+    videoResolution: '1080x1920'
+  }
 })
 const selectedRightConfigIndex = ref('')
 let clipNo = 0;
@@ -162,18 +162,6 @@ const checkVideoList = (clips: any) => {
   return isVideoListOk;
 }
 
-const checkZimuConfig = (clips: any) => {
-  let isZimuConfigOk = true;
-  for(const clip of clips) {
-    if (!(clip.zimuConfig && clip.zimuConfig.datas[0].path)) {
-      isZimuConfigOk = false;
-      message.error('请先为镜头【' + clip.name + '】合成配音')
-      break;
-    }
-  }
-  return isZimuConfigOk;
-}
-
 const generateVideo = async () => {
   if (state.clips.length === 0) {
     message.error('请至少添加一个镜头')
@@ -182,14 +170,11 @@ const generateVideo = async () => {
   if (!checkVideoList(state.clips)) {
     return;
   }
-  if (!checkZimuConfig(state.clips)) {
-    return;
-  }
   try {
     console.log('开始合成视频')
     isGeneratingVideo.value = true;
     const params = JSON.parse(JSON.stringify({
-      globalConfig: globalConfig,
+      globalConfig: state.globalConfig,
       clips: state.clips,
       outputFileName: videoTitle.value,
     }))

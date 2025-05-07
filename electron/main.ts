@@ -1,7 +1,7 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
 import path from 'path'
-import initShowSaveDialog from './show-save-dialog';
-import initOpenFile from './open-file';
+import initShowSaveDialog from './services/show-save-dialog';
+import initOpenFile from './services/open-file';
 import { initAliyunTTS } from './services/aliyun-tts';
 import { electronCrypto } from './utils/crypto-polyfill';
 import { setupLogger } from './services/logger';
@@ -30,6 +30,8 @@ if (process.platform === 'win32') {
 }
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.env.DIST, '../public')
+// 限制内存
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192')
 
 let win: BrowserWindow | null
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
@@ -64,9 +66,6 @@ initOpenFile();
 initAliyunTTS();
 initAppDataSaveDir();
 initVideoMixAndCut();
-
-
-
 
 app.whenReady().then(() => {
   ensureAppDataSaveDir();

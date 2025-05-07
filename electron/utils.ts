@@ -133,3 +133,14 @@ export function createWebReadableStream(fileStream: fs.ReadStream): ReadableStre
     }
   });
 }
+export function escapedFilePath(filePath: string) {
+  // Windows 路径需要特殊处理
+  if (process.platform === 'win32') {
+    // 替换反斜杠为双反斜杠，并转义冒号
+    return filePath
+      .replace(/\\/g, '\\\\')  // 反斜杠转义
+      .replace(/:/g, '\\:');   // 冒号转义
+  }
+  // Linux/macOS 只需处理空格等特殊字符
+  return filePath.replace(/(\s)/g, '\\$1');
+}
