@@ -68,7 +68,7 @@ export async function generateAudio(params: any) {
           log.info('语音合成完成');
           const duration = await getDurationWithFfmpeg(outputFile);
           log.info(`语音合成完成，时长: ${duration}秒`);
-          resolve({ success: true, outputFile, duration });
+          resolve({ success: true, outputFile, duration: Math.floor(duration * 1000) / 1000 });
         })
       
         tts.on("closed", () => {

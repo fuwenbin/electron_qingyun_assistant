@@ -245,8 +245,8 @@ export function generateAssFromText(text: string, duration: number, textConfig: 
 function splitTextToSentences(text: string): string[] {
   // 按标点符号拆分，但确保句子不会太长
   const sentences: string[] = [];
-  const maxCharsPerLine = 30;
-  const maxLines = 2;
+  const maxCharsPerLine = 15;
+  const maxLines = 1;
   
   // 首先按标点符号拆分
   const roughSentences = text.split(/([。！？；\n])/).filter(s => s.trim());

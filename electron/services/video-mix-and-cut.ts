@@ -10,6 +10,7 @@ import { generateAudio } from './aliyun-tts'
 import dayjs from 'dayjs'
 import { generateAssFile, generateAssFileContent, generateAssFromText } from './video-ass'
 import pLimit from 'p-limit'
+import fs from 'fs';
 
 // 限制并发数为 CPU 核心数 -1（根据机器性能调整）
 const limit = pLimit(Math.max(1, Math.floor(require('os').cpus().length * 0.8) - 1));
@@ -286,46 +287,25 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   return clipSegments;
 }
 
-async function concatVideos(videos: string[], outputPath: string, globalConfig: any): Promise<void> {
-  // 获取视频宽高
-  const videoRatio = globalConfig.videoRatio;
-  const videoResolution = globalConfig.videoResolution;
-  const videoResolutonPart = videoResolution.split('x').map(v => parseInt(v));
-  const videoWidth = videoRatio === '9:16' ? videoResolutonPart[0] : videoResolutonPart[1];
-  const videoHeight = videoRatio === '9:16' ? videoResolutonPart[1] : videoResolutonPart[0];
+async function concatVideos(videos: string[], outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const command = ffmpeg()
-    
-    // 添加所有输入视频
-    videos.forEach(video => {
-      command.input(video)
-    })
-
-    const filterComplex: any[] = [];
-
-    for (let i = 0; i < videos.length; i++) {
-      filterComplex.push(`[${i}:v]scale=${videoWidth}:${videoHeight}:force_original_aspect_ratio=decrease,pad=${videoWidth}:${videoHeight}:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`);
-      filterComplex.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`);
-    }
-    const concatInput = videos.map((_, i) => `[v${i}][a${i}]`).join('')
-    filterComplex.push(`${concatInput} concat=n=${videos.length}:v=1:a=1[v][a]`);
-
-    command
-      .complexFilter(filterComplex)
-      .outputOptions([
-        '-map [v]', // 映射视频流
-        '-map [a]', // 映射音频流
-        '-c:v libx264', // 重新编码视频
-        '-preset fast',
-        '-crf 23',
-        '-c:a aac',     // 重新编码音频
-        '-b:a 128k',
-        '-movflags +faststart' //便于网络播放
-      ])
+    const tempFilePath = path.basename(outputPath, path.extname(outputPath)) + "_temp.txt";
+    fs.writeFileSync(tempFilePath, videos.map(v => `file '${v}'`).join('\n'));
+    ffmpeg()
+      .input(tempFilePath)
+      .inputFormat('concat')
+      .inputOptions(['-safe 0'])
+      .outputOptions(['-c copy'])
       .on('start', (cmd) => console.log('执行命令:', cmd))
       .on('progress', (progress) => console.log(`处理进度: ${Math.round(progress.percent)}%`))
-      .on('end', resolve)
-      .on('error', reject)
+      .on('end', () => {
+        fs.unlinkSync(tempFilePath);
+        resolve();
+      })
+      .on('error', (err) => {
+        fs.unlinkSync(tempFilePath);
+        reject(err);
+      })
       .save(outputPath)
   })
 }
@@ -384,13 +364,27 @@ async function processVideoClipList(params) {
       duration: segmentsDurationSum
     });
   }
-  log.log('concat videos start')
-  log.log(JSON.stringify(outputSegmentList));
-  const concatPromiseList = outputSegmentList.map(segments => 
-    limit(() => concatVideos(segments.videos, segments.outputPath, globalConfig)));
-  await Promise.all(concatPromiseList);
-  log.log('concat videos done：')
-  log.log(JSON.stringify(outputSegmentList));
+  log.log('合成视频开始:')
+  for (let i = 0; i < outputSegmentList.length; i++) {
+    const segments = outputSegmentList[i];
+    log.log(`开始合成视频: ${i + 1}/${outputSegmentList.length}, 视频路径：${outputSegmentList[i].outputPath}`);
+    log.log(JSON.stringify(segments))
+    try  {
+      // 设置5分钟超时（300000毫秒）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('视频合成操作超时（5分钟）'));
+        }, 300000); // 5分钟 = 300000毫秒
+      });
+      const concatPromise = concatVideos(segments.videos, segments.outputPath);
+      await Promise.race([concatPromise, timeoutPromise]);
+      log.log(`成功合成视频:${i + 1}/${outputSegmentList.length}`)
+    } catch (error) {
+      log.error(error);
+      log.error(`合成视频失败:${i + 1}/${outputSegmentList.length}`);
+    }
+  }
+  log.log('合成视频结束')
   return outputSegmentList.map(v => {
     return {
       outputPath: v.outputPath,

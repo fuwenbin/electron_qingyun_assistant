@@ -11,6 +11,8 @@ import { initOpenFileDialog } from './services/open-file-dialog';
 import { initProtocolCustom } from './services/protocol-custom';
 import { initGlobalShortcutRegister } from './services/global-shortcut-register';
 import { setupFFmpeg } from './utils/ffmpeg-utils';
+import { initWindowControl } from './services/window-control';
+import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
 global.crypto = electronCrypto;
 // The built directory structure
 //
@@ -31,7 +33,7 @@ if (process.platform === 'win32') {
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.env.DIST, '../public')
 // 限制内存
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192')
+autoSetOptimalMemoryLimit();
 
 let win: BrowserWindow | null
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
@@ -45,6 +47,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
+    autoHideMenuBar: true
   })
 
   // Test active push message to Renderer-process.
@@ -74,6 +77,7 @@ app.whenReady().then(() => {
   createWindow();
   initOpenFileDialog(win as BrowserWindow);
   initGlobalShortcutRegister(win);
+  initWindowControl();
 })
 
 app.on('window-all-closed', () => {

@@ -171,7 +171,7 @@ const generateAudios = async () => {
       continue;
     }
     const audioConfig = clip.zimuConfig.audioConfig;
-    const outputFileName = `${videoTitle.value}_${clip.title}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
       const params = JSON.parse(JSON.stringify({
         text: audio.text,
         voice: audioConfig.voice,
@@ -180,9 +180,13 @@ const generateAudios = async () => {
         pitch_rate: audioConfig.pitch_rate,
         outputFileName: outputFileName
       }))
+      console.log('合成配音开始：');
+      console.log(params);
       const generateRes = await window.electronAPI.text2voice(params);
-      clip.zimuConfig.datas[0].path = generateRes.outputPath;
-      clip.zimuConfig.datas[0].duration = generateRes.duration;
+      console.log('合成配音成功：');
+      console.log(generateRes);
+      state.clips[i].zimuConfig.datas[0].path = generateRes.outputFile;
+      state.clips[i].zimuConfig.datas[0].duration = generateRes.duration;
   }
 }
 
@@ -209,10 +213,10 @@ const generateVideo = async () => {
     return;
   }
   try {
+    isGeneratingVideo.value = true;
     // 为没有合成配音的字幕合成配音
     await generateAudios();
-    console.log('开始合成视频')
-    isGeneratingVideo.value = true;
+    console.log('合成视频开始')
     const params = JSON.parse(JSON.stringify({
       globalConfig: state.globalConfig,
       clips: state.clips,
@@ -220,8 +224,8 @@ const generateVideo = async () => {
     }))
     console.log(params)
     const result = await window.electronAPI.videoMixAndCut(params);
-    console.log(result);
     message.success('合成视频成功')
+    console.log(JSON.stringify(result));
   } catch (error: any) {
     console.log(error)
     message.error('合成视频失败：' + error.message)
