@@ -315,8 +315,8 @@ async function processVideoClipList(params) {
   log.log(JSON.stringify(params));
   const clipList = params.clips;
   const outputFileName = params.outputFileName;
-  const outputDir = params.outputDir ?? getPlatformAppDataPath();
   const globalConfig = params.globalConfig;
+  const outputDir = globalConfig.outputDir || getPlatformAppDataPath();
   for (const clip of clipList) {
     clip.segments = await splitClipToSegments(clip, outputDir, outputFileName, globalConfig);
   }

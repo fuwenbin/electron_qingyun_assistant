@@ -32,7 +32,7 @@ export async function generateAudio(params: any) {
       speech_rate: params.speech_rate || 0,
       pitch_rate: params.pitch_rate || 0
     };
-    const outputDir = params.output_dir || getPlatformAppDataPath();
+    const outputDir = params.outputDir || getPlatformAppDataPath();
     const outputFileName = params.outputFileName || `tts_${Date.now()}`;
     const token = await getToken();
     // 确保输出目录存在

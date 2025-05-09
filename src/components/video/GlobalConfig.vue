@@ -9,6 +9,13 @@
     </div>
     <div class="config-body">
       <div class="config-body-item">
+        <div class="item-title">存放路径</div>
+        <div class="item-content">
+          <div>{{ props.modelValue.outputDir }}</div>
+          <a-button style="margin-left: 8px;" @click="changeSaveFolder">修改</a-button>
+        </div>
+      </div>
+      <div class="config-body-item">
         <div class="item-title">全局字幕与配音</div>
         <div class="item-content">
           <template v-if="props.modelValue.zimuConfig">
@@ -35,6 +42,14 @@
         <div class="item-title">全局标题</div>
         <div class="item-content">
           <template v-if="props.modelValue.titleConfig">
+            <a-button @click="emit('changeConfigIndex', 'globalTitleConfig')">
+              <template #icon>
+                <EditOutlined />
+              </template>
+              <span>编辑标题</span>
+            </a-button>
+            <CloseOutlined v-if="props.modelValue.titleConfig" style="margin-left: 8px;"
+              @click="deleteGlobalTitleConfig" />
           </template>
           <template v-else>
             <a-button @click="emit('changeConfigIndex', 'globalTitleConfig')">
@@ -49,11 +64,18 @@
       <div class="config-body-item">
         <div class="item-title">背景音乐</div>
         <div class="item-content">
-          <template v-if="props.modelValue.backgroundMusicConfig">
-            111
+          <template v-if="props.modelValue.backgroundAudioConfig">
+            <a-button @click="emit('changeConfigIndex', 'globalBackgroundAudioConfig')">
+              <template #icon>
+                <EditOutlined />
+              </template>
+              <span>{{ props.modelValue.backgroundAudioConfig.name }}</span>
+            </a-button>
+            <CloseOutlined v-if="props.modelValue.backgroundAudioConfig" style="margin-left: 8px;"
+              @click="deleteGlobalBackgroundAudioConfig" />
           </template>
           <template v-else>
-            <a-button @click="emit('changeConfigIndex', 'globalBackgroundMusicConfig')">
+            <a-button @click="emit('changeConfigIndex', 'globalBackgroundAudioConfig')">
               <template #icon>
                 <PlusOutlined />
               </template>
@@ -119,19 +141,31 @@ const deleteGlobalZimuConfig = () => {
   })
 }
 
-// const deleteGlobalTitleConfig = () => {
-//   emit('update:modelValue', {
-//     ...props.modelValue,
-//     titleConfig: undefined
-//   })
-// }
+const deleteGlobalTitleConfig = () => {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    titleConfig: undefined
+  })
+}
 
-// const deleteGlobalBackgroundMusicConfig = () => {
-//   emit('update:modelValue', {
-//     ...props.modelValue,
-//     backgroundMusicConfig: undefined
-//   })
-// }
+const changeSaveFolder = async () => {
+  const res = await window.electronAPI.selectDirectory({
+    defaultPath: props.modelValue.outputDir
+  });
+  if (res) {
+    emit('update:modelValue', {
+      ...props.modelValue,
+      outputDir: res
+    })
+  }
+}
+
+const deleteGlobalBackgroundAudioConfig = () => {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    backgroundAudioConfig: undefined
+  })
+}
 </script>
 
 <style scoped lang="scss">
@@ -155,6 +189,15 @@ const deleteGlobalZimuConfig = () => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  .item-title {
+    width: 100px;
+  }
+  .item-content {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
 }
 
 

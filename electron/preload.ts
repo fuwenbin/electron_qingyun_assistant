@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners(channel)
   },
   showSaveDialog: (options: any) => ipcRenderer.invoke('show-save-dialog', options),
-  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  selectDirectory: (options: any) => ipcRenderer.invoke('select-directory', options && encodeArg(JSON.stringify(options))),
   openFile: (path: string) => ipcRenderer.invoke('open-file', path),
 
   getDefaultSavePath: () => ipcRenderer.invoke('get-default-save-path'),

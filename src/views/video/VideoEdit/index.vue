@@ -6,7 +6,6 @@
         <button class="btn-back" @click="goBack">
           <i class="fas fa-arrow-left"></i>
         </button>
-        <a-button @click="saveVideo">保存到草稿</a-button>
       </div>
       <div class="center-action">
         <q-input v-model="videoTitle" borderless style="width: 200px;" placeholder="视频标题" />
@@ -14,10 +13,10 @@
       <div class="right-actions">
         <div class="video-create-tip">
           <span>预计生成</span>
-          <span>{{ estimateGenerateNum || '--' }}</span>
+          <span>{{ estimateGenerateVideoNum || '--' }}</span>
           <span>条</span>
           <span style="margin-left: 10px;">预计时长</span>
-          <span>{{ estimateGenerateTime || '--' }}</span>
+          <span>{{ estimateGenerateVideoDurationForShow || '--' }}</span>
           <span>秒</span>
         </div>
         <a-button type="primary" @click="generateVideo" :loading="isGeneratingVideo">合成视频</a-button>
@@ -91,8 +90,14 @@
           v-model="state.globalConfig" :closeable="false"
           @changeConfigIndex="(value) => selectedRightConfigIndex = value"/>
         <ZimuConfig v-if="selectedRightConfigIndex === `globalZimuConfig`" 
-          :rootName="videoTitle" title="全局字幕与配音" v-model="state.globalConfig.zimuConfig" 
+          :rootName="videoTitle" title="全局配置" v-model="state.globalConfig.zimuConfig" 
           @close="closeConfigPanel" />
+        <VideoTitleConfig v-if="selectedRightConfigIndex === `globalTitleConfig`" 
+          :rootName="videoTitle" title="全局配置" v-model="state.globalConfig.titleConfig" 
+          @close="closeConfigPanel" />
+        <BackgroundAudioConfig v-if="selectedRightConfigIndex === `globalBackgroundAudioConfig`" 
+          v-model="state.globalConfig.backgroundAudioConfig" 
+          @close="closeConfigPanel"/>
         <template v-for="(clip, index) in state.clips" :key="clip.name">
           <ZimuConfig v-if="selectedRightConfigIndex === `zimu-${index}`" 
             :rootName="videoTitle" :title="clip.name" v-model="clip.zimuConfig" 
@@ -107,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue'
+import { onMounted, ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import VideoChooser from '@/components/VideoChooser.vue'
@@ -116,38 +121,46 @@ import { message } from 'ant-design-vue'
 import ZimuConfig from '@/components/video/ZimuConfig.vue'
 import GlobalConfig from '@/components/video/GlobalConfig.vue'
 import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
+import BackgroundAudioConfig from '@/components/video/BackgroundAudioConfig.vue'
+import { formatDuration } from '@/utils/common-utils'
 
 const router = useRouter()
 
 // 状态
 const videoTitle = ref('批量混剪_' + dayjs().format('YYYYMMDDHHmm'))
-const estimateGenerateNum = ref(0)
-const estimateGenerateTime = ref(0)
 const state = reactive<any>({
   clips: [],
   globalConfig: {
     zimuConfig: undefined,
     titleConfig: undefined,
-    backgroundMusic: undefined,
+    backgroundAudioConfig: undefined,
     videoRatio: '9:16',
-    videoResolution: '1080x1920'
+    videoResolution: '1080x1920',
+    outputDir: undefined
   }
 })
 const selectedRightConfigIndex = ref('')
 let clipNo = 0;
 const isGeneratingVideo = ref(false);
+const estimateGenerateVideoNum = ref(0);
+const estimateGenerateVideoDuration = ref(0);
+
+const estimateGenerateVideoDurationForShow = computed(() => {
+  if (estimateGenerateVideoDuration.value > 0) {
+    return formatDuration(estimateGenerateVideoDuration.value, 0)
+  } else {
+    return ''
+  }
+})
+
 
 const editClipName = (index: number) => {
-  state.clips.value[index].isNameEditing = true
+  state.clips[index].isNameEditing = true
 }
 
 // 方法
 const goBack = () => {
   router.back()
-}
-
-const saveVideo = () => {
-  console.log('保存视频')
 }
 
 const checkVideoList = (clips: any) => {
@@ -164,6 +177,7 @@ const checkVideoList = (clips: any) => {
 
 
 const generateAudios = async () => {
+  const outputDir = state.globalConfig.outputDir;
   for (let i = 0; i < state.clips.length; i++) {
     const clip = state.clips[i];
     const audio = clip.zimuConfig.datas[0];
@@ -178,7 +192,8 @@ const generateAudios = async () => {
         speech_rate: audioConfig.speech_rate,
         volume: audioConfig.volume,
         pitch_rate: audioConfig.pitch_rate,
-        outputFileName: outputFileName
+        outputFileName: outputFileName,
+        outputDir
       }))
       console.log('合成配音开始：');
       console.log(params);
@@ -201,6 +216,15 @@ const checkZimuList = (clips: any[]) => {
   }
   return isZimuListOk;
 }
+
+const checkGlobalConfig = (globalConfig: any) => {
+  let isGlobalConfigOk = true;
+  if (!globalConfig.outputDir) {
+    message.error('请先选择文件存放路径')
+    return false;
+  }
+  return isGlobalConfigOk;
+}
 const generateVideo = async () => {
   if (state.clips.length === 0) {
     message.error('请至少添加一个镜头')
@@ -212,11 +236,14 @@ const generateVideo = async () => {
   if (!checkZimuList(state.clips)) {
     return;
   }
+  if (!checkGlobalConfig()) {
+    return;
+  }
   try {
     isGeneratingVideo.value = true;
     // 为没有合成配音的字幕合成配音
     await generateAudios();
-    console.log('合成视频开始')
+    estimateVideoResult();
     const params = JSON.parse(JSON.stringify({
       globalConfig: state.globalConfig,
       clips: state.clips,
@@ -233,6 +260,28 @@ const generateVideo = async () => {
     console.log('合成视频结束')
     isGeneratingVideo.value = false;
   }
+}
+
+const estimateVideoResult = () => {
+  let totalDuration = 0;
+  let totalNum = 0;
+  for (let i = 0; i < state.clips.length; i++) {
+    const clip = state.clips[i];
+    const videoList = clip.videoList;
+    const audioDuration = clip.zimuConfig.datas[0].duration;
+    let segmentsNum = 0;
+    for (let j = 0;j < videoList.length; j++) {
+      const itemVideo = videoList[j];
+      const itemVideoDuration = itemVideo.duration;
+      segmentsNum += Math.ceil(itemVideoDuration / audioDuration);
+    }
+    if (totalNum === 0 || (segmentsNum > 1 && segmentsNum < totalNum)) {
+      totalNum = segmentsNum;
+    }
+    totalDuration += audioDuration;
+  }
+  estimateGenerateVideoNum.value = totalNum;
+  estimateGenerateVideoDuration.value = totalDuration;
 }
 
 const addClip = () => {
@@ -269,9 +318,16 @@ const closeConfigPanel = () => {
   selectedRightConfigIndex.value = ''
 }
 
+const getDefaultSavePath = async () => {
+  const res = await window.electronAPI.getDefaultSavePath();
+  state.globalConfig.outputDir = res;
+}
+
 addClip();
+addClip();
+getDefaultSavePath();
 onMounted(async () => {
-  // do nothing
+  
 });
 </script>
 

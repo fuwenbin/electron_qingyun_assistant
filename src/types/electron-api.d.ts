@@ -25,7 +25,7 @@ declare global {
         filePath?: string;
       }>;
 
-      selectDirectory(): Promise<string | null>;
+      selectDirectory(options?: any): Promise<string | null>;
       
       openFile(path: string): Promise<void>;
       text2voice(params: any): Promise<any>;
@@ -34,6 +34,7 @@ declare global {
       openFileDialog(options: any): Promise<any>;
       readFile(filePath: string): Promise<ArrayBuffer>;
       readFileBase64(filePath: string): Promise<string>;
+      getDefaultSavePath(): Promise<string>;
     };
   }
 }
