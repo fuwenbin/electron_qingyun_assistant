@@ -123,6 +123,7 @@ import GlobalConfig from '@/components/video/GlobalConfig.vue'
 import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
 import BackgroundAudioConfig from '@/components/video/BackgroundAudioConfig.vue'
 import { formatDuration } from '@/utils/common-utils'
+import { title } from 'process'
 
 const router = useRouter()
 
@@ -205,6 +206,54 @@ const generateAudios = async () => {
   }
 }
 
+const generateAssFiles = async () => {
+  const videoRatio = state.globalConfig.videoRatio;
+  const videoResolution = state.globalConfig.videoResolution;
+  const videoResolutionParts = videoResolution.split('x');
+  const isVertical = videoRatio === '9:16';
+  const videoWidth = isVertical ? videoResolutionParts[0] : videoResolutionParts[1];
+  const videoHeight = isVertical ? videoResolutionParts[1] : videoResolutionParts[0];
+  for (let i = 0; i < state.clips.length; i++) {
+    const clip = state.clips[i];
+    const outputPath = `${videoTitle.value}_${i + 1}.ass`;
+    // 标题位置
+    if (clip.videoTitleConfig?.datas[0].textConfig) {
+      let titlePosX = videoWidth / 2;
+      let titlePosY = 30;
+      const titleTextAlign = clip.videoTitleConfig.datas[0].textConfig.textAlign;
+      if (titleTextAlign === 'left') {
+        titlePosX = 30;
+      } else if (titleTextAlign === 'right') {
+        titlePosX = videoWidth - 30;
+      }
+      state.clips[i].videoTitleConfig.datas[0].posX = titlePosX;
+      state.clips[i].videoTitleConfig.datas[0].posY = titlePosY;
+    }
+    // 字幕位置
+    if (clip.zimuConfig?.textConfig) {
+      let zimuPosX = videoWidth / 2;
+      let zimuPosY =  isVertical ? videoHeight - 550 : videoHeight - 200;
+      const zimuTextAlign = clip.zimuConfig?.textConfig.textAlign
+      if (zimuTextAlign === 'left') {
+        zimuPosX = 30;
+      } else if (zimuTextAlign === 'right') {
+        zimuPosX = videoWidth - 30;
+      }
+      state.clips[i].zimuConfig.posX = zimuPosX;
+      state.clips[i].zimuConfig.posY = zimuPosY;
+    }
+    const params = JSON.parse(JSON.stringify({
+      zimuConfig: clip.zimuConfig,
+      videoTitleConfig: clip.videoTitleConfig,
+      globalConfig: state.globalConfig,
+      outputPath
+    }))
+    const res = await window.electronAPI.generateAssFile(params)
+    console.log(res);
+    state.clips[i].assFilePath = res;
+  }
+}
+
 const checkZimuList = (clips: any[]) => {
   let isZimuListOk = true;
   for(const clip of clips) {
@@ -243,16 +292,19 @@ const generateVideo = async () => {
     isGeneratingVideo.value = true;
     // 为没有合成配音的字幕合成配音
     await generateAudios();
+    // 预估视频生成个数与时长
     estimateVideoResult();
+    // 生成字幕与标题的ass文件
+    await generateAssFiles();
     const params = JSON.parse(JSON.stringify({
       globalConfig: state.globalConfig,
       clips: state.clips,
       outputFileName: videoTitle.value,
     }))
-    console.log(params)
+    console.log('开始合成视频，参数：' + JSON.stringify(params));
     const result = await window.electronAPI.videoMixAndCut(params);
     message.success('合成视频成功')
-    console.log(JSON.stringify(result));
+    console.log('合成视频成功，结果：' + JSON.stringify(result));
   } catch (error: any) {
     console.log(error)
     message.error('合成视频失败：' + error.message)

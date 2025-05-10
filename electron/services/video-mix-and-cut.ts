@@ -77,7 +77,8 @@ async function processSegment(segment: any): Promise<void>  {
       options: {
         filename: `'${escapedFilePath(assFilePath)}'`,
         fontsdir: `'${escapedFilePath(fontsdir)}'`,
-        original_size: `${videoWidth}x${videoHeight}`
+        original_size: `${videoWidth}x${videoHeight}`,
+        stream_index: '0'
       },
       inputs: 'padded_video',
       outputs: 'video_with_subtitles'
@@ -234,28 +235,7 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   const clipSegments: any[] = [];
   const tempBaseName = `${outputFileName}_${clip.name}_`;
   // 获取字幕文件路径
-  const assFilePath = path.join(outputDir, `${outputFileName}_${clip.name}.ass`);
-  const assStyleList: string[] = [];
-  const assDialogueList: string[] = [];
-  // 生成字幕文件内容
-  const selectedSubtitle = clip.zimuConfig.datas[0];
-  const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, clip.zimuConfig.textConfig,
-    videoWidth, videoHeight);
-  assStyleList.push(...subtitlesContentList.map(v => v.style));
-  assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
-
-  if (clip.videoTitleConfig) {
-    // 获取标题配置
-    const titleConfig = clip.videoTitleConfig?.datas[0];
-    // 生成标题文件内容
-    const titleDuration = titleConfig.duration || audioDuration;
-    const titleContent = generateAssFileContent(titleConfig.text, titleConfig.textConfig, titleConfig.start, 
-      titleDuration, 'title', videoWidth, videoHeight, 'title');
-    assStyleList.push(titleContent.style);
-    assDialogueList.push(titleContent.dialogue);
-  }
-  
-  generateAssFile(assFilePath, assStyleList, assDialogueList, videoWidth, videoHeight);
+  const assFilePath = clip.assFilePath;
   for (const video of videoList) {
     const videoPath = video.path;
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);

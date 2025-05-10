@@ -13,6 +13,7 @@ import { initGlobalShortcutRegister } from './services/global-shortcut-register'
 import { setupFFmpeg } from './utils/ffmpeg-utils';
 import { initWindowControl } from './services/window-control';
 import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
+import { initVideoAss } from './services/video-ass';
 global.crypto = electronCrypto;
 // The built directory structure
 //
@@ -69,6 +70,7 @@ initOpenFile();
 initAliyunTTS();
 initAppDataSaveDir();
 initVideoMixAndCut();
+initVideoAss();
 
 app.whenReady().then(() => {
   ensureAppDataSaveDir();

@@ -2,8 +2,9 @@ import fs from 'fs';
 import { ipcMain } from 'electron';
 import { decodeArg } from '../utils';
 import path from 'path';
+import log from 'electron-log'
 export function generateAssFileContent(text: string, textConfig: any, start: number, duration: number, 
-  titleType: string, videoWidth: number, videoHeight: number, name: string) {
+  titleType: string, posX: number, posY: number, name: string) {
   const { fontFamily, fontSize, fontWeight, underline, italic, textAlign, customStyle } = textConfig;
   let fontColor = textConfig.fontColor.replace('#', '');
   let OutlineColour = '000000';
@@ -13,70 +14,47 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
     'center': titleType === 'subtitles' ? 2 : 8,
     'right': titleType === 'subtitles' ? 3 : 9
   }
-  const scrollSpeed = calculateOptimalSpeed(videoHeight, duration);
-  const Effect = titleType === 'subtitles' ? 
-      `Scroll up;${scrollSpeed}` : 
-      '';
   let BorderStyle = 1;
-  let Outline = 1;
-  let posX = videoWidth / 2;
-  let posY = 10;
-  if (titleType === 'subtitles') {
-    posX = videoWidth / 2;
-    posY = videoHeight - 10;
-  }
+  let Outline = 2;
   if (customStyle === 'custom-style-1') {
-    Outline = 2;
     OutlineColour = '1A1A1A';
     fontColor = 'ffffff';
   } else if (customStyle === 'custom-style-2') {
-    Outline = 2;
     OutlineColour = '1A1A1A';
     fontColor = '627EE9';
   } else if (customStyle === 'custom-style-3') {
-    Outline = 2;
     OutlineColour = '1A1A1A';
     fontColor = '1A1A1A';
   } else if (customStyle === 'custom-style-4') {
-    Outline = 2;
     OutlineColour = 'B463FE';
     fontColor = 'B463FE';
   } else if (customStyle === 'custom-style-5') {
-    Outline = 2;
     OutlineColour = 'FF9C20';
     fontColor = 'FF9C20';
   } else if (customStyle === 'custom-style-6') {
-    Outline = 2;
     OutlineColour = '2278FF';
     fontColor = '2278FF';
   } else if (customStyle === 'custom-style-7') {
     BorderStyle = 3;
-    Outline = 2;
-    OutlineColour = '1A1A1A';
     fontColor = '1A1A1A';
-    BackColour = 'FFE306'
+    BackColour = 'FFE306';
+    Outline = 4;
+    OutlineColour = 'FFE306';
   } else if (customStyle === 'custom-style-8') {
-    Outline = 2;
     OutlineColour = '1A1A1A';
     fontColor = 'FAF5B0';
   } else if (customStyle === 'custom-style-9') {
-    Outline = 2;
     OutlineColour = '1A1A1A';
     fontColor = 'FF9C20';
   } else if (customStyle === 'custom-style-10') {
-    Outline = 2;
     OutlineColour = 'F09CAF';
     fontColor = 'FFFFFF';
   } else if (customStyle === 'custom-style-11') {
-    Outline = 2;
     OutlineColour = 'F86F32';
     fontColor = 'FDDC63';
   }
-  // 确保PlayRes与视频分辨率比例一致
-  const playResX = 384;
-  const playResY = Math.round(playResX * (videoHeight / videoWidth));
-  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
-  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,${Effect},{\pos(${posX},${posY})}${text}`;
+  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour, '80')},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
+  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,,{\\pos(${posX},${posY})\\4a&H80\\4c&H00FFFF}${text}`;
   return {
     style: assStyle,
     dialogue: assDialogue
@@ -108,6 +86,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ${dialogueListContent}
   `;
   fs.writeFileSync(outputPath, assContent.trim());
+  return outputPath;
 }
 
 function formatTime(seconds: number): string {
@@ -128,8 +107,8 @@ function calculateOptimalSpeed(videoWidth: number, duration: number): number {
   return (videoWidth * 1.2) / duration;
 }
 
-export function generateAssFromText(text: string, duration: number, textConfig: any, videoWidth: number, videoHeight: number) {
-  const sentences = splitTextToSentences(text);
+export function generateAssFromText(text: string, duration: number, textConfig: any, posX: number, posY: number) {
+  const sentences = splitTextToSentences(text, textConfig.fontSize);
   const segments = calculateSegments(sentences, duration);
   const result: any[] = [];
   for (let i = 0; i < segments.length; i++) {
@@ -137,7 +116,7 @@ export function generateAssFromText(text: string, duration: number, textConfig: 
     const name = `subtitles-${i}`;
     const segmentDuration = segment.end - segment.start;
     const segmentContent = generateAssFileContent(segment.text, textConfig, segment.start, segmentDuration, 
-      "subtitles", videoWidth, videoHeight, name);
+      "subtitles", posX, posY, name);
     result.push({
       style: segmentContent.style,
       dialogue: segmentContent.dialogue
@@ -149,31 +128,54 @@ export function generateAssFromText(text: string, duration: number, textConfig: 
 /**
    * 将文本拆分为适合字幕显示的句子
    */
-function splitTextToSentences(text: string): string[] {
+function splitTextToSentences(text: string, fontSize: number): string[] {
   // 按标点符号拆分，但确保句子不会太长
   const sentences: string[] = [];
-  const maxCharsPerLine = 15;
+  const maxCharsPerLine = getMaxCharNumPerLine(fontSize);
+  log.log('#######################################')
+  log.log('字幕单行最长字符数：' + maxCharsPerLine);
+  log.log('#######################################')
   const maxLines = 1;
+  const maxCharNum = maxCharsPerLine * maxLines;
   
   // 首先按标点符号拆分
   const roughSentences = text.split(/([。！？；\n])/).filter(s => s.trim());
+  log.log('字幕分句结果：')
+  log.log(JSON.stringify(roughSentences));
   
   // 进一步拆分过长的句子
   for (let i = 0; i < roughSentences.length; i++) {
     let sentence = roughSentences[i];
     
     // 如果句子太长，按逗号或空格拆分
-    if (sentence.length > maxCharsPerLine * maxLines) {
+    if (sentence.length > maxCharNum) {
       const parts = sentence.split(/([,，])/).filter(s => s.trim());
       for (const part of parts) {
-        if (part.length > maxCharsPerLine * maxLines) {
+        if (part.length > maxCharNum) {
           // 如果部分仍然太长，按单词拆分
           const words = part.split(/\s+/);
+          log.log('句子分词结果：')
+          log.log(JSON.stringify(words));
           let currentLine = '';
           for (const word of words) {
-            if (currentLine.length + word.length > maxCharsPerLine) {
-              if (currentLine) sentences.push(currentLine);
-              currentLine = word;
+            if (currentLine.length + word.length > maxCharNum) {
+              if (word.length === maxCharNum) {
+                if (currentLine) {
+                  sentences.push(currentLine);
+                }
+                sentences.push(word);
+              } else {
+                const needToSplitLine = currentLine + (currentLine ? ' ' : '') + word;
+                for (let i = 0; i < needToSplitLine.length;) {
+                  const endIndex = Math.min(i + maxCharNum, needToSplitLine.length);
+                  if (endIndex < needToSplitLine.length) {
+                    sentences.push(needToSplitLine.substring(i, endIndex));
+                  } else {
+                    currentLine = needToSplitLine.substring(i, endIndex);
+                  }
+                  i = endIndex;
+                }
+              }
             } else {
               currentLine += (currentLine ? ' ' : '') + word;
             }
@@ -187,7 +189,8 @@ function splitTextToSentences(text: string): string[] {
       sentences.push(sentence);
     }
   }
-  
+  log.log('字幕分屏结果：')
+  log.log(JSON.stringify(sentences))
   return sentences;
 }
 
@@ -221,32 +224,49 @@ function calculateSegments(sentences: string[], totalDuration: number): any[] {
   return segments;
 }
 
+function getMaxCharNumPerLine(fontSize: number) {
+  const BASE_VIDEO_WIDTH = 1280;
+  const maxCharNum = Math.floor(BASE_VIDEO_WIDTH / (fontSize * 0.6) / 2);
+  return maxCharNum;
+}
+
 export function generateAssFileFromConfig(videoTitleConfig, zimuConfig, globalConfig, outputPath) {
-  const videoWidth = globalConfig.videoWidth;
-  const videoHeight = globalConfig.videoHeight;
+  const videoRatio = globalConfig.videoRatio;
+  const videoResolution = globalConfig.videoResolution;
+  const videoResolutionParts = videoResolution.split('x');
+  const isVerticalVideo = videoRatio === '9:16';
+  const videoWidth = isVerticalVideo ? videoResolutionParts[0] : videoResolutionParts[1];
+  const videoHeight = isVerticalVideo ? videoResolutionParts[1] : videoResolutionParts[0];
   const assFilePath = path.join(globalConfig.outputDir,  outputPath);
+  console.log(assFilePath);
+  console.log(outputPath);
+  console.log(globalConfig.outputDir);
   // 获取字幕文件路径
-    const assStyleList: string[] = [];
-    const assDialogueList: string[] = [];
-    // 生成字幕文件内容
-    const selectedSubtitle = zimuConfig.datas[0];
-    const audioDuration = zimuConfig.datas[0].duration;
-    const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, zimuConfig.textConfig,
-      videoWidth, videoHeight);
-    assStyleList.push(...subtitlesContentList.map(v => v.style));
-    assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
+  const assStyleList: string[] = [];
+  const assDialogueList: string[] = [];
+  // 生成字幕文件内容
+  const selectedSubtitle = zimuConfig.datas[0];
+  const audioDuration = zimuConfig.datas[0].duration;
+  const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, zimuConfig.textConfig,
+    zimuConfig.posX, zimuConfig.posY);
+  assStyleList.push(...subtitlesContentList.map(v => v.style));
+  assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
   if (videoTitleConfig) {
     // 获取标题配置
     const titleConfig = videoTitleConfig?.datas[0];
     // 生成标题文件内容
     const titleDuration = titleConfig.duration || audioDuration;
-    const titleContent = generateAssFileContent(titleConfig.text, titleConfig.textConfig, titleConfig.start, 
-      titleDuration, 'title', videoWidth, videoHeight, 'title');
+    // 标题分行
+    const titleLines = splitTextToSentences(titleConfig.text, titleConfig.textConfig.fontSize);
+    const formattedTitle = titleLines.join('\\n');
+    const titleContent = generateAssFileContent(formattedTitle, titleConfig.textConfig, titleConfig.start, 
+      titleDuration, 'title', titleConfig.posX, titleConfig.posY, 'title');
     assStyleList.push(titleContent.style);
     assDialogueList.push(titleContent.dialogue);
   }
   
-  generateAssFile(outputPath, assStyleList, assDialogueList, videoWidth, videoHeight);
+  generateAssFile(assFilePath, assStyleList, assDialogueList, videoWidth, videoHeight);
+  return assFilePath;
 }
 
 export function initVideoAss() {
