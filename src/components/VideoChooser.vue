@@ -40,8 +40,23 @@ const selectFiles = async () => {
       { name: 'Videos', extensions: ['mkv', 'avi', 'mp4'] }
     ]
   })
-  console.log(resultList);
-  emit('update:modelValue', resultList)
+  if (resultList.length === 0) {
+    return
+  } else {
+    let newList = props.modelValue;
+    if (newList && newList.length > 0) {
+      for (let i = 0; i < resultList.length; i++) {
+        const resultItem  = resultList[i];
+        if (newList.find((item: any) => item.url !== resultItem.url)) {
+          newList.push(resultItem);
+        }
+      }
+    } else {
+      newList = resultList;
+    }
+    emit('update:modelValue', newList)
+  }
+  
 }
 
 const handlePreview = (item: any) => {

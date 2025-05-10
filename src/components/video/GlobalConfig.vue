@@ -15,7 +15,7 @@
           <a-button style="margin-left: 8px;" @click="changeSaveFolder">修改</a-button>
         </div>
       </div>
-      <div class="config-body-item">
+      <div v-if="false" class="config-body-item">
         <div class="item-title">全局字幕与配音</div>
         <div class="item-content">
           <template v-if="props.modelValue.zimuConfig">
@@ -38,7 +38,7 @@
           </template>
         </div>
       </div>
-      <div class="config-body-item">
+      <div v-if="false" class="config-body-item">
         <div class="item-title">全局标题</div>
         <div class="item-content">
           <template v-if="props.modelValue.titleConfig">
@@ -69,7 +69,7 @@
               <template #icon>
                 <EditOutlined />
               </template>
-              <span>{{ props.modelValue.backgroundAudioConfig.name }}</span>
+              <span>{{ props.modelValue.backgroundAudioConfig.audio.name }}</span>
             </a-button>
             <CloseOutlined v-if="props.modelValue.backgroundAudioConfig" style="margin-left: 8px;"
               @click="deleteGlobalBackgroundAudioConfig" />

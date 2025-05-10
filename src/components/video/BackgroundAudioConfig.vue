@@ -5,8 +5,9 @@
         <div class="item-label">音乐音量</div>
         <div class="item-content">
           <a-slider :value="props.modelValue.volume" :min="0" :max="100" :step="1" 
-            style="width: 250px;"
+            style="flex: 1;"
             @change="changeVolume"/>
+          <div style="margin-left: 10px;font-size: 16px;width: 30px;">{{ props.modelValue.volume }}</div>
         </div>
       </div>
       <div class="config-item">
@@ -17,12 +18,19 @@
           </div>
         </div>
       </div>
+      <div v-if="props.modelValue.audio" class="config-item">
+        <div class="item-content">
+          <AudioPlayer :modelValue="props.modelValue.audio" @remove="removeAudio" @update:modelValue="updateAudioInfo"/>
+        </div>
+      </div>
     </div>
   </ConfigPanel>
 </template>
 <script lang="ts" setup>
 import ConfigPanel from './ConfigPanel.vue';
 import { UploadOutlined } from '@ant-design/icons-vue';
+import AudioPlayer from '@/components/media/audio/AudioPlayer.vue';
+import { message } from 'ant-design-vue';
 
 const props = withDefaults(defineProps<{
   modelValue: any
@@ -37,15 +45,36 @@ const changeVolume = (value: number) => {
 }
 
 const chooseBackgroundAudio = async () => {
-  const fileList = await window.electronAPI.openFileDialog({
-    filters: [
-      { name: 'Audios', extensions: ['mp3', 'm4a', 'aac', 'wav', 'wma', 'ogg', 'm4r', 'flac', 'arm'] }
-    ]
-  })
-  const selectedFile = fileList[0]
+  try {
+    const fileList = await window.electronAPI.openFileDialog({
+      filters: [
+        { name: 'Audios', extensions: ['mp3', 'm4a', 'aac', 'wav', 'wma', 'ogg', 'm4r', 'flac', 'arm'] }
+      ]
+    })
+    if (fileList.length > 0) {
+      const selectedFile = fileList[0]
+      emit('update:modelValue', {
+        ...props.modelValue,
+        audio: selectedFile
+      })
+    }
+  } catch (error: any) {
+    console.log(error)
+    message.error('打开文件失败:' + error.message);
+  }
+}
+
+const removeAudio = () => {
   emit('update:modelValue', {
     ...props.modelValue,
-    ...selectedFile
+    audio: null
+  })
+}
+
+const updateAudioInfo = (info: any) => {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    audio: info
   })
 }
 </script>
@@ -54,7 +83,8 @@ const chooseBackgroundAudio = async () => {
 .config-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
+  padding: 0 40px;
 }
 .config-item {
   display: flex;

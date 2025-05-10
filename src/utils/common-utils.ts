@@ -18,3 +18,11 @@ export function formatDuration(seconds: number, decimalPlaces = 2) {
   const tail = cs > 0 ? `.${cs.toString().padStart(decimalPlaces, '0')}` : '';
   return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}${tail}`;
 }
+
+export function formatShortDuration(seconds: number, decimalPlaces = 2) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const cs = Math.floor((seconds - Math.floor(seconds)) * 10 * decimalPlaces);
+  const tail = cs > 0 ? `.${cs.toString().padStart(decimalPlaces, '0')}` : '';
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}${tail}`;
+}
