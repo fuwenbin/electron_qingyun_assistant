@@ -1,101 +1,7 @@
 import fs from 'fs';
-import { getPlatformAppDataPath } from './default-save-path';
+import { ipcMain } from 'electron';
+import { decodeArg } from '../utils';
 import path from 'path';
-
-export function generateAssSubtitle(text: string, textConfig: any, start: number, duration: number, outputPath: string, 
-  titleType: string, videoWidth: number, videoHeight: number) {
-  const { fontFamily, fontSize, fontWeight, underline, italic, textAlign, customStyle } = textConfig;
-  let fontColor = textConfig.fontColor.replace('#', '');
-  let OutlineColour = '000000';
-  let BackColour = '000000';
-  let AlignmentMap = {
-    'left': titleType === 'subtitles' ? 1 : 7,
-    'center': titleType === 'subtitles' ? 2 : 8,
-    'right': titleType === 'subtitles' ? 3 : 9
-  }
-  const isVertical = videoWidth < videoHeight;
-  let MarginV = titleType === 'subtitles' ? 100 : 30
-  if (!isVertical) {
-    MarginV = titleType === 'subtitles' ? 10 : 0
-  }
-  const scrollSpeed = calculateOptimalSpeed(videoHeight, duration);
-  const Effect = titleType === 'subtitles' ? 
-      `Scroll up;${scrollSpeed}` : 
-      '';
-  let BorderStyle = 1;
-  let Outline = 1;
-  if (customStyle === 'custom-style-1') {
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = 'ffffff';
-  } else if (customStyle === 'custom-style-2') {
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = '627EE9';
-  } else if (customStyle === 'custom-style-3') {
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = '1A1A1A';
-  } else if (customStyle === 'custom-style-4') {
-    Outline = 2;
-    OutlineColour = 'B463FE';
-    fontColor = 'B463FE';
-  } else if (customStyle === 'custom-style-5') {
-    Outline = 2;
-    OutlineColour = 'FF9C20';
-    fontColor = 'FF9C20';
-  } else if (customStyle === 'custom-style-6') {
-    Outline = 2;
-    OutlineColour = '2278FF';
-    fontColor = '2278FF';
-  } else if (customStyle === 'custom-style-7') {
-    BorderStyle = 3;
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = '1A1A1A';
-    BackColour = 'FFE306'
-  } else if (customStyle === 'custom-style-8') {
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = 'FAF5B0';
-  } else if (customStyle === 'custom-style-9') {
-    Outline = 2;
-    OutlineColour = '1A1A1A';
-    fontColor = 'FF9C20';
-  } else if (customStyle === 'custom-style-10') {
-    Outline = 2;
-    OutlineColour = 'F09CAF';
-    fontColor = 'FFFFFF';
-  } else if (customStyle === 'custom-style-11') {
-    Outline = 2;
-    OutlineColour = 'F86F32';
-    fontColor = 'FDDC63';
-  }
-   // 确保PlayRes与视频分辨率比例一致
-  const playResX = 384;
-  const playResY = Math.round(playResX * (videoHeight / videoWidth));
-  const assContent = `
-[Script Info]
-Title: Dynamic Subtitles
-ScriptType: v4.00+
-PlayResX: ${playResX}
-PlayResY: ${playResY}
-ScaledBorderAndShadow: yes
-WrapStyle: 0
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},30,30,${MarginV},0
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},Default,,0,0,0,${Effect},${text}
-  `;
-  const fullFilePath = path.join(getPlatformAppDataPath(), outputPath);
-  fs.writeFileSync(fullFilePath, assContent.trim());
-  return fullFilePath;
-}
-
 export function generateAssFileContent(text: string, textConfig: any, start: number, duration: number, 
   titleType: string, videoWidth: number, videoHeight: number, name: string) {
   const { fontFamily, fontSize, fontWeight, underline, italic, textAlign, customStyle } = textConfig;
@@ -107,17 +13,18 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
     'center': titleType === 'subtitles' ? 2 : 8,
     'right': titleType === 'subtitles' ? 3 : 9
   }
-  const isVertical = videoWidth < videoHeight;
-  let MarginV = titleType === 'subtitles' ? 100 : 30
-  if (!isVertical) {
-    MarginV = titleType === 'subtitles' ? 10 : 0
-  }
   const scrollSpeed = calculateOptimalSpeed(videoHeight, duration);
   const Effect = titleType === 'subtitles' ? 
       `Scroll up;${scrollSpeed}` : 
       '';
   let BorderStyle = 1;
   let Outline = 1;
+  let posX = videoWidth / 2;
+  let posY = 10;
+  if (titleType === 'subtitles') {
+    posX = videoWidth / 2;
+    posY = videoHeight - 10;
+  }
   if (customStyle === 'custom-style-1') {
     Outline = 2;
     OutlineColour = '1A1A1A';
@@ -168,8 +75,8 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
   // 确保PlayRes与视频分辨率比例一致
   const playResX = 384;
   const playResY = Math.round(playResX * (videoHeight / videoWidth));
-  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},30,30,${MarginV},0`;
-  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,${Effect},${text}`;
+  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour)},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
+  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,${Effect},{\pos(${posX},${posY})}${text}`;
   return {
     style: assStyle,
     dialogue: assDialogue
@@ -179,8 +86,8 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
 export function generateAssFile(outputPath: string, styleList: string[], dialogueList: string[], 
   videoWidth: number, videoHeight: number) {
   // 确保PlayRes与视频分辨率比例一致
-  const playResX = 384;
-  const playResY = Math.round(playResX * (videoHeight / videoWidth));
+  const playResX = videoWidth;
+  const playResY = videoHeight;
   const styleListContent = styleList.join('\n');
   const dialogueListContent = dialogueList.join('\n')
     const assContent = `
@@ -312,5 +219,40 @@ function calculateSegments(sentences: string[], totalDuration: number): any[] {
   }
   
   return segments;
+}
+
+export function generateAssFileFromConfig(videoTitleConfig, zimuConfig, globalConfig, outputPath) {
+  const videoWidth = globalConfig.videoWidth;
+  const videoHeight = globalConfig.videoHeight;
+  const assFilePath = path.join(globalConfig.outputDir,  outputPath);
+  // 获取字幕文件路径
+    const assStyleList: string[] = [];
+    const assDialogueList: string[] = [];
+    // 生成字幕文件内容
+    const selectedSubtitle = zimuConfig.datas[0];
+    const audioDuration = zimuConfig.datas[0].duration;
+    const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, zimuConfig.textConfig,
+      videoWidth, videoHeight);
+    assStyleList.push(...subtitlesContentList.map(v => v.style));
+    assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
+  if (videoTitleConfig) {
+    // 获取标题配置
+    const titleConfig = videoTitleConfig?.datas[0];
+    // 生成标题文件内容
+    const titleDuration = titleConfig.duration || audioDuration;
+    const titleContent = generateAssFileContent(titleConfig.text, titleConfig.textConfig, titleConfig.start, 
+      titleDuration, 'title', videoWidth, videoHeight, 'title');
+    assStyleList.push(titleContent.style);
+    assDialogueList.push(titleContent.dialogue);
+  }
+  
+  generateAssFile(outputPath, assStyleList, assDialogueList, videoWidth, videoHeight);
+}
+
+export function initVideoAss() {
+  ipcMain.handle('generate-ass-file', async (_, paramsStr) => {
+    const params = JSON.parse(decodeArg(paramsStr));
+    return generateAssFileFromConfig(params.videoTitleConfig, params.zimuConfig, params.globalConfig, params.outputPath)
+  });
 }
 

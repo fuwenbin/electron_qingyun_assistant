@@ -236,7 +236,7 @@ const generateVideo = async () => {
   if (!checkZimuList(state.clips)) {
     return;
   }
-  if (!checkGlobalConfig()) {
+  if (!checkGlobalConfig(state.globalConfig)) {
     return;
   }
   try {

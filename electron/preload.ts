@@ -4,6 +4,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { encodeArg } from './utils';
 import crypto from 'crypto';
 import fs from 'fs';
+import { generateAssFile } from './services/video-ass';
 
 window.addEventListener('DOMContentLoaded', () => {
   const replaceText = (selector: string, text: string) => {
@@ -63,4 +64,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       });
     });
   },
+
+  generateAssFile: (params: any) => ipcRenderer.invoke('generate-ass-file', encodeArg(JSON.stringify(params))),
 });

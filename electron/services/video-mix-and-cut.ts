@@ -379,6 +379,14 @@ async function processVideoClipList(params) {
       const concatPromise = concatVideos(segments.videos, segments.outputPath);
       await Promise.race([concatPromise, timeoutPromise]);
       log.log(`成功合成视频:${i + 1}/${outputSegmentList.length}`)
+      const backgroundAudioPath = globalConfig.backgroundAudioConfig?.audio.path;
+      if (backgroundAudioPath && fs.existsSync(backgroundAudioPath)) {
+        // 如果配置有背景音乐，则添加背景音乐
+        const outputWithBgPath = path.join(outputDir, `${outputFileName}_${i + 1}_bg.mp4`)
+        log.log(`开始为视频添加背景音乐:${segments.outputPath}`);
+        await addBackgroundAudio(segments.outputPath, globalConfig.backgroundAudioConfig, outputWithBgPath);
+        outputSegmentList[i].outputPath = outputWithBgPath;
+      }
     } catch (error) {
       log.error(error);
       log.error(`合成视频失败:${i + 1}/${outputSegmentList.length}`);
@@ -391,6 +399,53 @@ async function processVideoClipList(params) {
       duration: v.duration
     }
   });
+}
+
+function addBackgroundAudio(videoPath: string, audioConfig: any, outputPath: string) {
+  return new Promise((resolve, reject) => {
+    const audioPath = audioConfig.audio.path;
+    const audioVolume = audioConfig.volume / 100;
+    const command = ffmpeg()
+      .input(videoPath)
+      .input(audioPath)
+      .inputOptions(['-stream_loop -1']);
+    const filters = [
+      {
+        filter: 'volume',
+        options: audioVolume,
+        inputs: '1:a',
+        outputs: 'scaled_audio'
+      },
+      {
+        filter: 'amix',
+        options: {
+          inputs: 2,
+          duration: 'first'
+        },
+        inputs: ['0:a', 'scaled_audio'],
+        outputs: ['mixed']
+      }
+    ];
+    command.complexFilter(filters)
+      .outputOptions([
+        '-map 0:v', 
+        '-map [mixed]',
+        '-c:v copy',
+        '-shortest'
+      ])
+      .on('start', (cmd) => console.log('开始添加背景音乐，执行命令:', cmd))
+      .on('progress', (progress) => console.log(`处理进度: ${Math.round(progress.percent)}%`))
+      .on('end', () => {
+        console.log('背景音乐添加成功');
+        fs.unlinkSync(videoPath);
+        resolve(outputPath);
+      })
+      .on('error', (err) => {
+        console.error('背景音乐添加失败:', err)
+        reject(err);
+      })
+      .save(outputPath)
+  })
 }
 
 export function initVideoMixAndCut() {

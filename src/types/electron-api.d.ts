@@ -35,6 +35,7 @@ declare global {
       readFile(filePath: string): Promise<ArrayBuffer>;
       readFileBase64(filePath: string): Promise<string>;
       getDefaultSavePath(): Promise<string>;
+      genereateAssFile(params: any): Promise<any>;
     };
   }
 }
