@@ -199,7 +199,7 @@ const generateAudios = async () => {
     const clip = state.clips[i];
     const audio = clip.zimuConfig.datas[0];
     const audioConfig = clip.zimuConfig.audioConfig;
-    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}}`
+    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}`
       const params = JSON.parse(JSON.stringify({
         text: audio.text,
         voice: audioConfig.voice,
