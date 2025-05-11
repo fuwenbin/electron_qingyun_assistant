@@ -56,7 +56,7 @@ const onPause = () => {
   playing.value = false;
 }
 
-const onTimeUpdate = (value: any) => {
+const onTimeUpdate = () => {
   if (audioRef.value) {
     currentTime.value = audioRef.value.currentTime;
     progress.value = currentTime.value / props.modelValue.duration * 100;

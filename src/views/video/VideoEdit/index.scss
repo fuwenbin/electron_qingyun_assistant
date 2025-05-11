@@ -64,13 +64,12 @@
 .left-panel {
   flex: 2;
   padding: 0 16px;
-  height: calc(100vh - 120px);
   .panel-section {
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      height: 80px;
       .right-actions {
         display: flex;
         align-items: center;
@@ -91,16 +90,16 @@
 }
 
 .clip-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   margin-bottom: 16px;
+  height: calc(100vh - 200px);
+  padding-bottom: 40px;
 }
 
 .clip-item {
   border: 1px solid var(--q-grey-3);
   border-radius: var(--q-border-radius-md);
   overflow: hidden;
+  margin-bottom: 16px;
 }
 
 .clip-header {

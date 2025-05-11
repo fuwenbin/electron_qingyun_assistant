@@ -26,7 +26,7 @@
     <!-- 编辑区域 -->
     <div class="edit-area">
       <!-- 左侧面板 -->
-      <div class="left-panel custom-scroll">
+      <div class="left-panel">
         <div class="panel-section">
           <div class="panel-header">
             <div class="left-actions">
@@ -42,8 +42,8 @@
               </a-button>
             </div>
           </div>
-          <div class="clip-list">
-            <div v-for="(clip, index) in state.clips" :key="index" class="clip-item">
+          <div ref="clipListRef" class="clip-list custom-scroll">
+            <div v-for="(clip, index) in state.clips" :key="index" class="clip-item" ref="clipListItemRefs">
               <div class="clip-header">
                 <div v-if="clip.isNameEditing" class="clip-header-editing">
                   <q-input autofocus v-model="clip.name" class="clip-name-input" 
@@ -80,6 +80,14 @@
                 </div>
               </div>
             </div>
+            <div class="clip-list-footer">
+              <a-button size="large" class="btn-add-clip" @click="addClip">
+                <template #icon>
+                  <PlusOutlined />
+                </template>
+                添加镜头
+              </a-button>
+            </div>
           </div>
         </div>
       </div>
@@ -112,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive, computed } from 'vue'
+import { onMounted, ref, reactive, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import VideoChooser from '@/components/VideoChooser.vue'
@@ -123,7 +131,6 @@ import GlobalConfig from '@/components/video/GlobalConfig.vue'
 import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
 import BackgroundAudioConfig from '@/components/video/BackgroundAudioConfig.vue'
 import { formatDuration } from '@/utils/common-utils'
-import { title } from 'process'
 
 const router = useRouter()
 
@@ -140,6 +147,8 @@ const state = reactive<any>({
     outputDir: undefined
   }
 })
+const clipListRef = ref();
+const clipListItemRefs = ref<HTMLElement[]>([]);
 const selectedRightConfigIndex = ref('')
 let clipNo = 0;
 const isGeneratingVideo = ref(false);
@@ -349,6 +358,14 @@ const addClip = () => {
       duration: undefined
     },
     transitionFromLastClipConfig: undefined
+  })
+  nextTick(() => {
+    if (clipListItemRefs.value.length > 0) {
+      const lastItemRef = clipListItemRefs.value[clipListItemRefs.value.length - 1];
+      lastItemRef.scrollIntoView({
+        behavior: 'smooth'
+      });
+    }
   })
 }
 

@@ -46,6 +46,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
+      scrollBounce: true,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true

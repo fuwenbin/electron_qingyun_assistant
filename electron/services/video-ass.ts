@@ -54,7 +54,7 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
     fontColor = 'FDDC63';
   }
   const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour, '80')},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
-  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,,{\\pos(${posX},${posY})\\4a&H80\\4c&H00FFFF}${text}`;
+  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,,{\\pos(${posX},${posY})}${text}`;
   return {
     style: assStyle,
     dialogue: assDialogue
