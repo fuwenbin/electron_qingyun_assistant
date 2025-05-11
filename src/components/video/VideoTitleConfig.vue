@@ -84,6 +84,7 @@ const getDefaultConfig = () => {
       italic: false,
       customStyle: 'none',
       textAlign: 'center',
+      posYPercent: 0.015
     },
     start: 0,
     duration: 0

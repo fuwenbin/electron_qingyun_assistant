@@ -32,6 +32,8 @@ const options = computed(() => {
 </script>
 
 <style scoped lang="scss">
+@import '@/assets/styles/custom-text-style.scss';
+
 .font-custom-style-chooser {
   display: flex;
   gap: 10px;
@@ -50,51 +52,6 @@ const options = computed(() => {
     font-weight: 800;
     &.active {
       border-color: #1890ff;
-    }
-    .custom-style-1 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #ffffff; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-2 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #627EE9; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-3 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #1A1A1A; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-4{
-      -webkit-text-stroke: 1px #B463FE; /* Safari */
-      color: #B463FE; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-5 {
-      -webkit-text-stroke: 1px #FF9C20; /* Safari */
-      color: #FF9C20; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-6 {
-      -webkit-text-stroke: 1px #2278FF; /* Safari */
-      color: #2278FF; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-7 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #1A1A1A; /* 设置为透明，以便显示描边 */
-      background-color: #FFE306;
-    }
-    .custom-style-8 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #FAF5B0; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-9 {
-      -webkit-text-stroke: 1px #1A1A1A; /* Safari */
-      color: #FF9C20; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-10 {
-      -webkit-text-stroke: 1px #F09CAF; /* Safari */
-      color: #FFFfff; /* 设置为透明，以便显示描边 */
-    }
-    .custom-style-11 {
-      -webkit-text-stroke: 1px #F86F32; /* Safari */
-      color: #FDDC63; /* 设置为透明，以便显示描边 */
     }
   }
 }

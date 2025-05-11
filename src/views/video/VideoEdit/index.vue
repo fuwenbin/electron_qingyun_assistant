@@ -91,6 +91,12 @@
           </div>
         </div>
       </div>
+      <div class="center-panel">
+        <VideoEditPreview :clips="state.clips" :global-config="state.globalConfig" 
+          :selected-config-index="selectedRightConfigIndex"
+          @change-zimu-position="changePreviewZimuPosition"
+          @change-title-position="changePreviewTitlePosition"/>
+      </div>
 
       <!-- 右侧面板 -->
       <div class="right-panel custom-scroll">
@@ -131,6 +137,7 @@ import GlobalConfig from '@/components/video/GlobalConfig.vue'
 import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
 import BackgroundAudioConfig from '@/components/video/BackgroundAudioConfig.vue'
 import { formatDuration } from '@/utils/common-utils'
+import VideoEditPreview from '@/components/video/VideoEditPreview.vue'
 
 const router = useRouter()
 
@@ -390,6 +397,16 @@ const closeConfigPanel = () => {
 const getDefaultSavePath = async () => {
   const res = await window.electronAPI.getDefaultSavePath();
   state.globalConfig.outputDir = res;
+}
+
+const changePreviewZimuPosition = (value: number) => {
+  const selectedClipIndex = Number(selectedRightConfigIndex.value.substring('zimu-'.length));
+  state.clips[selectedClipIndex].zimuConfig.textConfig.posYPercent = value;
+}
+
+const changePreviewTitlePosition = (value: number) => {
+  console.log(value);
+  console.log(654);
 }
 
 addClip();

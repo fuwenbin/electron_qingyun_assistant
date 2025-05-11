@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import ConfigPanel from './ConfigPanel.vue';
@@ -96,7 +96,8 @@ const handleReset = () => {
     underline: false,
     italic: false,
     textAlign: 'center',
-    customStyle: 'none'
+    customStyle: 'none',
+    posYPercent: 2/3
   }
   _value.audioConfig = {
     voice: 'xiaoyun',
@@ -139,6 +140,10 @@ const handleChangeZimuInput = (index: number, value: string) => {
   _value.datas[index].text = value;
   emit('update:modelValue', _value);
 }
+
+watch(() => _value, (newVal) => {
+  emit('update:modelValue', newVal);
+}, { deep: true });
 
 if (_value?.datas.length === 0) {
   handleReset();

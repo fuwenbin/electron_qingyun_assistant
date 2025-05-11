@@ -47,6 +47,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       scrollBounce: true,
+      directWrite: false,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
