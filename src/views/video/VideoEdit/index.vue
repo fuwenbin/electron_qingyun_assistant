@@ -198,11 +198,8 @@ const generateAudios = async () => {
   for (let i = 0; i < state.clips.length; i++) {
     const clip = state.clips[i];
     const audio = clip.zimuConfig.datas[0];
-    if (audio.path && audio.duration) {
-      continue;
-    }
     const audioConfig = clip.zimuConfig.audioConfig;
-    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}}`
       const params = JSON.parse(JSON.stringify({
         text: audio.text,
         voice: audioConfig.voice,
@@ -229,13 +226,16 @@ const generateAssFiles = async () => {
   const isVertical = videoRatio === '9:16';
   const videoWidth = isVertical ? videoResolutionParts[0] : videoResolutionParts[1];
   const videoHeight = isVertical ? videoResolutionParts[1] : videoResolutionParts[0];
+  
   for (let i = 0; i < state.clips.length; i++) {
     const clip = state.clips[i];
     const outputPath = `${videoTitle.value}_${i + 1}.ass`;
     // 标题位置
-    if (clip.videoTitleConfig?.datas[0].textConfig) {
+    if (clip.videoTitleConfig?.datas) {
+      const selectedDataIndex = clip.videoTitleConfig.selectedIndex;
       let titlePosX = videoWidth / 2;
-      let titlePosY = 30;
+      const currentTextConfig = clip.videoTitleConfig.datas[selectedDataIndex].textConfig;
+      let titlePosY = currentTextConfig.posYPercent * videoHeight;
       const titleTextAlign = clip.videoTitleConfig.datas[0].textConfig.textAlign;
       if (titleTextAlign === 'left') {
         titlePosX = 30;
@@ -248,7 +248,7 @@ const generateAssFiles = async () => {
     // 字幕位置
     if (clip.zimuConfig?.textConfig) {
       let zimuPosX = videoWidth / 2;
-      let zimuPosY =  isVertical ? videoHeight - 550 : videoHeight - 200;
+      let zimuPosY =  clip.zimuConfig.textConfig.posYPercent * videoHeight;
       const zimuTextAlign = clip.zimuConfig?.textConfig.textAlign
       if (zimuTextAlign === 'left') {
         zimuPosX = 30;
@@ -264,8 +264,10 @@ const generateAssFiles = async () => {
       globalConfig: state.globalConfig,
       outputPath
     }))
+    console.log('合成字幕文件开始');
+    console.log(params);
     const res = await window.electronAPI.generateAssFile(params)
-    console.log(res);
+    console.log('合成字幕文件结束');
     state.clips[i].assFilePath = res;
   }
 }
@@ -405,8 +407,9 @@ const changePreviewZimuPosition = (value: number) => {
 }
 
 const changePreviewTitlePosition = (value: number) => {
-  console.log(value);
-  console.log(654);
+  const selectedClipIndex = Number(selectedRightConfigIndex.value.substring('title-'.length));
+  const selectedDataIndex = state.clips[selectedClipIndex].videoTitleConfig.selectedIndex;
+  state.clips[selectedClipIndex].videoTitleConfig.datas[selectedDataIndex].textConfig.posYPercent = value;
 }
 
 addClip();

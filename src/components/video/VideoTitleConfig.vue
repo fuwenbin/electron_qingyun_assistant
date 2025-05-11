@@ -2,7 +2,7 @@
   <config-panel :title="title + '-文字标题'" @close="emit('close')">
     <div class="video-title-input-box">
       <template v-for="(item, index) in _value.datas" :key="item.name">
-        <a-textarea :value="item.text" placeholder="请输入内容" :autosize="{minRows: 1}" 
+        <a-textarea :value="item.text" placeholder="请输入内容" :auto-size="{minRows: 1}" 
           @update:value="(value: string) => handleChangeTitleInput(index, value)" />
       </template>
       <a-button v-if="false" @click="addTitle">

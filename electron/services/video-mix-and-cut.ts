@@ -269,7 +269,9 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
 
 async function concatVideos(videos: string[], outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tempFilePath = path.basename(outputPath, path.extname(outputPath)) + "_temp.txt";
+    const outputExtName = path.extname(outputPath);
+    const tempFilePath = outputPath.slice(0, outputPath.length - outputExtName.length) + "_temp.txt";
+    log.log('生成临时文件：' + tempFilePath);
     fs.writeFileSync(tempFilePath, videos.map(v => `file '${v}'`).join('\n'));
     ffmpeg()
       .input(tempFilePath)

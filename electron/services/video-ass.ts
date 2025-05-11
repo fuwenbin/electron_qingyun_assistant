@@ -4,7 +4,7 @@ import { decodeArg } from '../utils';
 import path from 'path';
 import log from 'electron-log'
 export function generateAssFileContent(text: string, textConfig: any, start: number, duration: number, 
-  titleType: string, posX: number, posY: number, name: string) {
+  titleType: string, posX: number, posY: number, name: string, videoWidth: number, videoHeight: number) {
   const { fontFamily, fontSize, fontWeight, underline, italic, textAlign, customStyle } = textConfig;
   let fontColor = textConfig.fontColor.replace('#', '');
   let OutlineColour = '000000';
@@ -16,6 +16,13 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
   }
   let BorderStyle = 1;
   let Outline = 2;
+  let formattedFontSize = textConfig.fontSize;
+  let formattedPosY = posY;
+  const isVertical = videoWidth < videoHeight;
+  if (isVertical) {
+    formattedFontSize = textConfig.fontSize * (1 + 1080 / 1920 / 2);
+  }
+  formattedPosY = posY + formattedFontSize;
   if (customStyle === 'custom-style-1') {
     OutlineColour = '1A1A1A';
     fontColor = 'ffffff';
@@ -53,8 +60,8 @@ export function generateAssFileContent(text: string, textConfig: any, start: num
     OutlineColour = 'F86F32';
     fontColor = 'FDDC63';
   }
-  const assStyle = `Style: ${name || titleType},${'Arial'},${fontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour, '80')},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
-  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,,{\\pos(${posX},${posY})}${text}`;
+  const assStyle = `Style: ${name || titleType},${'Arial'},${formattedFontSize},${rgbToAssColor(fontColor)},&H000000FF&,${rgbToAssColor(OutlineColour)},${rgbToAssColor(BackColour, '80')},${fontWeight === 'bold' ? 1 : 0},${italic ? 1 : 0},${underline ? 1 : 0},0,100,100,0,0,${BorderStyle},${Outline},0,${AlignmentMap[textAlign]},0,0,0,0`;
+  const assDialogue = `Dialogue: 0,${formatTime(start)},${formatTime(start + duration)},${name || titleType},,0,0,0,,{\\pos(${posX},${formattedPosY})}${text}`;
   return {
     style: assStyle,
     dialogue: assDialogue
@@ -107,7 +114,7 @@ function calculateOptimalSpeed(videoWidth: number, duration: number): number {
   return (videoWidth * 1.2) / duration;
 }
 
-export function generateAssFromText(text: string, duration: number, textConfig: any, posX: number, posY: number) {
+export function generateAssFromText(text: string, duration: number, textConfig: any, posX: number, posY: number, videoWidth: number, videoHeight: number) {
   const sentences = splitTextToSentences(text, textConfig.fontSize);
   const segments = calculateSegments(sentences, duration);
   const result: any[] = [];
@@ -116,7 +123,7 @@ export function generateAssFromText(text: string, duration: number, textConfig: 
     const name = `subtitles-${i}`;
     const segmentDuration = segment.end - segment.start;
     const segmentContent = generateAssFileContent(segment.text, textConfig, segment.start, segmentDuration, 
-      "subtitles", posX, posY, name);
+      "subtitles", posX, posY, name, videoWidth, videoHeight);
     result.push({
       style: segmentContent.style,
       dialogue: segmentContent.dialogue
@@ -132,9 +139,6 @@ function splitTextToSentences(text: string, fontSize: number): string[] {
   // 按标点符号拆分，但确保句子不会太长
   const sentences: string[] = [];
   const maxCharsPerLine = getMaxCharNumPerLine(fontSize);
-  log.log('#######################################')
-  log.log('字幕单行最长字符数：' + maxCharsPerLine);
-  log.log('#######################################')
   const maxLines = 1;
   const maxCharNum = maxCharsPerLine * maxLines;
   
@@ -248,7 +252,7 @@ export function generateAssFileFromConfig(videoTitleConfig, zimuConfig, globalCo
   const selectedSubtitle = zimuConfig.datas[0];
   const audioDuration = zimuConfig.datas[0].duration;
   const subtitlesContentList = generateAssFromText(selectedSubtitle.text, audioDuration, zimuConfig.textConfig,
-    zimuConfig.posX, zimuConfig.posY);
+    zimuConfig.posX, zimuConfig.posY, videoWidth, videoHeight);
   assStyleList.push(...subtitlesContentList.map(v => v.style));
   assDialogueList.push(...subtitlesContentList.map(v => v.dialogue));
   if (videoTitleConfig) {
@@ -260,7 +264,7 @@ export function generateAssFileFromConfig(videoTitleConfig, zimuConfig, globalCo
     const titleLines = splitTextToSentences(titleConfig.text, titleConfig.textConfig.fontSize);
     const formattedTitle = titleLines.join('\\n');
     const titleContent = generateAssFileContent(formattedTitle, titleConfig.textConfig, titleConfig.start, 
-      titleDuration, 'title', titleConfig.posX, titleConfig.posY, 'title');
+      titleDuration, 'title', titleConfig.posX, titleConfig.posY, 'title', videoWidth, videoHeight);
     assStyleList.push(titleContent.style);
     assDialogueList.push(titleContent.dialogue);
   }
