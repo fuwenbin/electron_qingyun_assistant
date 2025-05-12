@@ -1,5 +1,3 @@
-import ffmpeg from 'fluent-ffmpeg'
-// import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
 import { getDurationWithFfmpeg, getFontsdir, hasAudio } from '../utils/ffmpeg-utils'
 import { getPlatformAppDataPath } from './default-save-path'
@@ -8,9 +6,9 @@ import { decodeArg, escapedFilePath } from '../utils'
 import log from 'electron-log';
 import { generateAudio } from './aliyun-tts'
 import dayjs from 'dayjs'
-import { generateAssFile, generateAssFileContent, generateAssFromText } from './video-ass'
 import pLimit from 'p-limit'
 import fs from 'fs';
+import ffmpeg from 'fluent-ffmpeg'
 
 // 限制并发数为 CPU 核心数 -1（根据机器性能调整）
 const limit = pLimit(Math.max(1, Math.floor(require('os').cpus().length * 0.8) - 1));

@@ -1,59 +1,46 @@
-import * as ffmpeg from 'fluent-ffmpeg';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import log from 'electron-log'
 
 export function setupFFmpeg() {
-  try {
-    // 设置ffmpeg路径
-    let ffmpegPath: string;
-    let ffprobePath: string;
-
-    if (app.isPackaged) {
-      // 生产环境路径
-      const basePath = path.join(process.resourcesPath, 'bin'); // 修改为直接使用resources/bin
-      
-      // 检查路径是否存在
-      if (!fs.existsSync(basePath)) {
-        throw new Error(`FFmpeg目录不存在: ${basePath}`);
-      }
-
-      const exeExt = process.platform === 'win32' ? '.exe' : '';
-      ffmpegPath = path.join(basePath, `ffmpeg${exeExt}`);
-      ffprobePath = path.join(basePath, `ffprobe${exeExt}`);
-
-      // 验证文件是否存在
-      if (!fs.existsSync(ffmpegPath)) {
-        throw new Error(`FFmpeg可执行文件不存在: ${ffmpegPath}`);
-      }
-      if (!fs.existsSync(ffprobePath)) {
-        throw new Error(`FFprobe可执行文件不存在: ${ffprobePath}`);
-      }
-    } else {
-      // 开发环境路径
-      const basePath = path.join(app.getAppPath(), 'bin');
-      
-      const exeExt = process.platform === 'win32' ? '.exe' : '';
-      ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-      ffprobePath = require('@ffprobe-installer/ffprobe').path;
-
-    }
-    
-    // 设置路径
-    ffmpeg.setFfmpegPath(ffmpegPath);
-    ffmpeg.setFfprobePath(ffprobePath);
-
-    log.info('FFmpeg路径:', ffmpegPath);
-    log.info('FFprobe路径:', ffprobePath);
-    
-    return { ffmpegPath, ffprobePath };
-  } catch (error) {
-    log.error('FFmpeg初始化失败:', error);
-    throw new Error(`视频处理引擎初始化失败: ${error.message}`);
+  let ffmpegPath;
+  let ffprobePath;
+  let basePath;
+  const platform = process.platform;
+  const ffmpegExecutableName = platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+  const ffprobeExecutableName = platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+  
+  if (!app.isPackaged) {
+    // 开发环境
+    basePath = path.join(app.getAppPath(), 'bin');
+  } else {
+    // 生产环境
+    basePath = process.resourcesPath;
   }
+  ffmpegPath = path.join(basePath, ffmpegExecutableName);
+  ffprobePath = path.join(basePath, ffprobeExecutableName);
+  ffmpeg.setFfmpegPath(ffmpegPath);
+  ffmpeg.setFfprobePath(ffprobePath);
+  checkFFmpeg();
+}
+
+function checkFFmpeg(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const command = ffmpeg();
+    command.on('stderr', (line) => console.log('FFmpeg:', line));
+    
+    command
+      .output('-') // 输出到stdout
+      .addOption('-version')
+      .on('error', reject)
+      .on('end', (stdout, stderr) => {
+        const versionLine = stderr.split('\n').find(line => line.includes('ffmpeg version'));
+        resolve(versionLine || 'FFmpeg version unknown');
+      })
+      .run();
+  });
 }
 
 export function getDurationWithFfmpeg(filePath: string): Promise<number> {

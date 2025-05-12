@@ -3,18 +3,17 @@ import path from 'path'
 import initShowSaveDialog from './services/show-save-dialog';
 import initOpenFile from './services/open-file';
 import { initAliyunTTS } from './services/aliyun-tts';
-import { electronCrypto } from './utils/crypto-polyfill';
 import { setupLogger } from './services/logger';
 import { ensureAppDataSaveDir, initAppDataSaveDir } from './services/default-save-path';
 import { initVideoMixAndCut } from './services/video-mix-and-cut';
 import { initOpenFileDialog } from './services/open-file-dialog';
 import { initProtocolCustom } from './services/protocol-custom';
 import { initGlobalShortcutRegister } from './services/global-shortcut-register';
-import { setupFFmpeg } from './utils/ffmpeg-utils';
 import { initWindowControl } from './services/window-control';
 import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
 import { initVideoAss } from './services/video-ass';
-global.crypto = electronCrypto;
+import { setupFFmpeg } from './utils/ffmpeg-utils';
+
 // The built directory structure
 //
 // ├─┬─┬ dist
@@ -24,6 +23,9 @@ global.crypto = electronCrypto;
 // │ │ ├── main.js
 // │ │ └── preload.js
 // │
+if (typeof crypto === 'undefined') {
+  global.crypto = require('crypto').webcrypto;
+}
 process.env.LANG = 'zh_CN.UTF-8';
 process.env.LC_ALL = 'zh_CN.UTF-8';
 
@@ -39,7 +41,6 @@ autoSetOptimalMemoryLimit();
 let win: BrowserWindow | null
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
-
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC as string, 'vite.svg'),
@@ -47,7 +48,6 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       scrollBounce: true,
-      directWrite: false,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
@@ -67,6 +67,7 @@ function createWindow() {
 }
 
 setupLogger();
+setupFFmpeg();
 initShowSaveDialog();
 initOpenFile();
 initAliyunTTS();
@@ -74,14 +75,21 @@ initAppDataSaveDir();
 initVideoMixAndCut();
 initVideoAss();
 
+const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
+  // 注册打开文件对话框逻辑
+  initOpenFileDialog(win);
+  // 注册全局快捷键逻辑
+  initGlobalShortcutRegister(win);
+  // 注册窗口控制逻辑
+  initWindowControl();
+}
+
 app.whenReady().then(() => {
+  app.commandLine.appendSwitch('disable-direct-write');
   ensureAppDataSaveDir();
-  setupFFmpeg();
   initProtocolCustom();
   createWindow();
-  initOpenFileDialog(win as BrowserWindow);
-  initGlobalShortcutRegister(win);
-  initWindowControl();
+  initializeAppAfterCreateWindow(win as BrowserWindow);
 })
 
 app.on('window-all-closed', () => {
