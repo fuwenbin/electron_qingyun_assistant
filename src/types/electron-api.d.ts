@@ -36,6 +36,7 @@ declare global {
       readFileBase64(filePath: string): Promise<string>;
       getDefaultSavePath(): Promise<string>;
       generateAssFile(params: any): Promise<any>;
+      playwrightAction(params: any): Promise<any>;
     };
   }
 }

@@ -13,6 +13,7 @@ import { initWindowControl } from './services/window-control';
 import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
 import { initVideoAss } from './services/video-ass';
 import { setupFFmpeg } from './utils/ffmpeg-utils';
+import { initPlaywright } from './services/playwright';
 
 // The built directory structure
 //
@@ -48,6 +49,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       scrollBounce: true,
+      webviewTag: true,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
@@ -74,6 +76,7 @@ initAliyunTTS();
 initAppDataSaveDir();
 initVideoMixAndCut();
 initVideoAss();
+initPlaywright();
 
 const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
   // 注册打开文件对话框逻辑

@@ -10,7 +10,12 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     vue({
-      template: { transformAssetUrls }
+      template: { 
+        transformAssetUrls,
+        compilerOptions: {
+          isCustomElement: (tag) => tag === 'webview'
+        }
+      }
     }),
     quasar({
       sassVariables: 'src/quasar-variables.scss'

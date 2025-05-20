@@ -66,4 +66,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   generateAssFile: (params: any) => ipcRenderer.invoke('generate-ass-file', encodeArg(JSON.stringify(params))),
+
+  playwrightAction: (params: any) => ipcRenderer.invoke('playwright-action', encodeArg(JSON.stringify(params))),
 });
