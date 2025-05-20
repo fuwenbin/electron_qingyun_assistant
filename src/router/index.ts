@@ -68,6 +68,11 @@ const router = createRouter({
       path: '/interaction',
       name: 'interaction',
       component: () => import('../views/InteractionView.vue')
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: () => import('../views/TestView.vue')
     }
   ]
 })

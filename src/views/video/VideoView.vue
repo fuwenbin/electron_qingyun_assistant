@@ -37,6 +37,12 @@ const menuItems = ref<MenuItem[]>([
         icon: 'fas fa-comments'
       }
     ]
+  },
+  {
+    path: '/test',
+    title: '测试',
+    icon: 'fas fa-question'
+
   }
 ])
 </script>
