@@ -12,7 +12,9 @@ export function initPlaywright() {
       executablePath: chromium.executablePath(),
       headless: false,
       args: [
-        '--disable-blink-features=AutomationControlled'
+        '--disable-blink-features=AutomationControlled',
+        '--no-sandbox', 
+        '--disable-setuid-sandbox'
       ]
     });
     if (action === 'douyin-login') {
