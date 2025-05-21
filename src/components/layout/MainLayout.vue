@@ -7,6 +7,9 @@
           <span>青云助手</span>
         </div>
         <nav class="nav-links">
+          <router-link to="/account" class="nav-link">账号</router-link>
+        </nav>
+        <nav class="nav-links">
           <router-link to="/video/edit" class="nav-link">AI创作</router-link>
         </nav>
       </div>

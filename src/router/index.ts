@@ -15,59 +15,28 @@ const router = createRouter({
           component: () => import('../views/video/VideoEdit/index.vue')
         }
       ]
+    },{
+      path: '/account',
+      name: 'account',
+      component: () => import('../views/account/Account.vue'),
+      redirect: '/account/',
+      children: [
+        {
+          path: '/account/',
+          name: 'account-home',
+          component: () => import('../views/account/AccountHome.vue')
+        },
+        {
+          path: '/account/add',
+          name: 'account-add',
+          component: () => import('../views/account/AccountAdd.vue')
+        }
+      ]
     },
     {
       path: '/workspace',
       name: 'workspace',
       component: () => import('../views/WorkspaceView.vue')
-    },
-    {
-      path: '/account',
-      name: 'account',
-      component: () => import('../views/AccountView.vue')
-    },
-    {
-      path: '/post',
-      name: 'post',
-      component: () => import('../views/PostView.vue')
-    },
-    {
-      path: '/video',
-      name: 'video',
-      component: () => import('../views/video/VideoView.vue'),
-      children: [
-        {
-          path: '/video/edit',
-          name: 'videoEdit',
-          component: () => import('../views/video/VideoEdit/index.vue')
-        }
-      ]
-    },
-    
-    {
-      path: '/data',
-      name: 'data',
-      component: () => import('../views/DataView.vue')
-    },
-    {
-      path: '/team',
-      name: 'team',
-      component: () => import('../views/TeamView.vue')
-    },
-    {
-      path: '/hot',
-      name: 'hot',
-      component: () => import('../views/HotView.vue')
-    },
-    {
-      path: '/ai',
-      name: 'ai',
-      component: () => import('../views/AIView.vue')
-    },
-    {
-      path: '/interaction',
-      name: 'interaction',
-      component: () => import('../views/InteractionView.vue')
     },
     {
       path: '/test',
