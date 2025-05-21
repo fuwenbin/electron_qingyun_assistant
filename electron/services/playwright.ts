@@ -10,7 +10,7 @@ export function initPlaywright() {
     const {  action, payload, sessionId } = params;
     const browser = await chromium.launch({
       executablePath: chromium.executablePath(),
-      headless: false,
+      headless: true,
       args: [
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox', 
@@ -28,6 +28,7 @@ export function initPlaywright() {
     const context = await browser.newContext();
 
     const page = await context.newPage();
+    console.log(page.setUserAgent)
 
     // 隐藏自动化特征
     await page.addInitScript(() => {
@@ -48,20 +49,42 @@ export function initPlaywright() {
     fs.writeFileSync(statePath, JSON.stringify(state));
   }
 
-  async function douyinPublishVideo(browser: any, payload: string, sessionId: string) {
-    const context = await browser.newContext();
-     // 读取保存的状态
-     const statePath = path.join(getPlatformAppDataPath(), 'dy_state.json');
-    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+  async function douyinPublishVideo(browser: any, payload: any, sessionId: string) {
+    // 读取保存的状态
+    const statePath = path.join(getPlatformAppDataPath(), 'dy_state.json');
+    const context = await browser.newContext({
+      storageState: statePath
+    });
     const page = await context.newPage();
-    await page.goto('https://creator.douyin.com');
+    await page.goto('https://creator.douyin.com/creator-micro/content/upload');
     // 检查是否仍处于登录状态
     try {
-      await page.waitForSelector('.user-info', { timeout: 5000 });
+      await page.waitForSelector('#header-avatar', { timeout: 15000 });
       console.log('登录状态恢复成功');
     } catch {
       console.log('登录状态已过期，需要重新登录');
       await browser.close();
     }
+    // 触发上传
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.click('.container-drag-icon') // 抖音的上传拖拽区域
+    ]);
+
+    // 设置视频文件
+    // await fileChooser.setFiles(payload.filePath);
+
+    const fileInputElement = await page.$('input[type="file"]');
+    fileInputElement.setInputFiles(payload.filePath);
+    // 验证上传完成
+    await page.waitForTimeout(5000);
+    // 检查是否处于描述页
+    await page.waitForSelector('.editor-comp-publish', { timeout: 15000 })
+    const descriptionLineElement = await page.$('.zone-container .ace-line');
+    await descriptionLineElement.click();
+    await page.keyboard.type(payload.description);
+    await page.waitForTimeout(5000);
+    const publishButtonElement = await page.locator('button:text("发布")');
+    await publishButtonElement.click('text=发布');
   }
 }

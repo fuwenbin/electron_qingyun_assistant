@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut } from 'electron'
+import { app, BrowserWindow, globalShortcut, session } from 'electron'
 import path from 'path'
 import initShowSaveDialog from './services/show-save-dialog';
 import initOpenFile from './services/open-file';
@@ -50,10 +50,21 @@ function createWindow() {
       contextIsolation: true,
       scrollBounce: true,
       webviewTag: true,
+      webSecurity: false,
+      enableBlinkFeatures: 'CSSVariables,KeyboardMap',
+      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
   })
+
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    if (details.url.includes('douyin.com')) {
+      details.requestHeaders['User-Agent'] = 
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36';
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
