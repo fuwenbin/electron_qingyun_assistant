@@ -1,6 +1,13 @@
 import initSqlJs from 'sql.js'
 
 
+class DatabaseService {
+  db: any;
+  constructor() {
+    
+  }
+}
+
 let SQL;
 let db;
 
