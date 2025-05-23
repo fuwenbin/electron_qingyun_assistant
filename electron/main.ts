@@ -14,6 +14,7 @@ import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
 import { initVideoAss } from './services/video-ass';
 import { setupFFmpeg } from './utils/ffmpeg-utils';
 import { initPlaywright } from './services/playwright';
+import { initializeDatabase } from './services/database-service';
 
 // The built directory structure
 //
@@ -99,6 +100,7 @@ const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
 }
 
 app.whenReady().then(() => {
+  initializeDatabase();
   app.commandLine.appendSwitch('disable-direct-write');
   ensureAppDataSaveDir();
   initProtocolCustom();
