@@ -27,7 +27,6 @@
     "alibabacloud-nls": "^1.0.4",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.8.4",
-    "better-sqlite3": "^11.10.0",
     "buffer": "^6.0.3",
     "chromium-bidi": "^5.2.0",
     "crypto-browserify": "^3.12.1",

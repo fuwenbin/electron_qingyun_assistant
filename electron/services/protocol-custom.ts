@@ -1,10 +1,9 @@
-import { app, protocol } from 'electron';
+import { protocol } from 'electron';
 import path from 'path'
 import fs from 'fs'
-import { getPlatformAppDataPath } from './default-save-path'
 import { getMimeType } from '../utils';
-import { Readable } from 'stream';
 import { createWebReadableStream } from '../utils';
+import { PassThrough } from 'stream';
 
 // 安全检查中间件
 async function checkFileSafety(filePath: string): Promise<boolean> {
@@ -25,73 +24,77 @@ async function checkFileSafety(filePath: string): Promise<boolean> {
   }
 }
 
+export function initProtocolCustomBeforeAppReady() {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'media',
+      privileges: {
+        standard: false,
+        secure: true,
+        supportFetchAPI: true,
+        bypassCSP: true,
+        corsEnabled: true,
+        stream: true
+      }
+    }
+  ])
+}
+
 
 export function initProtocolCustom() {
   // 在主进程中注册自定义协议
-  protocol.handle('media', async (request) => {
+  protocol.handle('media', (request) => {
     try {
-      // 提取并安全解码路径
-      const unsafePath = request.url.slice('media://'.length);
-      const decodedPath = decodeURIComponent(unsafePath)
-        .replace(/\//g, '\\') // 统一为Windows路径分隔符
-        .replace(/^\\/, '');  // 移除开头的多余反斜杠
-
-      // 标准化路径
-      const safePath = path.normalize(decodedPath);
-
-       // 安全检查
-       if (!await checkFileSafety(safePath)) {
-        return new Response('Access Denied', { status: 403 });
-      }
-
-      // 获取文件统计信息
-      const stats = await fs.promises.stat(safePath);
-      if (!stats.isFile()) {
-        return new Response('Not a file', { status: 400 });
-      }
+      console.log(request.url)
+      console.log(new URL(request.url))
+      // 解码URL并获取文件路径
+      const filePath = decodeURIComponent(new URL(request.url).hostname);
+      console.log('处理文件请求:', filePath);
       
-      // 处理范围请求 (视频/音频流式传输)
-      const range = request.headers.get('range');
-      const fileSize = stats.size;
-      const headers = {
-        'Content-Type': getMimeType(safePath),
-        'Cache-Control': 'public, max-age=31536000'
+      // 检查文件是否存在
+      if (!fs.existsSync(filePath)) {
+        console.error('文件不存在:', filePath);
+        return new Response(null, { status: 404 });
       }
-      if (range) {
-        // 解析范围请求
-        const parts = range.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunkSize = (end - start) + 1;
 
-        // 创建部分读取流
-        const fileStream = fs.createReadStream(safePath, { start, end });
-        const webStream = createWebReadableStream(fileStream);
-
-        return new Response(webStream, {
-          status: 206,
-          headers: {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunkSize.toString(),
-            'Content-Type': await getMimeType(safePath),
-            'Cache-Control': 'public, max-age=31536000'
-          }
-        });
-      } else {
-        const fileStream = fs.createReadStream(safePath);
-        const webStream = createWebReadableStream(fileStream);
-
-        return new Response(webStream, {
-          headers: {
-            'Content-Length': fileSize.toString(),
-            'Content-Type': await getMimeType(safePath),
-            'Cache-Control': 'public, max-age=31536000'
-          }
-        });
+      // 获取文件大小
+      const stat = fs.statSync(filePath);
+      const fileSize = stat.size;
+      
+      // 处理Range请求头
+      const rangeHeader = request.headers.get('range');
+      let start = 0;
+      let end = fileSize - 1;
+      
+      if (rangeHeader) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        start = parseInt(parts[0], 10);
+        end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        
+        console.log(`处理Range请求: ${start}-${end}/${fileSize}`);
       }
+
+      // 创建可读流
+      const stream = fs.createReadStream(filePath, { start, end });
+      const responseStream: any = new PassThrough();
+      stream.pipe(responseStream);
+      
+      // 设置响应头
+      const responseHeaders = {
+        'Content-Type': 'video/mp4',
+        'Content-Length': (end - start + 1).toString(),
+        'Accept-Ranges': 'bytes',
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`
+      };
+
+      // 返回响应
+      return new Response(responseStream, {
+        status: rangeHeader ? 206 : 200,
+        headers: responseHeaders
+      });
     } catch (error) {
-      return new Response('Not Found', { status: 404 });
+      console.error('处理请求时出错:', error);
+      return new Response(null, { status: 500 });
     }
   });
 }

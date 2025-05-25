@@ -1,6 +1,5 @@
 import { PlatformAccount } from "../entities/platform-account";
 import { databaseService } from "../services/database-service";
-import { generateTextID } from "../utils/database-utils";
 import dayjs from "dayjs";
 
 const BASE_SELECT = `SELECT id, platform_id as platformId, platform_account_id as platformAccountId, 
@@ -63,7 +62,7 @@ export class PlatformAccountDao {
     if (entity.id) {
       this.update(entity)
     } else {
-      entity.id = generateTextID()
+      entity.id = databaseService.generateTextID()
       this.insert(entity)
     }
   }

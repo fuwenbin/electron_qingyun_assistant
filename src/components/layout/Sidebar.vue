@@ -121,6 +121,7 @@ onMounted(() => {
   text-decoration: none;
   transition: all 0.3s;
   cursor: pointer;
+  width: 240px;
 
   i {
     width: 20px;

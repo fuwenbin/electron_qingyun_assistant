@@ -7,7 +7,7 @@
         @preview="() => handlePreview(item)"
         @update-duration="(value) => handleUpdateDuration(index, value)"/>
     </template>
-    <div class="video-chooser-box video-box" @click="selectFiles">
+    <div v-if="!limit || (props.modelValue.length < limit)" class="video-chooser-box video-box" @click="selectFiles">
       <PlusOutlined class="video-chooser-icon" />
       <div class="video-chooser-title">添加素材</div>
     </div>
@@ -24,7 +24,9 @@ import { PlusOutlined } from '@ant-design/icons-vue';
 import VideoChooserPreviewItem from './VideoChooserPreviewItem.vue';
 
 const props = defineProps<{
-  modelValue: any[]
+  modelValue: any[];
+  limit?: number;
+  isShowDuration?: boolean;
 }>()
 
 const previewDialogOpen = ref(false)
@@ -54,6 +56,7 @@ const selectFiles = async () => {
     } else {
       newList = resultList;
     }
+    console.log(newList)
     emit('update:modelValue', newList)
   }
   

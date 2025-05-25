@@ -160,7 +160,8 @@ class DatabaseService {
     }
   }
   public generateTextID(): string {
-    return crypto.randomUUID().replaceAll('-', '')
+    const uuid: string =  crypto.randomUUID();
+    return uuid.replace(/-/g, '')
   }
 
   public generateIntegerID(tableName: string, idColumnName = 'id'): number {

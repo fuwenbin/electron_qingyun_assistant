@@ -7,7 +7,7 @@ import { setupLogger } from './services/logger';
 import { ensureAppDataSaveDir, initAppDataSaveDir } from './services/default-save-path';
 import { initVideoMixAndCut } from './services/video-mix-and-cut';
 import { initOpenFileDialog } from './services/open-file-dialog';
-import { initProtocolCustom } from './services/protocol-custom';
+import { initProtocolCustom, initProtocolCustomBeforeAppReady } from './services/protocol-custom';
 import { initGlobalShortcutRegister } from './services/global-shortcut-register';
 import { initWindowControl } from './services/window-control';
 import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
@@ -50,11 +50,6 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
-      scrollBounce: true,
-      webviewTag: true,
-      webSecurity: false,
-      enableBlinkFeatures: 'CSSVariables,KeyboardMap',
-      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
@@ -90,6 +85,7 @@ initAppDataSaveDir();
 initVideoMixAndCut();
 initVideoAss();
 initPlaywright();
+initProtocolCustomBeforeAppReady();
 
 const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
   // 注册打开文件对话框逻辑

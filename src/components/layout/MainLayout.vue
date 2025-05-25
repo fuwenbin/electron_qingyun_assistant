@@ -10,6 +10,9 @@
           <router-link to="/account" class="nav-link">账号</router-link>
         </nav>
         <nav class="nav-links">
+          <router-link to="/publish-video" class="nav-link">发视频</router-link>
+        </nav>
+        <nav class="nav-links">
           <router-link to="/video/edit" class="nav-link">AI创作</router-link>
         </nav>
       </div>
