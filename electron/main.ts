@@ -14,7 +14,8 @@ import { autoSetOptimalMemoryLimit } from './services/memory-limit-auto-set';
 import { initVideoAss } from './services/video-ass';
 import { setupFFmpeg } from './utils/ffmpeg-utils';
 import { initPlaywright } from './services/playwright';
-import { initializeDatabase } from './services/database-service';
+import { databaseService } from './services/database-service';
+import { initApiController } from './services/api-controller';
 
 // The built directory structure
 //
@@ -100,12 +101,13 @@ const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
 }
 
 app.whenReady().then(() => {
-  initializeDatabase();
+  databaseService.init();
   app.commandLine.appendSwitch('disable-direct-write');
   ensureAppDataSaveDir();
   initProtocolCustom();
   createWindow();
   initializeAppAfterCreateWindow(win as BrowserWindow);
+  initApiController();
 })
 
 app.on('window-all-closed', () => {
@@ -122,6 +124,9 @@ app.on('activate', () => {
 }) 
 
 app.on('will-quit', () => {
+  if (databaseService) {
+    databaseService.close()
+  }
   globalShortcut.unregisterAll()
 })
 

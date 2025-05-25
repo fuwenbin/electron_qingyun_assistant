@@ -32,26 +32,57 @@
 
 <script lang="ts" setup>
 import { FireFilled } from '@ant-design/icons-vue'
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
+import { useRouter } from 'vue-router'
+import message from 'ant-design-vue/es/message'
 
+const router = useRouter()
 const hotPlatformList = ref([
   {
+    id: 1,
     name: '抖音',
     logo: logoDouyin,
-    url: 'https://www.douyin.com/',
+    loginUrl: 'https://www.douyin.com/',
   },
 ])
 const addAccount = async (platform: any) => {
-  const url = platform.url
   const res = await window.electronAPI.playwrightAction({
-    action: 'account-bind',
+    action: 'platform-account-add',
     payload: {
-      url
+      platformId: platform.id,
+      loginUrl: platform.loginUrl
     }
   })
-  console.log(res)
+  if (res.success) {
+    message.success('账号添加成功')
+    router.push('/account')
+  } else {
+    message.error('账号添加失败：' + res.errorMsg)
+  }
 }
+
+const getPlatformList = async () => {
+  const res = await window.electronAPI.apiRequest({
+    url: '/platform/list',
+    method: 'GET'
+  })
+  if (res.code === 0) {
+    hotPlatformList.value = res.data
+  }
+}
+
+onMounted(() => {
+  getPlatformList()
+  window.electronAPI.onPlatformLoginFinished((res: any) => {
+    console.log(res)
+  })
+})
+
+onBeforeUnmount(() => {
+  window.electronAPI.onPlatformLoginFinished(() => {})
+})
+
 </script>
 
 <style lang="scss" scoped>

@@ -1,7 +1,9 @@
 CREATE TABLE IF NOT EXISTS platforms (
-  id TEXT PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   logo  TEXT,
+  login_url TEXT,
+  publish_video_url TEXT,
   status INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
@@ -9,14 +11,15 @@ CREATE TABLE IF NOT EXISTS platforms (
 
 CREATE TABLE IF NOT EXISTS platform_accounts (
   id TEXT PRIMARY KEY,
-  platform_id TEXT NOT NULL,
+  platform_id INTEGER NOT NULL,
+  platform_account_id TEXT NOT NULL,
   name TEXT,
   remark TEXT,
   logo TEXT,
   state_data TEXT,
   login_status INTEGER DEFAULT 0,
   status INTEGER DEFAULT 1,
-  lastest_login_time TEXT,
+  last_login_time TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );

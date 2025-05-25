@@ -68,4 +68,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateAssFile: (params: any) => ipcRenderer.invoke('generate-ass-file', encodeArg(JSON.stringify(params))),
 
   playwrightAction: (params: any) => ipcRenderer.invoke('playwright-action', encodeArg(JSON.stringify(params))),
+  onPlatformLoginFinished: (callback: Function) => ipcRenderer.on('platform-login-finished', (_, params) => callback(params)),
+  apiRequest: (params: any) => ipcRenderer.invoke('api-request', encodeArg(JSON.stringify(params))),
 });

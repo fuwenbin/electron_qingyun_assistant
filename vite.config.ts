@@ -64,7 +64,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: ['ws', 'electron']
-    },
+    }
   },
   server: {
     port: 3000,
@@ -96,6 +96,9 @@ export default defineConfig({
   },
   base: './', // 确保相对路径
   optimizeDeps: {
-    exclude: ['electron']
+    exclude: [
+      'electron',
+      'sql.js'
+    ]
   }
 }) 

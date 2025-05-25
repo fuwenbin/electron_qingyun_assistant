@@ -37,6 +37,8 @@ declare global {
       getDefaultSavePath(): Promise<string>;
       generateAssFile(params: any): Promise<any>;
       playwrightAction(params: any): Promise<any>;
+      onPlatformLoginFinished(callback: Function): void;
+      apiRequest(params: any): Promise<any>;
     };
   }
 }

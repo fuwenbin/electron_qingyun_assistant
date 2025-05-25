@@ -4,7 +4,7 @@ import { app, ipcMain } from 'electron'
 
 const APP_NAME = 'zhushou'
 
-function getInstallationDirectory() {
+export function getInstallationDirectory() {
   // 对于打包后的应用
   if (app.isPackaged) {
     return path.dirname(process.execPath);

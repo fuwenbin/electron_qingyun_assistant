@@ -15,7 +15,7 @@ const router = createRouter({
           component: () => import('../views/video/VideoEdit/index.vue')
         }
       ]
-    },{
+    }, {
       path: '/account',
       name: 'account',
       component: () => import('../views/account/Account.vue'),
@@ -32,11 +32,28 @@ const router = createRouter({
           component: () => import('../views/account/AccountAdd.vue')
         }
       ]
+    }, {
+      path: '/publish-video',
+      name: 'publish-video',
+      component: () => import('../views/publish-video/index.vue'),
+      redirect: '/publish-video/single-publish',
+      children: [
+        {
+          path: '/publish-video/single-publish',
+          name: 'publish-video-single-publish',
+          component: () => import('../views/publish-video/SinglePublish.vue')
+        },
+      ]
     },
     {
       path: '/workspace',
       name: 'workspace',
       component: () => import('../views/WorkspaceView.vue')
+    },
+    {
+      path: '/video/edit',
+      name: 'videoEdit',
+      component: () => import('../views/video/VideoEdit/index.vue')
     },
     {
       path: '/test',

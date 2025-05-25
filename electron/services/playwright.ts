@@ -1,34 +1,45 @@
 const { chromium } = require('playwright');
 import { ipcMain } from "electron";
 import path from 'path';
-import fs from 'fs';
 import { getPlatformAppDataPath } from "./default-save-path";
 import { decodeArg } from "../utils";
+import { PlatformAccountService } from "./platform-account-service";
+import { waitForRandomTime } from "../utils/playwright-utils";
 export function initPlaywright() {
-  ipcMain.handle('playwright-action', async (_, paramsStr) => {
+  ipcMain.handle('playwright-action', async (event, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr));
     const {  action, payload, sessionId } = params;
     const browser = await chromium.launch({
       executablePath: chromium.executablePath(),
-      headless: true,
+      headless: false,
       args: [
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox', 
         '--disable-setuid-sandbox'
       ]
     });
-    if (action === 'douyin-login') {
-      douyinLogin(browser)
-    } else if (action === 'douyin-publish-video') {
+    if (action === 'douyin-publish-video') {
       douyinPublishVideo(browser, payload, sessionId)
+    } else if (action === 'platform-account-add') {
+      const platformId = payload.platformId;
+      const loginUrl = payload.loginUrl;
+      try {
+        douyinLogin(browser, platformId, loginUrl)
+        event.sender.send('platform-login-finished', {
+          success: true
+        })
+      } catch (error) {
+        event.sender.send('platform-login-finished', {
+          success: false,
+          errorMsg: error.message
+        })
+      }
     }
   });
 
-  async function douyinLogin(browser) {
+  async function douyinLogin(browser, platformId: number, loginUrl: string) {
     const context = await browser.newContext();
-
     const page = await context.newPage();
-    console.log(page.setUserAgent)
 
     // 隐藏自动化特征
     await page.addInitScript(() => {
@@ -39,14 +50,31 @@ export function initPlaywright() {
       });
     });
 
-    await page.goto('https://www.douyin.com');
+    await page.goto(loginUrl, {
+      waitUtil: 'domcontentloaded',
+      timeout: 30000
+    });
      // 等待用户手动登录
     console.log('请在浏览器中完成抖音登录...');
     await page.waitForNavigation({ url: /douyin\.com\/.?/, timeout: 0 });
+    await waitForRandomTime(page, 10000);
+    await page.waitForSelector('[data-e2e="live-avatar"]', { timeout: 600000 })
     // 保存登录状态
     const state = await context.storageState();
-    const statePath = path.join(getPlatformAppDataPath(), 'dy_state.json');
-    fs.writeFileSync(statePath, JSON.stringify(state));
+    const localStorageItems = state.origins.find(v => v.origin === 'https://www.douyin.com').localStorage
+    console.log(JSON.stringify(localStorageItems))
+    const userInfoItem = localStorageItems.find(v => v.name === 'user_info');
+    const userInfo = JSON.parse(userInfoItem.value);
+    console.log(userInfo);
+    const platformAccountId = userInfo.uid;
+    const logoUrl = userInfo.avatarUrl;
+    const name = userInfo.nickname;
+    const platformAccountService = new PlatformAccountService();
+    platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
+    await waitForRandomTime(page, 2000);
+    page.close();
+    context.close();
+    browser.close();
   }
 
   async function douyinPublishVideo(browser: any, payload: any, sessionId: string) {
