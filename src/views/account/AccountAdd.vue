@@ -54,7 +54,7 @@ const addAccount = async (platform: any) => {
       loginUrl: platform.loginUrl
     }
   })
-  if (res.success) {
+  if (res.code === 0) {
     message.success('账号添加成功')
     router.push('/account')
   } else {

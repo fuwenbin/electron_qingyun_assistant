@@ -43,6 +43,11 @@ const router = createRouter({
           name: 'publish-video-single-publish',
           component: () => import('../views/publish-video/SinglePublish.vue')
         },
+        {
+          path: '/publish-video/my-videos',
+          name: 'publish-video-my-videos',
+          component: () => import('../views/publish-video/MyVideos.vue')
+        }
       ]
     },
     {

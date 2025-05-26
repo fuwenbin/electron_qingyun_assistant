@@ -7,6 +7,7 @@
         :src="currentVideoUrl"
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoadedMetadata"
+        crossorigin="anonymous"
       ></video>
       <div v-if="!currentVideoUrl" class="placeholder">
         <i class="fas fa-film"></i>

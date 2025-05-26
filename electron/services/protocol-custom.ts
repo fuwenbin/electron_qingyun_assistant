@@ -45,8 +45,6 @@ export function initProtocolCustom() {
   // 在主进程中注册自定义协议
   protocol.handle('media', (request) => {
     try {
-      console.log(request.url)
-      console.log(new URL(request.url))
       // 解码URL并获取文件路径
       const filePath = decodeURIComponent(new URL(request.url).hostname);
       console.log('处理文件请求:', filePath);
@@ -70,21 +68,22 @@ export function initProtocolCustom() {
         const parts = rangeHeader.replace(/bytes=/, '').split('-');
         start = parseInt(parts[0], 10);
         end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        
-        console.log(`处理Range请求: ${start}-${end}/${fileSize}`);
       }
 
       // 创建可读流
-      const stream = fs.createReadStream(filePath, { start, end });
+      const fileStream = fs.createReadStream(filePath, { start, end });
       const responseStream: any = new PassThrough();
-      stream.pipe(responseStream);
+      fileStream.pipe(responseStream);
       
       // 设置响应头
       const responseHeaders = {
-        'Content-Type': 'video/mp4',
+        'Content-Type': getMimeType(filePath),
         'Content-Length': (end - start + 1).toString(),
         'Accept-Ranges': 'bytes',
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Access-Control-Allow-Origin': '*', // 解决CORS问题
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+        "Cache-Control": "no-cache"
       };
 
       // 返回响应

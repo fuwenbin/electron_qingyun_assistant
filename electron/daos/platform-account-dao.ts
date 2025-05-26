@@ -14,7 +14,7 @@ export class PlatformAccountDao {
     (id, platform_id, platform_account_id, name, logo, status, login_status, state_data, 
       remark, last_login_time, created_at, updated_at) 
     VALUES 
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss')
     const params = [
       entity.id,

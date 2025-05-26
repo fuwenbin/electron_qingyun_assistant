@@ -19,7 +19,7 @@
     <CloseCircleOutlined class="remove-btn" @click="emit('remove')" />
     <audio ref="audioRef" :src="props.modelValue.url"
       @play="onPlay" @pause="onPause" @timeupdate="onTimeUpdate" 
-      @loadedmetadata="onLoadedMetadata"></audio>
+      @loadedmetadata="onLoadedMetadata" crossorigin="anonymous"></audio>
   </div>
   
 </template>

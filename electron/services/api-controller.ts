@@ -9,14 +9,14 @@ export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
     const { url, method, data } = params
-    if (url === '/platform/list' && method.toLowerCase() === 'GET') {
+    if (url === '/platform/list' && method.toLowerCase() === 'get') {
       const resData = platformService.list()
       return {
         code: 0,
         data: resData,
         message: 'success'
       }
-    } else if (url === '/platform-account/list') {
+    } else if (url === '/platform-account/list' && method.toLowerCase() === 'get') {
       const resData = platformAccountService.list()
       return {
         code: 0,

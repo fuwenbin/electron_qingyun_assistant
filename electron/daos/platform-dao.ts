@@ -17,4 +17,16 @@ export class PlatformDao {
       return []
     }
   }
+
+  findById(id: number) {
+    const sql = `${BASE_SELECT}
+    FROM platforms WHERE id = ?`;
+    const params = [id];
+    const records = databaseService.query(sql, params)
+    if (records && records.length > 0) {
+      return records[0]
+    } else {
+      return null
+    }
+  }
 }

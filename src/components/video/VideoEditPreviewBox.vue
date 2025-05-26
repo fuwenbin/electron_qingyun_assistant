@@ -1,6 +1,6 @@
 <template>
   <div ref="previewBoxRef" class="video-edit-preview-box">
-    <video v-if="videoUrl" :src="videoUrl"
+    <video v-if="videoUrl" :src="videoUrl" crossorigin="anonymous"
       class="preview-placeholder-video" :class="{[direction]: direction}"></video>
     <VideoEditPreviewBoxPlaceholderText v-if="zimuTextConfig" 
       class="preview-placeholder-text" key="zimuPreview"

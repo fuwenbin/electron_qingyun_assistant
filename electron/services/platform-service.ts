@@ -14,4 +14,8 @@ export class PlatformService {
   public list() {
     return this.dao.list();
   }
+
+  public findById(id: number) {
+    return this.dao.findById(id);
+  }
 }

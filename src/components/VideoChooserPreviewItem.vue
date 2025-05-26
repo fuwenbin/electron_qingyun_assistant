@@ -1,8 +1,8 @@
 <template>
   <div class="video-chooser-preview-item">
     <div class="video-container">
-      <video ref="videoElement" class="video-element" :src="src"
-        @loadedmetadata="handleLoadedMetadata"></video>
+      <video ref="videoElement" class="video-element" :src="props.src"
+        @loadedmetadata="handleLoadedMetadata" crossorigin="anonymous"></video>
     </div>
     <div class="video-header" :title="props.name">{{ props.name }}</div>
     <div class="video-footer">

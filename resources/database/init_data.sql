@@ -1,2 +1,2 @@
 INSERT INTO platforms (id, name, logo, login_url, publish_video_url, status, created_at, updated_at) 
-VALUES (1, '抖音', 'logo_douyin.svg', 'https://www.douyin.com/', 'https://creator.douyin.com', 1, '2025-05-24 00:00:00', '2025-05-24 00:00:00')
+VALUES (1, '抖音', 'logo_douyin.svg', 'https://www.douyin.com/', 'https://creator.douyin.com/creator-micro/content/upload', 1, '2025-05-24 00:00:00', '2025-05-24 00:00:00')
