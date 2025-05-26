@@ -4,20 +4,24 @@ import { decodeArg } from "../utils";
 import { PlatformAccountService } from "./platform-account-service";
 import { waitForRandomTimeout } from "../utils/playwright-utils";
 import { PlatformService } from "./platform-service";
+
+async function getBrowser(headless: boolean = true) {
+  return await chromium.launch({
+    executablePath: chromium.executablePath(),
+    headless,
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox', 
+      '--disable-setuid-sandbox'
+    ]
+  });
+}
 export function initPlaywright() {
   ipcMain.handle('playwright-action', async (event, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr));
     const {  action, payload} = params;
-    const browser = await chromium.launch({
-      executablePath: chromium.executablePath(),
-      headless: false,
-      args: [
-        '--disable-blink-features=AutomationControlled',
-        '--no-sandbox', 
-        '--disable-setuid-sandbox'
-      ]
-    });
     if (action === 'platform-account-add') {
+      const browser = await getBrowser(false);
       const platformId = payload.platformId;
       const loginUrl = payload.loginUrl;
       try {
@@ -40,6 +44,7 @@ export function initPlaywright() {
         }
       }
     } else if (action === 'publish-video') {
+      const browser = await getBrowser();
       const platformId = payload.platformId;
       const platformAccountList = payload.accountList;
       try {
@@ -134,12 +139,10 @@ export function initPlaywright() {
     try {
       // 等待上传区域加载完成
       console.log('等待上传按钮图标加载完成')
-      const dargIconElement = await page.waitForSelector('.container-drag-icon', {
+      await page.waitForSelector('.container-drag-icon', {
         state: 'visible',
         timeout: 30000 
       });
-      console.log('上传按钮图标加载完成')
-      dargIconElement.click();
       await waitForRandomTimeout(page, 2000);
       // 触发上传
       console.log('等待上传文件：' + payload.filePath)
@@ -149,49 +152,18 @@ export function initPlaywright() {
         page.click('.container-drag-icon', { force: true, delay: 300 }) // 抖音的上传拖拽区域
       ]);
       console.log('触发文件上传事件')
-      await waitForRandomTimeout(page, 3000);
 
       // 设置视频文件
       await fileChooser.setFiles(payload.filePath);
-      console.log("设置上传的文件：" + fileChooser.files)
       if (!fileChooser.files) {
         const fileInputElement = await page.locator('input[type="file"]');
         fileInputElement.setInputFiles(payload.filePath);
         console.log("直接设置文件上传input：" + fileInputElement.files)
-        if (!fileInputElement.files) {
-          await page.evaluate((path) => {
-            // 创建或获取已有input
-            let input = document.querySelector('input[type="file"]') as HTMLInputElement;
-            if (!input) {
-              input = document.createElement('input');
-              input.type = 'file';
-              input.style.display = 'none';
-              document.body.appendChild(input);
-            }
-            
-            // 设置文件（Electron环境特殊处理）
-            const file = {
-              name: path.split(/[\\/]/).pop(),
-              path: path,
-              size: 0,
-              type: 'video/*',
-              lastModified: Date.now()
-            };
-            
-            // 使用DataTransfer
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(new File([], file.name, file));
-            input.files = dataTransfer.files;
-            
-            // 触发事件
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }, payload.filePath);
-        }
       }
       
       // 检查是否处于描述页
       console.log('上传文件后，等待页面跳转到视频发布页面')
-      await page.waitForURL('https://creator.douyin.com/creator-micro/content/post/video', {
+      await page.waitForURL('https://creator.douyin.com/creator-micro/content/post/video**', {
         timeout: 60000
       })
       console.log('页面跳转到视频发布页面')

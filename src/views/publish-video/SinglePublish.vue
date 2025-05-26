@@ -102,9 +102,7 @@ import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
 import Sider from './components/Sider.vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const selectedVideos  = ref<any[]>([])
 
 const baseContentData = reactive({

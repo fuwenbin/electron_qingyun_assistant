@@ -50,8 +50,12 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
-      sandbox: false,
+      scrollBounce: true,
       webviewTag: true,
+      webSecurity: false,
+      enableBlinkFeatures: 'CSSVariables,KeyboardMap',
+      experimentalFeatures: true,
+      sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true
