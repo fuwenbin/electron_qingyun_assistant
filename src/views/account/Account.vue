@@ -1,9 +1,9 @@
 <template>
   <Page>
     <div class="page-header">
-      <a-button type="primary" @click="() => $router.push('/account/add')">添加账号</a-button>
-      <a-button type="primary" @click="() => $router.push('/account/sync')">同步账号</a-button>
-      <a-button type="default" @click="() => $router.push('/account/manage')">账号管理</a-button>
+      <a-button type="primary" @click="() => router.push('/account/add')">添加账号</a-button>
+      <a-button type="primary" @click="() => router.push('/account/sync')">同步账号</a-button>
+      <a-button type="default" @click="() => router.push('/account/manage')">账号管理</a-button>
     </div>
     <router-view />
   </Page>
@@ -15,8 +15,10 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import Page from '@/components/Page.vue';
+import { useRouter } from 'vue-router';
 
 const addAccountDialogOpen = ref(false);
+const router = useRouter();
 </script>
 
 <style lang="scss" scoped>

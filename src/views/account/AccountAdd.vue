@@ -18,7 +18,7 @@
           <div class="platform-list">
             <div v-for="item in hotPlatformList" class="platform-item" @click="addAccount(item)">
               <div class="platform-logo">
-                <img :src="item.logo" />
+                <img :src="getLogo(item.id)" />
               </div>
               <div class="platform-name">{{ item.name }}</div>
             </div>
@@ -37,15 +37,17 @@ import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
 import { useRouter } from 'vue-router'
 import message from 'ant-design-vue/es/message'
 
+console.log(logoDouyin)
 const router = useRouter()
-const hotPlatformList = ref([
-  {
-    id: 1,
-    name: '抖音',
-    logo: logoDouyin,
-    loginUrl: 'https://www.douyin.com/',
-  },
-])
+const hotPlatformList = ref([])
+
+const getLogo = (platformId: number) => {
+  if (platformId === 1) {
+    return logoDouyin
+  } else {
+    return ''
+  }
+}
 const addAccount = async (platform: any) => {
   const res = await window.electronAPI.playwrightAction({
     action: 'platform-account-add',
