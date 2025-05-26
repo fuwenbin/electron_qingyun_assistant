@@ -4,11 +4,10 @@ import { decodeArg } from "../utils";
 import { PlatformAccountService } from "./platform-account-service";
 import { waitForRandomTimeout } from "../utils/playwright-utils";
 import { PlatformService } from "./platform-service";
-import { time } from "console";
 
 async function getBrowser(headless: boolean = true) {
   return await chromium.launch({
-    executablePath: chromium.executablePath(),
+    channel: 'chrome',
     headless,
     args: [
       '--disable-blink-features=AutomationControlled',
