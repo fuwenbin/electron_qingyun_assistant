@@ -123,8 +123,15 @@
     ],
     "extraResources": [
       {
-        "from": "fonts",
+        "from": "resources/fonts",
         "to": "fonts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/database",
+        "to": "database",
         "filter": [
           "**/*"
         ]

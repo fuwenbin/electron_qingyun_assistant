@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS platform_accounts_r_groups (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXIST video_publish_tasks (
+CREATE TABLE IF NOT EXISTS video_publish_tasks (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,
   platform_id TEXT NOT NULL,

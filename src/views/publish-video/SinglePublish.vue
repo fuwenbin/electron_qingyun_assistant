@@ -58,40 +58,42 @@
   </div>
   <a-modal v-model:open="publishModalOpen" title="选择账号" :width="1000" okText="发布"
     @ok="publishConfirm">
-    <div class="publish-modal-body">
-      <div class="platform-account-group-list">
+    <a-spin size="large" :spinning="loading">
+      <div class="publish-modal-body custom-scroll">
+        <div class="platform-account-group-list">
 
-      </div>
-      <div class="platform-account-chooser-container">
-        <div class="account-chooser-filter">
-          <div class="select-all">
-            <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount"/>全选
-          </div>
-          <div class="timing-config">
-            <div class="timing-config-type">
-              <a-checkbox v-model:checked="isTimingPublish" />定时发布
-            </div>
-            <div class="timing-config-time">
-              <a-date-picker v-if="isTimingPublish" v-model:value="timingPublishTime" 
-                format="YYYY-MM-DD HH:mm" :show-time="true" 
-              />
-            </div>
-          </div>
         </div>
-        <div class="account-chooser-list">
-          <div v-for="item in platformAccountList" :key="item.id" class="account-chooser-item">
-            <a-checkbox :checked="isAccountSelected(item)" @change="handleAccountCheckChange(item)" />
-            <img :src="item.logo" class="item-logo" />
-            <div class="item-info">
-              <div class="item-name">{{ item.name }}</div>
-              <div class="item-platform-info">
-                <div class="platform-name">{{ item.platform?.name }}</div>
+        <div class="platform-account-chooser-container">
+          <div class="account-chooser-filter">
+            <div class="select-all">
+              <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount"/>全选
+            </div>
+            <div class="timing-config">
+              <div class="timing-config-type">
+                <a-checkbox v-model:checked="isTimingPublish" />定时发布
+              </div>
+              <div class="timing-config-time">
+                <a-date-picker v-if="isTimingPublish" v-model:value="timingPublishTime" 
+                  format="YYYY-MM-DD HH:mm" :show-time="true" 
+                />
+              </div>
+            </div>
+          </div>
+          <div class="account-chooser-list">
+            <div v-for="item in platformAccountList" :key="item.id" class="account-chooser-item">
+              <a-checkbox :checked="isAccountSelected(item)" @change="handleAccountCheckChange(item)" />
+              <img :src="item.logo" class="item-logo" />
+              <div class="item-info">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-platform-info">
+                  <div class="platform-name">{{ item.platform?.name }}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </a-spin>
   </a-modal>
 </template>
 
@@ -117,6 +119,7 @@ const platformAccountList = ref<any[]>([])
 const selectedAccountList = ref<any[]>([])
 const isTimingPublish = ref(false)
 const timingPublishTime = ref('')
+const loading = ref(false)
 
 watch (selectedVideos, (newValue) => {
   if (newValue && newValue.length) {
@@ -180,16 +183,24 @@ const publishConfirm = async () => {
     isTimingPublish: isTimingPublish.value,
     timingPublishTime: dayjs(timingPublishTime.value).format('YYYY-MM-DD HH:mm')
   }))
-  const res = await window.electronAPI.playwrightAction({
-    action: 'publish-video',
-    payload: params
-  })
-  if (res.code === 0) {
-    message.success('发布成功', 3000)
-    publishModalOpen.value = false
-    reset()
-  } else {
-    message.error('发布失败：' + res.errorMsg)
+  loading.value = true;
+  try {
+    const res = await window.electronAPI.playwrightAction({
+      action: 'publish-video',
+      payload: params
+    })
+    if (res.code === 0) {
+      message.success('发布成功', 3000)
+      publishModalOpen.value = false
+      reset()
+    } else {
+      throw new Error(res.message);
+    }
+  } catch (error: any) {
+    console.error('发布失败：' + error.message)
+    message.error('发布失败：' + error.message)
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -239,6 +250,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@import "@/assets/styles/custom-scroll.scss";
+
 .page-single-publish {
   width: 100%;
   height: 100%;
@@ -290,6 +303,7 @@ onMounted(() => {
   gap: 20px;
 }
 .publish-modal-body {
+  height: 70vh;
   .account-chooser-filter {
     display: flex;
     align-items: center;

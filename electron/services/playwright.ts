@@ -4,6 +4,7 @@ import { decodeArg } from "../utils";
 import { PlatformAccountService } from "./platform-account-service";
 import { waitForRandomTimeout } from "../utils/playwright-utils";
 import { PlatformService } from "./platform-service";
+import { time } from "console";
 
 async function getBrowser(headless: boolean = true) {
   return await chromium.launch({
@@ -68,7 +69,6 @@ export function initPlaywright() {
           message: error.message
         }
       }
-      
     }
   });
 
@@ -124,19 +124,17 @@ export function initPlaywright() {
     });
     const page = await context.newPage();
     const publishVideoUrl = platform.publishVideoUrl;
-    await page.goto(publishVideoUrl);
-    // 检查是否仍处于登录状态
+
     try {
-      await page.waitForSelector('#header-avatar', { timeout: 15000 });
-      console.log('登录状态恢复成功');
-    } catch {
-      console.log('登录状态已过期，需要重新登录');
-      await page.close();
-      await context.close();
-      await browser.close();
-    }
-    // 开始操作
-    try {
+      await page.goto(publishVideoUrl);
+      // 检查是否仍处于登录状态
+      try {
+        await page.waitForSelector('#header-avatar', { timeout: 15000 });
+        console.log('登录状态恢复成功');
+      } catch {
+        throw new Error('登录状态已过期，需要重新登录');
+      }
+      // 开始操作
       // 等待上传区域加载完成
       console.log('等待上传按钮图标加载完成')
       await page.waitForSelector('.container-drag-icon', {
@@ -173,7 +171,6 @@ export function initPlaywright() {
       await page.keyboard.type(payload.description);
       await waitForRandomTimeout(page, 1000);
       await page.mouse.wheel(0, 600);
-      console.log(payload.isTimingPublish)
       if (payload.isTimingPublish) {
         const timingPublishCheckboxTextElement = await page.waitForSelector('label:has-text("定时发布") input[type="checkbox"]', {
           timeout: 5000
@@ -186,13 +183,16 @@ export function initPlaywright() {
       }
       const publishButtonElement = await page.waitForSelector('button:text("发布")');
       await publishButtonElement.click();
+      await page.waitForURL('https://creator.douyin.com/creator-micro/content/manage**', {
+        timeout: 30000
+      })
     } catch (error) {
       console.log(error);
       throw error;
     } finally {
-      page.close();
-      context.close();
-      browser.close();
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
     }
   }
 }
