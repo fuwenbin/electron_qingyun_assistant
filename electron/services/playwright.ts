@@ -1,11 +1,11 @@
 const { chromium } = require('playwright');
 import { ipcMain } from "electron";
 import { decodeArg } from "../utils";
-import { PlatformAccountService } from "./platform-account-service";
+import PlatformAccountService from "./platform-account-service";
 import { waitForRandomTimeout } from "../utils/playwright-utils";
-import { PlatformService } from "./platform-service";
+import PlatformService from "./platform-service";
 
-async function getBrowser(headless: boolean = true) {
+export async function getBrowser(headless: boolean = true) {
   return await chromium.launch({
     channel: 'chrome',
     headless,
@@ -26,18 +26,11 @@ export function initPlaywright() {
       const loginUrl = payload.loginUrl;
       try {
         douyinLogin(browser, platformId, loginUrl)
-        event.sender.send('platform-login-finished', {
-          success: true
-        })
         return {
           code: 0,
           message: 'success'
         }
       } catch (error) {
-        event.sender.send('platform-login-finished', {
-          success: false,
-          errorMsg: error.message
-        })
         return {
           code: 500,
           message: error.message
@@ -84,31 +77,35 @@ export function initPlaywright() {
       });
     });
 
-    await page.goto(loginUrl, {
-      waitUtil: 'domcontentloaded',
-      timeout: 30000
-    });
-     // 等待用户手动登录
-    console.log('请在浏览器中完成抖音登录...');
-    await page.waitForNavigation({ url: /douyin\.com\/.?/, timeout: 0 });
-    await waitForRandomTimeout(page, 10000);
-    await page.waitForSelector('[data-e2e="live-avatar"]', { timeout: 600000 })
-    // 保存登录状态
-    const state = await context.storageState();
-    const localStorageItems = state.origins.find(v => v.origin === 'https://www.douyin.com').localStorage
-    console.log(JSON.stringify(localStorageItems))
-    const userInfoItem = localStorageItems.find(v => v.name === 'user_info');
-    const userInfo = JSON.parse(userInfoItem.value);
-    console.log(userInfo);
-    const platformAccountId = userInfo.uid;
-    const logoUrl = userInfo.avatarUrl;
-    const name = userInfo.nickname;
-    const platformAccountService = new PlatformAccountService();
-    platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
-    await waitForRandomTimeout(page, 2000);
-    page.close();
-    context.close();
-    browser.close();
+    try {
+      await page.goto(loginUrl, {
+        waitUtil: 'domcontentloaded',
+        timeout: 30000
+      });
+      // 等待用户手动登录
+      console.log('请在浏览器中完成抖音登录...');
+      await page.waitForNavigation({ url: /douyin\.com\/.?/, timeout: 0 });
+      await page.waitForSelector('[data-e2e="live-avatar"]', { timeout: 120000 })
+      // 保存登录状态
+      const state = await context.storageState();
+      const localStorageItems = state.origins.find(v => v.origin === 'https://www.douyin.com').localStorage
+      const userInfoItem = localStorageItems.find(v => v.name === 'user_info');
+      console.log('localStorage用户信息项：' + JSON.stringify(userInfoItem))
+      const userInfo = JSON.parse(userInfoItem.value);
+      console.log(userInfo);
+      const platformAccountId = userInfo.uid;
+      const logoUrl = userInfo.avatarUrl;
+      const name = userInfo.nickname;
+      const platformAccountService = new PlatformAccountService();
+      platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
+    } catch (error) {
+      console.log(error);
+      throw error;
+    } finally {
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
+    }
   }
 
   async function douyinPublishVideo(browser: any, payload: any) {

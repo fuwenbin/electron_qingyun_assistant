@@ -19,10 +19,10 @@ const router = createRouter({
       path: '/account',
       name: 'account',
       component: () => import('../views/account/Account.vue'),
-      redirect: '/account/',
+      redirect: '/account/home',
       children: [
         {
-          path: '/account/',
+          path: '/account/home',
           name: 'account-home',
           component: () => import('../views/account/AccountHome.vue')
         },
@@ -36,18 +36,28 @@ const router = createRouter({
       path: '/publish-video',
       name: 'publish-video',
       component: () => import('../views/publish-video/index.vue'),
-      redirect: '/publish-video/single-publish',
+      redirect: '/publish-video/batch-publish',
       children: [
         {
-          path: '/publish-video/single-publish',
-          name: 'publish-video-single-publish',
-          component: () => import('../views/publish-video/SinglePublish.vue')
+          path: '/publish-video/batch-publish',
+          name: 'publish-video-batch-publish',
+          component: () => import('../views/publish-video/batch-publish/index.vue')
         },
         {
           path: '/publish-video/my-videos',
           name: 'publish-video-my-videos',
           component: () => import('../views/publish-video/MyVideos.vue')
-        }
+        },
+        {
+          path: '/publish-video/my-settings',
+          name: 'publish-video-my-settings',
+          component: () => import('../views/publish-video/MySettings.vue')
+        },
+        {
+          path: '/publish-video/my-tasks',
+          name: 'publish-video-my-tasks',
+          component: () => import('../views/publish-video/MyTasks.vue')
+        },
       ]
     },
     {

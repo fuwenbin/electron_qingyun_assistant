@@ -13,38 +13,26 @@ import { ref } from 'vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Page from '@/components/Page.vue'
 
-interface MenuItem {
-  path: string
-  title: string
-  icon: string
-  children?: MenuItem[]
-}
-
-const menuItems = ref<MenuItem[]>([
+const menuItems = ref<any[]>([
   {
-    path: '/publish-video/single-publish',
-    title: '发视频',
-    icon: 'fas fa-home'
+    path: '/publish-video/batch-publish',
+    title: '发视频'
+  },
+  {
+    path: '/publish-video/my-settings',
+    title: '我的配置'
+  },
+  {
+    path: '/publish-video/my-tasks',
+    title: '我的任务'
   },
   {
     path: '/publish-video/my-videos',
-    title: '我的视频',
-    icon: 'fas fa-robot'
+    title: '我的视频'
   },
   {
     path: '/video/edit',
-    title: 'AI混剪',
-    icon: 'fas fa-question'
-  },
-  {
-    path: '/video/edit',
-    title: 'AI创作',
-    icon: 'fas fa-question'
-  },
-  {
-    path: '/video/edit',
-    title: '发图文/动态',
-    icon: 'fas fa-question'
+    title: 'AI混剪'
   }
 ])
 </script>

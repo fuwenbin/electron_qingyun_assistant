@@ -16,6 +16,7 @@ import { setupFFmpeg } from './utils/ffmpeg-utils';
 import { initPlaywright } from './services/playwright';
 import { databaseService } from './services/database-service';
 import { initApiController } from './services/api-controller';
+import { videoPublishTaskManager } from './utils/video-publish-task-manager';
 
 // The built directory structure
 //
@@ -102,14 +103,15 @@ const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
   initWindowControl();
 }
 
-app.whenReady().then(() => {
-  databaseService.init();
+app.whenReady().then(async () => {
+  await databaseService.init();
   app.commandLine.appendSwitch('disable-direct-write');
   ensureAppDataSaveDir();
   initProtocolCustom();
   createWindow();
   initializeAppAfterCreateWindow(win as BrowserWindow);
   initApiController();
+  videoPublishTaskManager.start();
 })
 
 app.on('window-all-closed', () => {

@@ -1,25 +1,18 @@
 <template>
   <div class="sider">
-    <div class="sider-item">
+    <div class="sider-item" @click="router.push('/publish-video/single-publish')">
       <div class="item-name">新建视频发布</div>
     </div>
-    <div class="sider-item">
+    <div class="sider-item" @click="router.push('/publish-video/batch-publish')">
       <div class="item-name">新建批量发布</div>
-    </div>
-    <div class="sider-item">
-      <div class="item-name">一键设置话题</div>
-    </div>
-    <div class="sider-item">
-      <div class="item-name">位置设置</div>
-    </div>
-    <div class="sider-item">
-      <div class="item-name">购物车设置</div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 </script>
 
 <style lang="scss" scoped>

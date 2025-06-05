@@ -39,10 +39,14 @@ class DatabaseService {
       log.info('SQL.js初始化完成')
       this.dbPath = path.join(getPlatformAppDataPath(), 'database.sqlite')
       log.info('数据库文件路径：' + this.dbPath)
+      const databaseExists = fs.existsSync(this.dbPath);
       
-      if (fs.existsSync(this.dbPath)) {
+      if (databaseExists) {
         const data = fs.readFileSync(this.dbPath);
         this.db = new SQL.Database(new Uint8Array(data));
+        const initTableSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_table.sql');
+        this.executeSqlFile(initTableSqlPath);
+        this.save();
       } else {
         this.db = new SQL.Database();
         const initTableSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_table.sql');

@@ -1,6 +1,6 @@
 import { PlatformDao } from "../daos/platform-dao";
 
-export class PlatformService {
+export default class PlatformService {
 
   dao: PlatformDao;
   constructor() {

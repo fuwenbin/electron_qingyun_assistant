@@ -1,21 +1,24 @@
 import { PlatformAccount } from "../entities/platform-account";
 import { databaseService } from "../services/database-service";
 import dayjs from "dayjs";
+import { BaseDao } from "./base-dao";
 
 const BASE_SELECT = `SELECT id, platform_id as platformId, platform_account_id as platformAccountId, 
   name, logo, status, login_status as loginStatus, state_data as stateData, remark, 
   last_login_time as lastLoginTime, created_at as createdAt, updated_at as updatedAt`;
 
-export class PlatformAccountDao { 
-  constructor() {}
+export class PlatformAccountDao extends BaseDao { 
+  constructor() {
+    super("platform_accounts", BASE_SELECT)
+  }
 
   insert(entity: PlatformAccount): number {
+    const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss')
     const sql = `INSERT INTO platform_accounts 
     (id, platform_id, platform_account_id, name, logo, status, login_status, state_data, 
       remark, last_login_time, created_at, updated_at) 
     VALUES 
     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss')
     const params = [
       entity.id,
       entity.platformId,
@@ -56,38 +59,6 @@ export class PlatformAccountDao {
     const rows = databaseService.execute(sql, params);
     databaseService.save()
     return rows
-  }
-
-  save(entity: PlatformAccount) {
-    if (entity.id) {
-      this.update(entity)
-    } else {
-      entity.id = databaseService.generateTextID()
-      this.insert(entity)
-    }
-  }
-
-  list() {
-      const sql = `${BASE_SELECT}
-      FROM platform_accounts`;
-      const records = databaseService.query(sql)
-      if (records && records.length > 0) {
-        return records
-      } else {
-        return []
-      }
-    }
-
-  findById(id: string) {
-    const sql = `${BASE_SELECT}
-    FROM platform_accounts WHERE id = ?`;
-    const params = [id];
-    const records = databaseService.query(sql, params)
-    if (records && records.length > 0) {
-      return records[0]
-    } else {
-      return null
-    }
   }
 
   findByPlatformIdAndPlatformAccountId(platformId: number, platformAccountId: string) { 

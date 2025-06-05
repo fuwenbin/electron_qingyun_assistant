@@ -1,3 +1,6 @@
+/*
+status: 0-未激活 1-已激活
+*/
 CREATE TABLE IF NOT EXISTS platforms (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
@@ -9,6 +12,10 @@ CREATE TABLE IF NOT EXISTS platforms (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+/*
+login_status: 0-未登录 1-已登录
+status: 0-未激活 1-已激活
+*/
 CREATE TABLE IF NOT EXISTS platform_accounts (
   id TEXT PRIMARY KEY,
   platform_id INTEGER NOT NULL,
@@ -27,7 +34,7 @@ CREATE TABLE IF NOT EXISTS platform_accounts (
 CREATE TABLE IF NOT EXISTS platform_account_groups (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  sequence TEXT,
+  sequence INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -35,20 +42,46 @@ CREATE TABLE IF NOT EXISTS platform_account_groups (
 CREATE TABLE IF NOT EXISTS platform_accounts_r_groups (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,
-  token TEXT,
-  status INTEGER DEFAULT 0,
+  sequence INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+/*
+setting_type: 1:单条视频发布 2：批量发布
+*/
+CREATE TABLE IF NOT EXISTS video_publish_settings  (
+  id TEXT PRIMARY KEY,
+  file_path TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  topic_group1 TEXT,
+  topic_group2 TEXT,
+  platform_data TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+/*
+status: 0:未开始 1:进行中 2:成功 3:失败
+publish_type: 0:立即发布 1:平台定时固定时间发布 2：本地定时固定时间发布 3：本地定时固定间隔发布
+*/
 CREATE TABLE IF NOT EXISTS video_publish_tasks (
   id TEXT PRIMARY KEY,
+  file_path TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  topic TEXT,
+  platform_data TEXT,
   account_id TEXT NOT NULL,
-  platform_id TEXT NOT NULL,
-  data TEXT,
-  status INTEGER DEFAULT 0,
+  platform_id INTEGER NOT NULL,
+  publish_type INTEGER NOT NULL DEFAULT 0,
+  publish_time TEXT,
+  scheduled_start_time TEXT,
   start_time TEXT,
   end_time TEXT,
+  status INTEGER DEFAULT 0,
+  item_id TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );

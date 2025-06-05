@@ -2,7 +2,7 @@ import { PlatformAccount } from "../entities/platform-account";
 import dayjs from 'dayjs'
 import { PlatformAccountDao } from "../daos/platform-account-dao";
 
-export class PlatformAccountService {
+export default class PlatformAccountService {
 
   dao: PlatformAccountDao;
   constructor() {
@@ -27,8 +27,15 @@ export class PlatformAccountService {
     this.dao.save(platformAccount);
   }
 
+  public findById(id: string) {
+    return this.dao.findById(id);
+  }
+
   public list() {
     return this.dao.list();
+  }
+  public listByIds(ids: string[]) {
+    return this.dao.listByIds(ids);
   }
 
   getStateData(id: string) {

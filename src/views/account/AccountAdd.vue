@@ -37,9 +37,8 @@ import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
 import { useRouter } from 'vue-router'
 import message from 'ant-design-vue/es/message'
 
-console.log(logoDouyin)
 const router = useRouter()
-const hotPlatformList = ref([])
+const hotPlatformList = ref<any[]>([])
 
 const getLogo = (platformId: number) => {
   if (platformId === 1) {
@@ -58,7 +57,7 @@ const addAccount = async (platform: any) => {
   })
   if (res.code === 0) {
     message.success('账号添加成功')
-    router.push('/account')
+    router.push('/account/home')
   } else {
     message.error('账号添加失败：' + res.errorMsg)
   }

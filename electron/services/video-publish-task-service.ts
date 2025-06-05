@@ -1,0 +1,108 @@
+import VideoPublishTaskDao from "../daos/video-publish-task-dao";
+import VideoPublishTask from "../entities/video-publish-task";
+import VideoPublishSettingService from "./video-publish-setting-service";
+import PlatformAccountService from "./platform-account-service";
+import PlatformService from './platform-service'
+import dayjs from "dayjs";
+
+export default class VideoPublishTaskService {
+  dao: VideoPublishTaskDao;
+  videoPublishSettingService: VideoPublishSettingService;
+  platformAccountService: PlatformAccountService;
+  platformService: PlatformService;
+
+  constructor() {
+    this.dao = new VideoPublishTaskDao();
+    this.videoPublishSettingService = new VideoPublishSettingService();
+    this.platformAccountService = new PlatformAccountService();
+    this.platformService = new PlatformService();
+  }
+
+  list() {
+    return this.dao.list();
+  }
+
+  findById(id: string) {
+    return this.dao.findById(id);
+  }
+
+  save(entity: VideoPublishTask) {
+    return this.dao.save(entity);
+  }
+
+  publish(params: any) {
+    const videoList = params.filePath.split('_,_');
+    const titleList = params.title.split('_,_');
+    const descriptionList = params.description.split('_,_');
+    const topicGroup1List = params.topicGroup1.split(',');
+    const topicGroup2List = params.topicGroup2.split(',');
+    const platformData = JSON.parse(params.platformData);
+    const platformAccountList = params.platformAccountList;
+    const publishType = params.publishType;
+    const publishTime = params.publishTime;
+    videoList.forEach(filePath => {
+      const titleIndex = this._getRandomIndex(titleList.length);
+      const title = titleList[titleIndex];
+      const descriptionIndex = this._getRandomIndex(descriptionList.length);
+      let description = descriptionList[descriptionIndex];
+      const topic1List = this._getRandomTopic(topicGroup1List, 4);
+      const topic2List = this._getRandomTopic(topicGroup2List, 1);
+      const topicList = [...topic1List, ...topic2List]
+      description += topicList.map(v => `#${v}`).join(' ');
+      platformAccountList.forEach(accountId => {
+        const account = this.platformAccountService.findById(accountId);
+        const platformId = account.platformId;
+        const task = new VideoPublishTask();
+        task.filePath = filePath;
+        task.title = title;
+        task.description = description;
+        task.topic = topicList.join(' ');
+        task.platformData = platformData[`${platformId}`] || '';
+        task.accountId = accountId;
+        task.platformId = platformId;
+        task.publishType = publishType;
+        task.publishTime = publishTime;
+        if (publishTime === 0 || publishTime === 1) {
+          task.scheduledStartTime = publishTime ? publishTime : dayjs().format('YYYY-MM-DD HH:mm');
+        } else {
+          task.scheduledStartTime = publishTime;
+        }
+        task.startTime = '';
+        task.endTime = '';
+        task.status = 0;
+        task.itemId = '';
+        try {
+          this.save(task);
+        } catch (error) {
+          console.error('创建发布任务失败：' + JSON.stringify(task));
+          console.error(error.message);
+        }
+      });
+      
+    })
+  }
+
+  getLatestTaskToPublish() {
+    return this.dao.getLatestTaskToPublish();
+  }
+
+  private _getRandomIndex(size: number) {
+    return Math.floor(Math.random() * size) % size;
+  }
+
+  private _getRandomTopic(topics: string[], size: number) {
+    if (topics.length <= size) {
+      return topics;
+    } else {
+      const result: string[] = [];
+      let selectData = [...topics];
+      for (let i = 0; i < size; i++) {
+        const selectedIndex = this._getRandomIndex(selectData.length);
+        result.push(selectData[selectedIndex])
+        selectData = selectData.filter((_, index) => index !== selectedIndex)
+      }
+      return result;
+    }
+  }
+
+}
