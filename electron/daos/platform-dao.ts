@@ -1,33 +1,14 @@
 import { databaseService } from "../services/database-service";
+import { BaseDao } from "./base-dao";
 
 const BASE_SELECT = `SELECT id, name, logo, login_url as loginUrl, publish_video_url as publishVideoUrl, 
   status, 
   created_at as createdAt, updated_at as updatedAt`;
 
-export class PlatformDao {
+export class PlatformDao extends BaseDao {
 
-  constructor() {}
-  list() {
-    const sql = `${BASE_SELECT}
-    FROM platforms`;
-    const records = databaseService.query(sql)
-    if (records && records.length > 0) {
-      return records
-    } else {
-      return []
-    }
-  }
-
-  findById(id: number) {
-    const sql = `${BASE_SELECT}
-    FROM platforms WHERE id = ?`;
-    const params = [id];
-    const records = databaseService.query(sql, params)
-    if (records && records.length > 0) {
-      return records[0]
-    } else {
-      return null
-    }
+  constructor() {
+    super("platforms", BASE_SELECT)
   }
 
 }

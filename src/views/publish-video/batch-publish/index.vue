@@ -7,7 +7,7 @@
           <div class="form-item">
             <div class="item-label">添加视频</div>
             <div class="item-input">
-              <VideoChooser v-model="selectedVideos" :limit="1"/>
+              <PublishVideoChooser v-model="selectedVideos"/>
             </div>
           </div>
           <div class="form-item">
@@ -93,13 +93,13 @@
 </template>
 
 <script lang="ts" setup>
-import VideoChooser from '@/components/VideoChooser.vue'
 import { onMounted, reactive, ref, watch } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
 import { message } from 'ant-design-vue'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'
 import BatchPublishDescription from './components/BatchPublishDescription.vue'
 import PublishSettingDialog from '../components/PublishSettingDialog.vue'
+import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
 const selectedVideos  = ref<any[]>([])
 

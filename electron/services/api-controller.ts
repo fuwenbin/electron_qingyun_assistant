@@ -3,6 +3,7 @@ import PlatformService from '../services/platform-service'
 import PlatformAccountService from './platform-account-service';
 import VideoPublishSettingService from './video-publish-setting-service';
 import VideoPublishTaskService from './video-publish-task-service';
+import PlatformAccountSyncTaskService from './platform-account-sync-task-service';
 import { decodeArg } from '../utils';
 import BusinessException from '../exception/business-exception';
 
@@ -10,6 +11,7 @@ const platformService = new PlatformService();
 const platformAccountService = new PlatformAccountService();
 const videoPublishSettingService = new VideoPublishSettingService();
 const videoPublishTaskService = new VideoPublishTaskService();
+const platformAccountSyncTaskService = new PlatformAccountSyncTaskService();
 export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
@@ -52,6 +54,20 @@ export function initApiController() {
         }
       } else if (url === '/video-publish-task/list' && method.toLowerCase() === 'get') {
         const resData = videoPublishTaskService.list()
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
+      } else if (url === '/video-publish-task/statistic-by-filename' && method.toLowerCase() === 'get') {
+        const resData = videoPublishTaskService.statisticVideoPublishPlatform(data)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
+      } else if (url === '/platform-account-sync-task/add') {
+        const resData = await platformAccountSyncTaskService.add(data)
         return {
           code: 0,
           message: 'success',

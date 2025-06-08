@@ -18,20 +18,7 @@ const router = createRouter({
     }, {
       path: '/account',
       name: 'account',
-      component: () => import('../views/account/Account.vue'),
-      redirect: '/account/home',
-      children: [
-        {
-          path: '/account/home',
-          name: 'account-home',
-          component: () => import('../views/account/AccountHome.vue')
-        },
-        {
-          path: '/account/add',
-          name: 'account-add',
-          component: () => import('../views/account/AccountAdd.vue')
-        }
-      ]
+      component: () => import('../views/account/Account.vue')
     }, {
       path: '/publish-video',
       name: 'publish-video',

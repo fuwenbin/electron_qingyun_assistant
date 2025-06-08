@@ -59,6 +59,8 @@ function createWindow() {
       sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     },
+    width: 1400,
+    height: 900,
     autoHideMenuBar: true
   })
 

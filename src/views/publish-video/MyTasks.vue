@@ -49,6 +49,10 @@
           <div>{{ record.endTime }}</div>
         </template>
       </a-table-column>
+      <a-table-column key="endTime" title="播放" data-index="playCount"></a-table-column>
+      <a-table-column key="endTime" title="点赞" data-index="diggCount"></a-table-column>
+      <a-table-column key="endTime" title="评论" data-index="commentCount"></a-table-column>
+      <a-table-column key="endTime" title="分享" data-index="shareCount"></a-table-column>
       <a-table-column key="actions" title="操作">
         <template #default="{record}">
           <div class="item-actions">
@@ -63,10 +67,11 @@
 </template>
 
 <script lang="ts" setup>
-import {  ref, onMounted } from 'vue'
+import {  ref, onMounted, onBeforeUnmount } from 'vue'
 import { message } from 'ant-design-vue'
 
 const dataList = ref<any[]>([])
+const refreshTimeout = ref<any>(null)
 
 const getDataList = async () => {
   try {
@@ -79,7 +84,6 @@ const getDataList = async () => {
     } else {
       throw new Error(res.message)
     }
-    console.log(res.data)
   } catch (error: any) {
     console.error("获取视频发布任务列表失败：" + error.message)
     message.error("获取视频发布任务列表失败：" + error.message)
@@ -101,9 +105,29 @@ const getStatusName = (status: number) => {
   }
 }
 
-onMounted(() => {
-  getDataList()
+const refresh  = () => {
+  if (!refreshTimeout.value) {
+    refreshTimeout.value = setTimeout(async () => {
+      await getDataList()
+      refreshTimeout.value = null
+      refresh();
+    }, 5000)
+  }
+}
+
+
+onMounted(async () => {
+  await getDataList();
+  refresh();
 })
+
+onBeforeUnmount(() => {
+  if (refreshTimeout.value) {
+    clearTimeout(refreshTimeout.value)
+    refreshTimeout.value = null
+  }
+})
+  
 </script>
 
 <style lang="scss" scoped>

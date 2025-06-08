@@ -69,19 +69,38 @@ publish_type: 0:立即发布 1:平台定时固定时间发布 2：本地定时�
 CREATE TABLE IF NOT EXISTS video_publish_tasks (
   id TEXT PRIMARY KEY,
   file_path TEXT NOT NULL,
-  title TEXT,
-  description TEXT,
-  topic TEXT,
-  platform_data TEXT,
+  file_name TEXT NOT NULL,
+  title TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  topic TEXT DEFAULT '',
+  platform_data TEXT DEFAULT '',
   account_id TEXT NOT NULL,
   platform_id INTEGER NOT NULL,
   publish_type INTEGER NOT NULL DEFAULT 0,
-  publish_time TEXT,
-  scheduled_start_time TEXT,
-  start_time TEXT,
-  end_time TEXT,
+  publish_time TEXT DEFAULT '',
+  scheduled_start_time TEXT DEFAULT '',
+  start_time TEXT DEFAULT '',
+  end_time TEXT DEFAULT '',
   status INTEGER DEFAULT 0,
-  item_id TEXT,
+  item_id TEXT DEFAULT '',
+  collect_count INTEGER DEFAULT 0,
+  comment_count INTEGER DEFAULT 0,
+  digg_count INTEGER DEFAULT 0,
+  forward_count INTEGER DEFAULT 0,
+  live_watch_count INTEGER DEFAULT 0,
+  play_count INTEGER DEFAULT 0,
+  share_count INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+/*
+sync_status: 1-成功 2-失败
+*/
+CREATE TABLE IF NOT EXISTS account_sync_records (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  sync_status INTEGER NOT NULL,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );

@@ -1,6 +1,7 @@
 export default class VideoPublishTask {
   id: string;
   filePath: string;
+  fileName: string;
   title: string;
   description: number;
   topic: string;
@@ -14,6 +15,13 @@ export default class VideoPublishTask {
   endTime: string;
   status: number;
   itemId: string;
+  collectCount: number;
+  commentCount: number;
+  diggCount: number;
+  forwardCount: number;
+  liveWatchCount: number;
+  playCount: number;
+  shareCount: number;
   createdAt: string;
   updatedAt: string;
 }

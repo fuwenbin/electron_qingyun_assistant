@@ -4,6 +4,7 @@ import VideoPublishSettingService from "./video-publish-setting-service";
 import PlatformAccountService from "./platform-account-service";
 import PlatformService from './platform-service'
 import dayjs from "dayjs";
+import path from "path";
 
 export default class VideoPublishTaskService {
   dao: VideoPublishTaskDao;
@@ -54,6 +55,7 @@ export default class VideoPublishTaskService {
         const platformId = account.platformId;
         const task = new VideoPublishTask();
         task.filePath = filePath;
+        task.fileName = path.basename(filePath);
         task.title = title;
         task.description = description;
         task.topic = topicList.join(' ');
@@ -71,6 +73,13 @@ export default class VideoPublishTaskService {
         task.endTime = '';
         task.status = 0;
         task.itemId = '';
+        task.collectCount = 0;
+        task.commentCount = 0;
+        task.diggCount = 0;
+        task.forwardCount = 0;
+        task.liveWatchCount = 0;
+        task.playCount = 0;
+        task.shareCount = 0;
         try {
           this.save(task);
         } catch (error) {
@@ -103,6 +112,52 @@ export default class VideoPublishTaskService {
       }
       return result;
     }
+  }
+
+  statisticVideoPublishPlatform(filenameList: string[]) {
+    const records = this.dao.statisticVideoPublishPlatform(filenameList);
+    const platformIdList: any[] = Array.from(new Set(records.map(v => v.platformId)));
+    const platformList = this.platformService.listByIds(platformIdList);
+    const result: any = {}
+    filenameList.forEach(filename => {
+      const fileRecords = records.filter(v => v.fileName === filename);
+      let fileStatistic = result[filename];
+      if (!fileStatistic) {
+        result[filename] = {}
+      }
+      fileRecords.forEach(record => {
+        const platformId = record.platformId;
+        const platform = platformList.find(v => v.id === platformId);
+        const status = record.status;
+        let filePlatformStatistic = result[filename][platformId];
+        if (!filePlatformStatistic) {
+          result[filename][platformId]  = {
+            platformId: platformId,
+            platformName: platform.name,
+            notPublishCount: 0,
+            publishingCount: 0,
+            publishSuccessCount: 0,
+            publishFailCount: 0
+          }
+        }
+        if (status === 0) {
+          result[filename][platformId].notPublishCount += 1;
+        } else if (status === 1) {
+          result[filename][platformId].publishingCount += 1;
+        } else if (status === 2) {
+          result[filename][platformId].publishSuccessCount += 1;
+        } else if (status === 3) {
+          result[filename][platformId].publishFailCount += 1;
+        }
+      })
+    })
+    console.log(JSON.stringify(result))
+    console.log('33333333333333333333333333333333')
+    return result;
+  }
+
+  public findByItemId(itemId: string) {
+    return this.dao.findByItemId(itemId);
   }
 
 }

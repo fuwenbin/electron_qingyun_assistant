@@ -1,11 +1,12 @@
 <template>
-  <div class="page-account-add">
+  <a-modal :open="props.open" title="添加账号" width="1000" :footer="null"
+    @update:open="(value: boolean) => emit('update:open', value)">
+    <div class="page-account-add">
     <div class="page-header">
       <div class="header-left">
-        <div class="page-title">添加账号</div>
       </div>
       <div class="header-right">
-        <a-input type="search" placeholder="请输入要查找的平台" />"
+        <a-input type="search" placeholder="请输入要查找的平台" />
       </div>
     </div>
     <div class="page-body">
@@ -27,17 +28,21 @@
       </div>
     </div>
   </div>
-  
+  </a-modal>
 </template>
 
 <script lang="ts" setup>
-import { FireFilled } from '@ant-design/icons-vue'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { FireFilled } from '@ant-design/icons-vue'
 import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
-import { useRouter } from 'vue-router'
 import message from 'ant-design-vue/es/message'
 
-const router = useRouter()
+const props = defineProps<{
+  open: boolean;
+}>()
+
+const emit = defineEmits(['update:open', 'close', 'refresh'])
+
 const hotPlatformList = ref<any[]>([])
 
 const getLogo = (platformId: number) => {
@@ -56,8 +61,9 @@ const addAccount = async (platform: any) => {
     }
   })
   if (res.code === 0) {
-    message.success('账号添加成功')
-    router.push('/account/home')
+    message.success('账号添加成功', 3);
+    emit('update:open', false);
+    emit('refresh');
   } else {
     message.error('账号添加失败：' + res.errorMsg)
   }
@@ -83,6 +89,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.electronAPI.onPlatformLoginFinished(() => {})
 })
+
+const handleModalOpenChange = (value: boolean) => {
+  emit('update:open', value)
+  if (!value) {
+    emit('close')
+  }
+}
 
 </script>
 

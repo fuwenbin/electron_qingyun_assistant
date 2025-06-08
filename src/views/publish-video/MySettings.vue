@@ -66,7 +66,6 @@ const getDataList = async () => {
     })
     if (res.code === 0) {
       dataList.value = res.data
-      console.log(res.data)
     } else {
       throw new Error(res.message)
     }

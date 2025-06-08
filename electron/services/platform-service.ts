@@ -18,4 +18,8 @@ export default class PlatformService {
   public findById(id: number) {
     return this.dao.findById(id);
   }
+
+  public listByIds(ids: number[]) {
+    return this.dao.listByIds(ids);
+  }
 }

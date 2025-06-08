@@ -25,7 +25,7 @@ export function initPlaywright() {
       const platformId = payload.platformId;
       const loginUrl = payload.loginUrl;
       try {
-        douyinLogin(browser, platformId, loginUrl)
+        await douyinLogin(browser, platformId, loginUrl)
         return {
           code: 0,
           message: 'success'

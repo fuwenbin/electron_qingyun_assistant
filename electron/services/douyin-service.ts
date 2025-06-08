@@ -95,6 +95,14 @@ export default class DouyinService {
       }
       const publishButtonElement = await page.waitForSelector('button:text("发布")');
       await publishButtonElement.click();
+      const publishResponse = await page.waitForResponse((response) => response.url().includes('/api/media/aweme/create_v2') && response.status() === 200);
+      const publishResponseJson = await publishResponse.json();
+
+      if (publishResponseJson?.status_code === 0) {
+        const item_id  = publishResponseJson?.item_id;
+        console.log('发布成功，平台id：' + item_id)
+        task.itemId = item_id;
+      }
       await page.waitForURL('https://creator.douyin.com/creator-micro/content/manage**', {
         timeout: 30000
       })
@@ -106,6 +114,46 @@ export default class DouyinService {
       task.status = 3;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
       this.videoPublishTaskService.save(task);
+      throw error;
+    } finally {
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
+    }
+  }
+
+  async syncAccount(accountId: string) {
+    console.log('开始同步账号信息：' + accountId)
+    const browser = await getBrowser(true);
+    // 读取保存的状态
+    const stateStr = this.platformAccountService.getStateData(accountId)
+    const context = await browser.newContext({
+      storageState: JSON.parse(stateStr)
+    });
+    const page = await context.newPage();
+    const statisticUrl = 'https://creator.douyin.com/creator-micro/content/manage'
+    try {
+      await page.goto(statisticUrl);
+      const statisticResponse = await page.waitForResponse(
+        (response) => response.url().includes('/douyin/creator/pc/work_list')
+      )
+      const statisticData = await statisticResponse.json()
+      const workList = statisticData?.aweme_list || [];
+      for  (const work of workList) {
+        const itemId = work.statistics.aweme_id;
+        const task = this.videoPublishTaskService.findByItemId(itemId);
+        if (task) {
+          task.collectCount = work.statistics.collect_count;
+          task.commentCount = work.statistics.comment_count;
+          task.diggCount  = work.statistics.digg_count;
+          task.forwardCount = work.statistics.forward_count;
+          task.liveWatchCount = work.statistics.live_watch_count;
+          task.playCount = work.statistics.play_count;
+          task.shareCount = work.statistics.share_count;
+          this.videoPublishTaskService.save(task);
+        }
+      }
+    } catch (error: any) {
       throw error;
     } finally {
       await page?.close().catch(() => {});
