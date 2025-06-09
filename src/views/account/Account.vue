@@ -29,7 +29,7 @@
       </div>
     </div>
   </Page>
-  <AccountAddModal v-model:open="accountAddModelOpen" />
+  <AccountAddModal v-model:open="accountAddModelOpen" @refresh="getAccountList"/>
   <AccountSyncModal v-model:open="accountSyncModelOpen" />
 </template>
 
@@ -55,6 +55,7 @@ const getAccountList = async () => {
     accountList.value = res.data
   }
 }
+
 onMounted(() => {
   getAccountList()
 })

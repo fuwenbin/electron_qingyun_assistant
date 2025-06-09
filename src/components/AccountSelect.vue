@@ -81,8 +81,15 @@ const getAccountList = async () => {
     url: '/platform-account/list',
     method: 'GET'
   })
-  if (res.code === 0) {
-    platformAccountList.value = res.data
+  try {
+    if (res.code === 0) {
+      platformAccountList.value = res.data
+    } else {
+      throw new Error(res.message);
+    }
+  } catch (error: any) {
+    console.error('获取账号列表报错：' + error.message)
+    message.error('获取账号列表报错：' + error.message)
   }
 }
 

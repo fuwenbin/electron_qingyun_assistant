@@ -22,11 +22,6 @@ interface MenuItem {
 
 const menuItems = ref<MenuItem[]>([
   {
-    path: '/',
-    title: '首页',
-    icon: 'fas fa-home'
-  },
-  {
     path: '/ai',
     title: '创作中心',
     icon: 'fas fa-robot',
@@ -37,12 +32,6 @@ const menuItems = ref<MenuItem[]>([
         icon: 'fas fa-comments'
       }
     ]
-  },
-  {
-    path: '/test',
-    title: '测试',
-    icon: 'fas fa-question'
-
   }
 ])
 </script>

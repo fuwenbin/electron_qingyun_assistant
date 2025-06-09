@@ -90,13 +90,6 @@ onBeforeUnmount(() => {
   window.electronAPI.onPlatformLoginFinished(() => {})
 })
 
-const handleModalOpenChange = (value: boolean) => {
-  emit('update:open', value)
-  if (!value) {
-    emit('close')
-  }
-}
-
 </script>
 
 <style lang="scss" scoped>

@@ -6,15 +6,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../views/HomeView.vue'),
-      redirect: '/video/edit',
-      children: [
-        {
-          path: '/video/edit',
-          name: 'videoEdit',
-          component: () => import('../views/video/VideoEdit/index.vue')
-        }
-      ]
+      redirect: '/video/edit'
     }, {
       path: '/account',
       name: 'account',
@@ -53,9 +45,17 @@ const router = createRouter({
       component: () => import('../views/WorkspaceView.vue')
     },
     {
-      path: '/video/edit',
-      name: 'videoEdit',
-      component: () => import('../views/video/VideoEdit/index.vue')
+      path: '/video',
+      name: 'video',
+      component: () => import('../views/video/VideoView.vue'),
+      redirect: '/video/edit',
+      children: [
+        {
+          path: '/video/edit',
+          name: 'videoEdit',
+          component: () => import('../views/video/VideoEdit/index.vue')
+        }
+      ]
     },
     {
       path: '/test',
