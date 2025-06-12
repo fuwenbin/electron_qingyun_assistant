@@ -1,6 +1,6 @@
 <template>
   <div class="page-my-task">
-    <a-table :data-source="dataList">
+    <a-table :data-source="dataList" :pagination="false">
       <a-table-column key="index" title="序号">
         <template #default="{index}">
           <div>{{ index + 1 }}</div>
@@ -59,19 +59,28 @@
             <a-button v-if="record.status === 3" type="primary" 
               @click="() => {}">重试</a-button>
             <a-button v-if="record.status === 0" type="text" danger @click="() => {}">取消</a-button>
+            <a-button v-if="record.status === 2" type="default" size="small" 
+              @click="openCommentDialog(record)">评论</a-button>
+            <a-button v-if="record.status === 2" type="default" size="small" 
+              @click="() => {}">私信</a-button>
           </div>
         </template>
       </a-table-column>
     </a-table>
   </div>
+  <comment-list-dialog v-if="commentListDialogOpen" v-model:open="commentListDialogOpen" :accountId="commentTask?.accountId" 
+    :platformId="commentTask?.platformId" :itemId="commentTask?.itemId"/>
 </template>
 
 <script lang="ts" setup>
 import {  ref, onMounted, onBeforeUnmount } from 'vue'
 import { message } from 'ant-design-vue'
+import CommentListDialog from './components/CommentListDialog.vue'
 
 const dataList = ref<any[]>([])
 const refreshTimeout = ref<any>(null)
+const commentListDialogOpen = ref(false)
+const commentTask = ref<any>(null)
 
 const getDataList = async () => {
   try {
@@ -89,7 +98,6 @@ const getDataList = async () => {
     message.error("获取视频发布任务列表失败：" + error.message)
   }
 }
-
 const getStatusName = (status: number) => {
   switch (status) {
     case 0:
@@ -115,6 +123,13 @@ const refresh  = () => {
   }
 }
 
+const openCommentDialog = (task: any) => {
+  commentTask.value = task;
+  commentListDialogOpen.value = true;
+}
+
+
+
 
 onMounted(async () => {
   await getDataList();
@@ -139,5 +154,10 @@ onBeforeUnmount(() => {
     width: 40px;
     height: 40px;
   }
+}
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 </style>

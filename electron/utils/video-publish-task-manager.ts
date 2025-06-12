@@ -1,6 +1,6 @@
 import VideoPublishTask from "../entities/video-publish-task";
-import VideoPublishTaskService from "../services/video-publish-task-service";
-import DouyinService from "../services/douyin-service";
+import videoPublishTaskService from "../services/video-publish-task-service";
+import douyinService from "../services/douyin-service";
 
 export class VideoPublishTaskManger {
   static instance: VideoPublishTaskManger;
@@ -9,12 +9,6 @@ export class VideoPublishTaskManger {
   interval: any;
   isRunning: boolean = false;
   isStarted: boolean = false;
-  videoPublishTaskService: VideoPublishTaskService;
-  douyinService: DouyinService;
-  constructor() {
-    this.videoPublishTaskService = new VideoPublishTaskService();
-    this.douyinService = new DouyinService();
-  }
 
   public static getInstance() {
     if (!VideoPublishTaskManger.instance) {
@@ -39,13 +33,13 @@ export class VideoPublishTaskManger {
   }
 
   async publish() {
-    const latestTask = this.videoPublishTaskService.getLatestTaskToPublish();
+    const latestTask = videoPublishTaskService.getLatestTaskToPublish();
     if (!latestTask) {
       console.log("开始执行视频发布任务：没有需要执行的任务");
       return await new Promise(resolve => setTimeout(resolve, 5000));
     } else {
       console.log("开始执行视频发布任务：" + JSON.stringify(latestTask));
-      return await this.douyinService.publishVideo(latestTask);
+      return await douyinService.publishVideo(latestTask);
     }
   }
 }

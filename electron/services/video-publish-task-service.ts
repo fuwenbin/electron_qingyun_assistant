@@ -1,22 +1,14 @@
 import VideoPublishTaskDao from "../daos/video-publish-task-dao";
 import VideoPublishTask from "../entities/video-publish-task";
-import VideoPublishSettingService from "./video-publish-setting-service";
-import PlatformAccountService from "./platform-account-service";
-import PlatformService from './platform-service'
+import platformAccountService from "./platform-account-service";
+import platformService from './platform-service'
 import dayjs from "dayjs";
 import path from "path";
 
-export default class VideoPublishTaskService {
+export class VideoPublishTaskService {
   dao: VideoPublishTaskDao;
-  videoPublishSettingService: VideoPublishSettingService;
-  platformAccountService: PlatformAccountService;
-  platformService: PlatformService;
-
   constructor() {
     this.dao = new VideoPublishTaskDao();
-    this.videoPublishSettingService = new VideoPublishSettingService();
-    this.platformAccountService = new PlatformAccountService();
-    this.platformService = new PlatformService();
   }
 
   list() {
@@ -51,7 +43,7 @@ export default class VideoPublishTaskService {
       const topicList = [...topic1List, ...topic2List]
       description += topicList.map(v => `#${v}`).join(' ');
       platformAccountList.forEach(accountId => {
-        const account = this.platformAccountService.findById(accountId);
+        const account = platformAccountService.findById(accountId);
         const platformId = account.platformId;
         const task = new VideoPublishTask();
         task.filePath = filePath;
@@ -117,7 +109,7 @@ export default class VideoPublishTaskService {
   statisticVideoPublishPlatform(filenameList: string[]) {
     const records = this.dao.statisticVideoPublishPlatform(filenameList);
     const platformIdList: any[] = Array.from(new Set(records.map(v => v.platformId)));
-    const platformList = this.platformService.listByIds(platformIdList);
+    const platformList = platformService.listByIds(platformIdList);
     const result: any = {}
     filenameList.forEach(filename => {
       const fileRecords = records.filter(v => v.fileName === filename);
@@ -151,8 +143,6 @@ export default class VideoPublishTaskService {
         }
       })
     })
-    console.log(JSON.stringify(result))
-    console.log('33333333333333333333333333333333')
     return result;
   }
 
@@ -161,3 +151,5 @@ export default class VideoPublishTaskService {
   }
 
 }
+
+export default new VideoPublishTaskService();

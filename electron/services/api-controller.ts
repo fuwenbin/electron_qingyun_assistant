@@ -1,17 +1,13 @@
 import { ipcMain } from 'electron'
-import PlatformService from '../services/platform-service'
-import PlatformAccountService from './platform-account-service';
-import VideoPublishSettingService from './video-publish-setting-service';
-import VideoPublishTaskService from './video-publish-task-service';
-import PlatformAccountSyncTaskService from './platform-account-sync-task-service';
+import platformService from '../services/platform-service'
+import platformAccountService from './platform-account-service';
+import videoPublishSettingService from './video-publish-setting-service';
+import videoPublishTaskService from './video-publish-task-service';
+import platformAccountSyncTaskService from './platform-account-sync-task-service';
 import { decodeArg } from '../utils';
 import BusinessException from '../exception/business-exception';
-
-const platformService = new PlatformService();
-const platformAccountService = new PlatformAccountService();
-const videoPublishSettingService = new VideoPublishSettingService();
-const videoPublishTaskService = new VideoPublishTaskService();
-const platformAccountSyncTaskService = new PlatformAccountSyncTaskService();
+import testService from './test';
+import platfromAccountCommentService from './platform-account-comment-service';
 export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
@@ -19,6 +15,13 @@ export function initApiController() {
     try {
       if (url === '/platform/list' && method.toLowerCase() === 'get') {
         const resData = platformService.list()
+        return {
+          code: 0,
+          data: resData,
+          message: 'success'
+        }
+      } else if (url === '/platform-account/addAccount' && method.toLowerCase() === 'post') {
+        const resData = await platformAccountService.addAccountLogin(data)
         return {
           code: 0,
           data: resData,
@@ -72,6 +75,19 @@ export function initApiController() {
           code: 0,
           message: 'success',
           data: resData
+        }
+      } else if (url === '/platform-account-comment/listNotReplyCommentLatest10' && method.toLowerCase() === 'get') {
+        const resData = await platfromAccountCommentService.listNotReplyCommentLatest10(data)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
+      } else if (url === '/platform-account-comment/publishCommentReply' && method.toLowerCase() === 'post') {
+        await platfromAccountCommentService.publishCommentReply(data)
+        return {
+          code: 0,
+          message: 'success'
         }
       } else {
         throw new BusinessException(404, '请求的服务不存在')

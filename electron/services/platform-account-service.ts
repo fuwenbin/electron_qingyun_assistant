@@ -1,8 +1,9 @@
 import { PlatformAccount } from "../entities/platform-account";
 import dayjs from 'dayjs'
 import { PlatformAccountDao } from "../daos/platform-account-dao";
+import douyinService from "./douyin-service";
 
-export default class PlatformAccountService {
+export class PlatformAccountService {
 
   dao: PlatformAccountDao;
   constructor() {
@@ -31,6 +32,10 @@ export default class PlatformAccountService {
     return this.dao.findById(id);
   }
 
+  public async addAccountLogin(data) {
+    return await douyinService.login(data);
+  }
+
   public list() {
     return this.dao.list();
   }
@@ -51,3 +56,5 @@ export default class PlatformAccountService {
 
   }
 }
+
+export default new PlatformAccountService();;

@@ -1,31 +1,68 @@
 import { waitForRandomTimeout } from "../utils/playwright-utils";
-import PlatformAccountService from "./platform-account-service";
-import PlatformService from "./platform-service";
+import platformAccountService from "./platform-account-service";
+import platformService from "./platform-service";
 import { getBrowser } from "./playwright";
-import VideoPublishTaskService from "./video-publish-task-service";
+import videoPublishTaskService from "./video-publish-task-service";
 import dayjs from "dayjs";
+import log from "electron-log";
 
-export default class DouyinService {
+export class DouyinService {
 
-  platformService: PlatformService;
-  platformAccountService: PlatformAccountService;
-  videoPublishTaskService: VideoPublishTaskService;
-  constructor() {
-    this.platformService = new PlatformService();
-    this.platformAccountService = new PlatformAccountService();
-    this.videoPublishTaskService = new VideoPublishTaskService();
+  async login(payload: any) {
+    const browser = await getBrowser(false);
+    const platformId = payload.platformId;
+    const loginUrl = "https://creator.douyin.com";
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    
+    // 隐藏自动化特征
+    await page.addInitScript(() => {
+      // @ts-ignore
+      delete navigator.__proto__.webdriver;
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false
+      });
+    });
+
+    try {
+      await page.goto(loginUrl, {
+        waitUtil: 'domcontentloaded',
+        timeout: 120000
+      });
+      // 等待用户手动登录
+      log.log('请在浏览器中完成抖音登录...');
+      const infoResponsePromise = page.waitForResponse(
+        (response: any) => response.url().includes('/aweme/v1/creator/user/info/')
+      )
+      await page.waitForURL("**/creator-micro/home", {timeout: 120000 });
+      const state = await context.storageState();
+      const infoRes = await infoResponsePromise;
+      const infoResData = await infoRes.json();
+      const userInfo = infoResData.user_profile;
+      const platformAccountId = userInfo.unique_id;
+      const logoUrl = userInfo.avatar_url;
+      const name = userInfo.nick_name;
+      platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
+    } catch (error) {
+      log.log(error);
+      throw error;
+    } finally {
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
+    }
   }
   async publishVideo(payload: any) {
     const taskId = payload.id;
-    const task = this.videoPublishTaskService.findById(taskId);
+    const task = videoPublishTaskService.findById(taskId);
     task.status = 1;
     task.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    this.videoPublishTaskService.save(task);
+    videoPublishTaskService.save(task);
     const browser = await getBrowser();
     const platformId = payload.platformId;
-    const platform = this.platformService.findById(platformId);
+    const platform = platformService.findById(platformId);
     // 读取保存的状态
-    const stateStr = this.platformAccountService.getStateData(payload.accountId)
+    const stateStr = platformAccountService.getStateData(payload.accountId)
     const context = await browser.newContext({
       storageState: JSON.parse(stateStr)
     });
@@ -108,12 +145,12 @@ export default class DouyinService {
       })
       task.status = 2;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-      this.videoPublishTaskService.save(task);
+      videoPublishTaskService.save(task);
     } catch (error) {
       console.log(error);
       task.status = 3;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-      this.videoPublishTaskService.save(task);
+      videoPublishTaskService.save(task);
       throw error;
     } finally {
       await page?.close().catch(() => {});
@@ -126,7 +163,7 @@ export default class DouyinService {
     console.log('开始同步账号信息：' + accountId)
     const browser = await getBrowser(true);
     // 读取保存的状态
-    const stateStr = this.platformAccountService.getStateData(accountId)
+    const stateStr = platformAccountService.getStateData(accountId)
     const context = await browser.newContext({
       storageState: JSON.parse(stateStr)
     });
@@ -141,7 +178,7 @@ export default class DouyinService {
       const workList = statisticData?.aweme_list || [];
       for  (const work of workList) {
         const itemId = work.statistics.aweme_id;
-        const task = this.videoPublishTaskService.findByItemId(itemId);
+        const task = videoPublishTaskService.findByItemId(itemId);
         if (task) {
           task.collectCount = work.statistics.collect_count;
           task.commentCount = work.statistics.comment_count;
@@ -150,7 +187,7 @@ export default class DouyinService {
           task.liveWatchCount = work.statistics.live_watch_count;
           task.playCount = work.statistics.play_count;
           task.shareCount = work.statistics.share_count;
-          this.videoPublishTaskService.save(task);
+          videoPublishTaskService.save(task);
         }
       }
     } catch (error: any) {
@@ -161,4 +198,132 @@ export default class DouyinService {
       await browser?.close().catch(() => {});
     }
   }
+
+  async syncAccountComment(data: any) {
+    const {accountId, itemId } = data;
+    console.log('开始同步账号评论信息：' + accountId)
+    const browser = await getBrowser();
+    // 读取保存的状态
+    const stateStr = platformAccountService.getStateData(accountId)
+    const context = await browser.newContext({
+      storageState: JSON.parse(stateStr)
+    });
+    const page = await context.newPage();
+    const commentUrl = 'https://creator.douyin.com/creator-micro/interactive/comment'
+    try {
+      const itemListResponsePromise = page.waitForResponse(
+        (response) => response.url().includes('/aweme/v1/creator/item/list') && response.status() === 200
+      )
+      await page.goto(commentUrl, {
+        waitUtil: 'domcontentloaded',
+        timeout: 30000
+      });
+      const itemListResponse = await itemListResponsePromise;
+      const itemListResData = await itemListResponse.json()
+      const itemListData = itemListResData.item_info_list
+      const selectIndex = itemListData.findIndex(item => item.item_id_plain === itemId)
+      const selectWorkButton = await page.waitForSelector('button span.douyin-creator-interactive-button-content:has-text("选择作品")');
+      await selectWorkButton.click();
+      const selectWorkItem = await page.waitForSelector(`.douyin-creator-interactive-list-items > div:nth-child(${selectIndex + 1}) > img`)
+      await selectWorkItem.click();
+      const commentTypeSelectElement = await page.waitForSelector('div.douyin-creator-interactive-select[role=combobox]:nth-child(1)');
+      await commentTypeSelectElement.click();
+      const commentTypeSelectedItemElement = await page.waitForSelector(`div.douyin-creator-interactive-select-option-list-chosen[role=listbox] .douyin-creator-interactive-select-option:has-text("未回复")`);
+      const commentListResponsePromise = page.waitForResponse(
+        response => response.url().includes('/api/comment/read/aweme/v1/web/comment/list/select/') 
+          && response.status() === 200 
+          && response.url().includes('comment_select_options=0%2Cnot_replied')
+      );
+      await commentTypeSelectedItemElement.click();
+      const commentListResponse = await commentListResponsePromise;
+      const commentListResponseData = await commentListResponse.json();
+      return commentListResponseData.comments || [];
+    } catch (error: any) {
+      throw error;
+    } finally {
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
+    }
+  }
+
+  async publishCommentReply(data: any) {
+    const {accountId, itemId, replyList } = data;
+    console.log('开始发布账号评论回复：' + accountId)
+    const browser = await getBrowser();
+    // 读取保存的状态
+    const stateStr = platformAccountService.getStateData(accountId)
+    const context = await browser.newContext({
+      storageState: JSON.parse(stateStr)
+    });
+    const page = await context.newPage();
+    const commentUrl = 'https://creator.douyin.com/creator-micro/interactive/comment'
+    try {
+      const itemListResponsePromise = page.waitForResponse(
+        (response) => response.url().includes('/aweme/v1/creator/item/list') && response.status() === 200
+      )
+      await page.goto(commentUrl, {
+        waitUtil: 'domcontentloaded',
+        timeout: 30000
+      });
+      const itemListResponse = await itemListResponsePromise;
+      const itemListResData = await itemListResponse.json()
+      const itemListData = itemListResData.item_info_list
+      const selectIndex = itemListData.findIndex(item => item.item_id_plain === itemId)
+      const selectWorkButton = await page.waitForSelector('button span.douyin-creator-interactive-button-content:has-text("选择作品")');
+      await selectWorkButton.click();
+      const selectWorkItem = await page.waitForSelector(`.douyin-creator-interactive-list-items > div:nth-child(${selectIndex + 1}) > img`)
+      await selectWorkItem.click();
+      const commentTypeSelectElement = await page.waitForSelector('div.douyin-creator-interactive-select[role=combobox]:nth-child(1)');
+      await commentTypeSelectElement.click();
+      const commentTypeSelectedItemElement = await page.waitForSelector(`div.douyin-creator-interactive-select-option-list-chosen[role=listbox] .douyin-creator-interactive-select-option:has-text("未回复")`);
+      const commentListResponsePromise = page.waitForResponse(
+        response => response.url().includes('/api/comment/read/aweme/v1/web/comment/list/select/') 
+          && response.status() === 200 
+          && response.url().includes('comment_select_options=0%2Cnot_replied')
+      );
+      await commentTypeSelectedItemElement.click();
+      const commentListResponse = await commentListResponsePromise;
+      const commentListResponseData = await commentListResponse.json();
+      const commentList = commentListResponseData.comments;
+      for (const reply of replyList) {
+        if (!reply.replyText) {
+          continue;
+        }
+        const commentId = reply.commentId;
+        const commendIndex = commentList.findIndex(v => v.cid === commentId);
+        const replyButtonElement = await page.waitForSelector(
+          `div.douyin-creator-interactive-tabs-pane-motion-overlay 
+          div[class^="container-"]:nth-child(${commendIndex + 1})
+          div[class^="content-"] 
+          div[class^="operations-"] 
+          div[class^="item-"]:nth-child(3)`, { timeout: 5000 });
+        replyButtonElement.click();
+        const replyInputElement = await page.waitForSelector(
+          `div.douyin-creator-interactive-tabs-pane-motion-overlay 
+          div[class^="container-"]:nth-child(${commendIndex + 1})
+          div[class^="content-"] 
+          div[class^="reply-content-"] 
+          div[class^="input-"]`
+        );
+        await replyInputElement.fill(reply.replyText);
+        const replySendButtonElement = await page.waitForSelector(
+          `div.douyin-creator-interactive-tabs-pane-motion-overlay 
+          div[class^="container-"]:nth-child(${commendIndex + 1})
+          div[class^="content-"] 
+          div[class^="reply-content-"] 
+          button:has-text("发送")`
+        );
+        await replySendButtonElement.click();
+      }
+    } catch (error: any) {
+      throw error;
+    } finally {
+      await page?.close().catch(() => {});
+      await context?.close().catch(() => {});
+      await browser?.close().catch(() => {});
+    }
+  }
 }
+
+export default new DouyinService();

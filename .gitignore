@@ -28,5 +28,6 @@ dist-electron
 dist_electron
 # 本地资源文件
 bin
-fonts
 data
+resources/chrome-win
+resources/fonts

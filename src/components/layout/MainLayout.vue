@@ -15,6 +15,9 @@
         <nav class="nav-links">
           <router-link to="/video/edit" class="nav-link">AI创作</router-link>
         </nav>
+        <nav class="nav-links">
+          <router-link to="/test" class="nav-link">测试</router-link>
+        </nav>
       </div>
       <div class="header-right">
         <button class="upgrade-btn">

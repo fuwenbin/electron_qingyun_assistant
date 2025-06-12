@@ -2,6 +2,7 @@
   <div class="page">
     <a-button type="primary" @click="douyinLogin">抖音登录</a-button>
     <a-button type="primary" @click="douyinPublishVideo">抖音发布</a-button>
+    <a-button type="primary" @click="douyinSyncComment">抖音评论</a-button>
     <!-- <webview  src="https://creator.douyin.com" 
       useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
       style="width: 100%; height: 600px" /> -->
@@ -27,6 +28,17 @@ const douyinPublishVideo = async () => {
     sessionId: '123'
   })
   console.log('test')
+}
+const douyinSyncComment = async () => {
+  const res = await window.electronAPI.apiRequest({
+    url: '/platform-account-comment/listNotReplyCommentLatest10',
+    method: 'GET',
+    data: {
+      accountId: '83747f605d954de39eca0a51a4257863',
+      itemId: '7513185073592585487'
+    }
+  })
+  console.log(res)
 }
 </script>
 

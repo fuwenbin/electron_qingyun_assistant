@@ -1,7 +1,7 @@
 import VideoPublishSettingDao from "../daos/video-publish-setting-dao";
 import VideoPublishSetting from  "../entities/video-publish-setting";
 
-export default class VideoPublishSettingService {
+export class VideoPublishSettingService {
   dao: VideoPublishSettingDao;
 
   constructor() {
@@ -20,3 +20,5 @@ export default class VideoPublishSettingService {
     return this.dao.list();
   }
 }
+
+export default new VideoPublishSettingService();

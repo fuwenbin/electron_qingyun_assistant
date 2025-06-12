@@ -53,20 +53,26 @@ const getLogo = (platformId: number) => {
   }
 }
 const addAccount = async (platform: any) => {
-  const res = await window.electronAPI.playwrightAction({
-    action: 'platform-account-add',
-    payload: {
-      platformId: platform.id,
-      loginUrl: platform.loginUrl
+  try {
+    const res = await window.electronAPI.apiRequest({
+      url: '/platform-account/addAccount',
+      method: 'POST',
+      data: {
+        platformId: platform.id
+      }
+    })
+    if (res.code === 0) {
+      message.success('账号添加成功', 3);
+      emit('update:open', false);
+      emit('refresh');
+    } else {
+      throw new Error(res.message)
     }
-  })
-  if (res.code === 0) {
-    message.success('账号添加成功', 3);
-    emit('update:open', false);
-    emit('refresh');
-  } else {
-    message.error('账号添加失败：' + res.errorMsg)
+  } catch (error: any) {
+    console.error("添加账号失败：" + error.message)
+    message.error("添加账号失败：" + error.message)
   }
+  
 }
 
 const getPlatformList = async () => {

@@ -1,17 +1,13 @@
-import DouyinService from "./douyin-service";
+import douyinService from "./douyin-service";
 
-export default class PlatformAccountSyncTaskService {
-
-  douyinService: DouyinService;
-
-  constructor() {
-    this.douyinService = new DouyinService();
-  }
+export class PlatformAccountSyncTaskService {
   
   async add(accountIdList: string[]) {
     for (let i = 0; i < accountIdList.length; i++) {
       const accountId = accountIdList[i];
-      await this.douyinService.syncAccount(accountId)
+      await douyinService.syncAccount(accountId)
     }
   }
 }
+
+export default new PlatformAccountSyncTaskService();

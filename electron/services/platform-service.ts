@@ -1,6 +1,6 @@
 import { PlatformDao } from "../daos/platform-dao";
 
-export default class PlatformService {
+export class PlatformService {
 
   dao: PlatformDao;
   constructor() {
@@ -23,3 +23,5 @@ export default class PlatformService {
     return this.dao.listByIds(ids);
   }
 }
+
+export default new PlatformService();

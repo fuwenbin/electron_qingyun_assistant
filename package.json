@@ -119,6 +119,11 @@
       {
         "from": "bin/ffprobe.exe",
         "to": "resources/ffprobe.exe"
+      },
+      {
+        "from": "resources/chrome-win",
+        "to": "chrome-win",
+        "filter": ["**/*"]
       }
     ],
     "extraResources": [

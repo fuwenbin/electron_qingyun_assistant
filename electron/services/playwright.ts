@@ -1,13 +1,18 @@
 const { chromium } = require('playwright');
 import { ipcMain } from "electron";
 import { decodeArg } from "../utils";
-import PlatformAccountService from "./platform-account-service";
+import platformAccountService from "./platform-account-service";
 import { waitForRandomTimeout } from "../utils/playwright-utils";
-import PlatformService from "./platform-service";
+import platformService from "./platform-service";
+import log from 'electron-log';
+import { getInstallationDirectory } from "./default-save-path";
+import path from "path";
 
 export async function getBrowser(headless: boolean = true) {
+  let rootPath = getInstallationDirectory()
+  let browserPath = path.join(rootPath, 'resources', 'chrome-win', 'chrome.exe');
   return await chromium.launch({
-    channel: 'chrome',
+    executablePath: browserPath,
     headless,
     args: [
       '--disable-blink-features=AutomationControlled',
@@ -80,26 +85,25 @@ export function initPlaywright() {
     try {
       await page.goto(loginUrl, {
         waitUtil: 'domcontentloaded',
-        timeout: 30000
+        timeout: 120000
       });
       // 等待用户手动登录
-      console.log('请在浏览器中完成抖音登录...');
+      log.log('请在浏览器中完成抖音登录...');
       await page.waitForNavigation({ url: /douyin\.com\/.?/, timeout: 0 });
       await page.waitForSelector('[data-e2e="live-avatar"]', { timeout: 120000 })
       // 保存登录状态
       const state = await context.storageState();
       const localStorageItems = state.origins.find(v => v.origin === 'https://www.douyin.com').localStorage
       const userInfoItem = localStorageItems.find(v => v.name === 'user_info');
-      console.log('localStorage用户信息项：' + JSON.stringify(userInfoItem))
+      log.log('localStorage用户信息项：' + JSON.stringify(userInfoItem))
       const userInfo = JSON.parse(userInfoItem.value);
-      console.log(userInfo);
+      log.log(userInfo);
       const platformAccountId = userInfo.uid;
       const logoUrl = userInfo.avatarUrl;
       const name = userInfo.nickname;
-      const platformAccountService = new PlatformAccountService();
       platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
     } catch (error) {
-      console.log(error);
+      log.log(error);
       throw error;
     } finally {
       await page?.close().catch(() => {});
@@ -110,10 +114,8 @@ export function initPlaywright() {
 
   async function douyinPublishVideo(browser: any, payload: any) {
     const platformId = payload.platformId;
-    const platformService = new PlatformService();
     const platform = platformService.findById(platformId);
     // 读取保存的状态
-    const platformAccountService = new PlatformAccountService();
     const stateStr = platformAccountService.getStateData(payload.platformAccountId)
     const context = await browser.newContext({
       storageState: JSON.parse(stateStr)
