@@ -31,17 +31,18 @@ export class DouyinService {
       });
       // 等待用户手动登录
       log.log('请在浏览器中完成抖音登录...');
-      const infoResponsePromise = page.waitForResponse(
-        (response: any) => response.url().includes('/aweme/v1/creator/user/info/')
-      )
       await page.waitForURL("**/creator-micro/home", {timeout: 120000 });
       const state = await context.storageState();
-      const infoRes = await infoResponsePromise;
-      const infoResData = await infoRes.json();
-      const userInfo = infoResData.user_profile;
-      const platformAccountId = userInfo.unique_id;
-      const logoUrl = userInfo.avatar_url;
-      const name = userInfo.nick_name;
+      const avatarElement = await page.waitForSelector('div[class^="avatar-"] img');
+      const logoUrl = await avatarElement.evaluate((img) => img.src);
+      console.log('账号logo：' + logoUrl);
+      const nameElement = await page.waitForSelector('div[class^="name-"]');
+      const name = await nameElement.textContent();
+      log.log('账号昵称：' + name);
+      const idElement = await page.waitForSelector('div[class^="unique_id-"]');
+      const platformAccountIdContent = await idElement.textContent();
+      const platformAccountId = platformAccountIdContent.replace("抖音号：", "").trim();
+      log.log('账号id:' + platformAccountId);
       platformAccountService.addAccount(platformId, platformAccountId, name, logoUrl, JSON.stringify(state))
     } catch (error) {
       log.log(error);

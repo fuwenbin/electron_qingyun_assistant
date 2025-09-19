@@ -94,7 +94,7 @@
 
 <script lang="ts" setup>
 import { onMounted, reactive, ref, watch } from 'vue'
-import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
+import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'
 import BatchPublishDescription from './components/BatchPublishDescription.vue'
@@ -283,6 +283,24 @@ onMounted(() => {
   .publish-base-content {
     flex: 1;
   }
+  .publish-platform-content{
+    .platform-list{
+
+      .platform-item{
+        display: flex;
+        img{
+          width: 50px;
+          height: 50px
+        }
+
+      }
+    } 
+    
+  }
+  
+  .publish-platform-content { 
+  }
+  
 }
 .page-footer {
   height: 100px;
