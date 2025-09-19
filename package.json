@@ -6,15 +6,16 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron .\"",
-    "electron:build": "npm run build:renderer && npm run build:main && electron-builder",
+    "electron:dev": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron .\"",
+    "electron:build": "npm run setup:ffmpeg && npm run build:renderer && npm run build:main && electron-builder",
     "electron:preview": "npm run build:renderer && npm run build:main && electron .",
     "build:renderer": "vue-tsc --noEmit && vite build",
     "build:main": "tsc -p tsconfig.node.json",
+    "setup:ffmpeg": "node scripts/setup-ffmpeg.js",
     "type-check": "vue-tsc --noEmit",
     "type-check:main": "tsc -p tsconfig.node.json --noEmit",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps && npm run setup:ffmpeg"
   },
   "dependencies": {
     "@alicloud/pop-core": "^1.8.0",
@@ -113,12 +114,9 @@
     },
     "extraFiles": [
       {
-        "from": "bin/ffmpeg.exe",
-        "to": "resources/ffmpeg.exe"
-      },
-      {
-        "from": "bin/ffprobe.exe",
-        "to": "resources/ffprobe.exe"
+        "from": "bin/",
+        "to": "resources/",
+        "filter": ["ffmpeg*", "!*.md"]
       },
       {
         "from": "resources/chrome-win",
