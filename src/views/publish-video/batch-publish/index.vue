@@ -248,7 +248,6 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   display: flex;
-  padding-top: 10px;
   flex-direction: column;
 }
 
@@ -278,14 +277,26 @@ onMounted(() => {
 }
 .page-body {
   flex: 1;
-  padding-left: 20px;
   display: flex;
   .publish-base-content {
     flex: 1;
+    padding: 20px;
   }
-  .publish-platform-content{
-    .platform-list{
+  .publish-platform-list{
+    border-left: 1px solid #dfdfdf;
 
+    .platform-list-title{ 
+      display: flex;
+      justify-content: center;
+      font-weight: 600;
+      padding: 5px;
+    }
+    .platform-list{
+      display: flex;
+      .active{
+        background: #ffffff;
+        border-left: 1px solid #209eff;
+      }
       .platform-item{
         display: flex;
         img{
@@ -295,12 +306,8 @@ onMounted(() => {
 
       }
     } 
+  }
     
-  }
-  
-  .publish-platform-content { 
-  }
-  
 }
 .page-footer {
   height: 100px;
