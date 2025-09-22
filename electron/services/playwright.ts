@@ -7,19 +7,46 @@ import platformService from "./platform-service";
 import log from 'electron-log';
 import { getInstallationDirectory } from "./default-save-path";
 import path from "path";
+import fs from "fs";
 
 export async function getBrowser(headless: boolean = true) {
   let rootPath = getInstallationDirectory()
-  let browserPath = path.join(rootPath, 'resources', 'chrome-win', 'chrome.exe');
-  return await chromium.launch({
-    executablePath: browserPath,
+  let browserPath: string | undefined;
+  
+  // Platform-specific browser paths
+  const platform = process.platform;
+  
+  if (platform === 'win32') {
+    browserPath = path.join(rootPath, 'resources', 'chrome-win', 'chrome.exe');
+  } else if (platform === 'darwin') {
+    // On macOS, try to use system Chrome or let Playwright use its bundled Chromium
+    const systemChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    if (fs.existsSync(systemChromePath)) {
+      browserPath = systemChromePath;
+    } else {
+      // Let Playwright use its bundled Chromium by not specifying executablePath
+      browserPath = undefined;
+    }
+  } else {
+    // Linux - let Playwright use its bundled Chromium
+    browserPath = undefined;
+  }
+  
+  const launchOptions: any = {
     headless,
     args: [
       '--disable-blink-features=AutomationControlled',
       '--no-sandbox', 
       '--disable-setuid-sandbox'
     ]
-  });
+  };
+  
+  // Only set executablePath if we have a valid browser path
+  if (browserPath) {
+    launchOptions.executablePath = browserPath;
+  }
+  
+  return await chromium.launch(launchOptions);
 }
 export function initPlaywright() {
   ipcMain.handle('playwright-action', async (event, paramsStr) => {

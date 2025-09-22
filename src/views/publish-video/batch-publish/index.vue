@@ -69,6 +69,53 @@
             </div>
           </div>
         </div>
+        <div class="form-item">
+          <div class="item-label">
+            <div class="label-name">选择发布账号</div>
+            <div class="label-tip">选择要发布视频的账号</div>
+          </div>
+          <div class="item-input">
+            <div class="input-content">
+              <div class="account-chooser-filter">
+                <div class="select-all">
+                  <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount"/>全选
+                </div>
+              </div>
+              <div class="account-chooser-list">
+                <div v-for="item in platformAccountList" :key="item.id" class="account-chooser-item">
+                  <a-checkbox :checked="isAccountSelected(item)" @change="handleAccountCheckChange(item)" />
+                  <img :src="item.logo" class="item-logo" />
+                  <div class="item-info">
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-platform-info">
+                      <div class="platform-name">{{ item.platform?.name }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-item">
+          <div class="item-label">
+            <div class="label-name">发布设置</div>
+            <div class="label-tip">配置发布时间和方式</div>
+          </div>
+          <div class="item-input">
+            <div class="input-content">
+              <div class="timing-config">
+                <div class="timing-config-type">
+                  <a-checkbox v-model:checked="isTimingPublish" />定时发布
+                </div>
+                <div class="timing-config-time">
+                  <a-date-picker v-if="isTimingPublish" v-model:value="timingPublishTime" 
+                    format="YYYY-MM-DD HH:mm" :show-time="true" :disabled-date="disabledDate"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="publish-platform-list">
         <div class="platform-list-title">平台</div>
@@ -86,19 +133,18 @@
     </div>
     <div class="page-footer">
       <a-button @click="save">保存</a-button>
-      <a-button @click="openPublishModal">发布</a-button>
+      <a-button @click="handlePublish">发布</a-button>
     </div>
   </div>
-  <PublishSettingDialog v-model:open="publishModalOpen" :setting="baseContentData"/>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch, computed } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
+import dayjs from 'dayjs'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'
 import BatchPublishDescription from './components/BatchPublishDescription.vue'
-import PublishSettingDialog from '../components/PublishSettingDialog.vue'
 import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
 const selectedVideos  = ref<any[]>([])
@@ -119,12 +165,56 @@ const baseContentData = reactive<{
 })
 const platformList = ref<any[]>([])
 const selectedPlatformId = ref()
-const publishModalOpen = ref(false)
+
 const selectedAccountList = ref<any[]>([])
 const isTimingPublish = ref(false)
 const timingPublishTime = ref('')
 const topicGroup1InputValue = ref('')
 const topicGroup2InputValue = ref('')
+
+// Account management variables and methods
+const platformAccountList = ref<any[]>([])
+
+const isAccountSelected = (item: any) => {
+  return !!selectedAccountList.value.find(v => v.id === item.id)
+}
+
+const isAccountAllSelected = computed(() => {
+  let result = platformAccountList.value.length === selectedAccountList.value.length;
+  if (!result) {
+    return false;
+  }
+  for (let i = 0; i < platformAccountList.value.length; i++) {
+    const item = platformAccountList.value[i];
+    if (!selectedAccountList.value.find(v => v.id === item.id)) {
+      result = false;
+      break;
+    }
+  }
+  return result;
+})
+
+const selectAllAccount = () => {
+  if (isAccountAllSelected.value) {
+    selectedAccountList.value = [];
+  } else {
+    selectedAccountList.value = platformAccountList.value;
+  }
+}
+
+const handleAccountCheckChange = (item: any) => {
+  if (selectedAccountList.value.find(v => v.id === item.id)) {
+    selectedAccountList.value = selectedAccountList.value.filter(v => v.id !== item.id)
+  } else {
+    selectedAccountList.value = [...selectedAccountList.value, item]
+  }
+}
+
+const disabledDate = (currentDate: any) => {
+  const startDate = dayjs().add(2, 'hours')
+  const endDate = dayjs().add(14, 'days')
+  return currentDate.isBefore(startDate) || currentDate.isAfter(endDate)
+}
 
 watch (selectedVideos, (newValue) => {
   if (newValue && newValue.length) {
@@ -142,6 +232,16 @@ const getPlatformList = async () => {
   if (res.code === 0) {
     platformList.value = res.data
     selectedPlatformId.value = platformList.value[0].id
+  }
+}
+
+const getAccountList = async () => {
+  const res = await window.electronAPI.apiRequest({
+    url: '/platform-account/list',
+    method: 'GET'
+  })
+  if (res.code === 0) {
+    platformAccountList.value = res.data
   }
 }
 
@@ -185,17 +285,53 @@ const save = async () => {
  }
 }
 
-const openPublishModal = async () => {
+const handlePublish = async () => {
+  if (selectedAccountList.value.length === 0) {
+    message.error("请选择账号")
+    return
+  }
+  
   if (!baseContentData.id) {
     const saveRes = await save();
     if (!saveRes) {
       return;
     }
   }
-  publishModalOpen.value = true
-  isTimingPublish.value = false
-  timingPublishTime.value = ''
-  selectedAccountList.value = []
+  
+  console.info("提交数据: ", baseContentData)
+  const data = JSON.parse(JSON.stringify({
+    filePath: baseContentData.filePathList,
+    title: baseContentData.titleList,
+    description: baseContentData.descriptionList,
+    topicGroup1: baseContentData.topicGroup1,
+    topicGroup2: baseContentData.topicGroup2,
+    // platformData: {},
+    platformAccountList: selectedAccountList.value.map(v => v.id),
+    publishType: isTimingPublish.value ? 1 : 0,
+    publishTime: isTimingPublish.value ? timingPublishTime.value : dayjs().format('YYYY-MM-DD HH:mm')
+  }))
+  
+  try {
+    console.info('发布任务参数：', data)
+    const res = await window.electronAPI.apiRequest({
+      url: '/video-publish-task/publish',
+      method: 'POST',
+      data
+    })
+    console.log(res)
+    if (res.code === 0) {
+      message.success("创建发布任务成功")
+      // Reset form after successful publish
+      selectedAccountList.value = []
+      isTimingPublish.value = false
+      timingPublishTime.value = ''
+    } else {
+      throw new Error(res.message)
+    }
+  } catch (error: any) {
+    console.error('创建发布任务失败：' + error.message);
+    message.error('创建发布任务失败：' + error.message)
+  }
 }
 
 const handletopicGroup1InputConfirm = (e: any) => {
@@ -238,6 +374,7 @@ const handletopicGroup2InputConfirm = (e: any) => {
 
 onMounted(() => { 
   getPlatformList()
+  getAccountList()
 })
 </script>
 
@@ -333,6 +470,43 @@ onMounted(() => {
       width: 40px;
       height: 40px;
       border-radius: 50%;
+    }
+  }
+}
+.account-chooser-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.account-chooser-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.account-chooser-item {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
+  .item-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  .item-info {
+    flex: 1;
+    .item-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+    .item-platform-info {
+      .platform-name {
+        color: #666;
+        font-size: 12px;
+      }
     }
   }
 }

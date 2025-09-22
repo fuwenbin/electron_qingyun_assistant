@@ -99,8 +99,9 @@ const handleOk = async () => {
     message.error("请选择账号")
     return
   }
+  console.info("提交数据: ",props.setting)
   const data = JSON.parse(JSON.stringify({
-    filePath: props.setting.filePath,
+    filePath: props.setting.filePathList,
     title: props.setting.title,
     description: props.setting.description,
     topicGroup1: props.setting.topicGroup1,
@@ -111,6 +112,7 @@ const handleOk = async () => {
     publishTime: isTimingPublish.value ? timingPublishTime.value : dayjs().format('YYYY-MM-DD HH:mm')
   }))
   try {
+    console.info('发布任务参数：', data)
     const res = await window.electronAPI.apiRequest({
       url: '/video-publish-task/publish',
       method: 'POST',

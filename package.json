@@ -7,6 +7,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "electron:dev": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron .\"",
+    "electron:dev:debug": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron . --inspect=9229\"",
     "electron:build": "npm run setup:ffmpeg && npm run build:renderer && npm run build:main && electron-builder",
     "electron:preview": "npm run build:renderer && npm run build:main && electron .",
     "build:renderer": "vue-tsc --noEmit && vite build",

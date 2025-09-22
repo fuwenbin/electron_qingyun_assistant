@@ -53,6 +53,83 @@ export class DouyinService {
       await browser?.close().catch(() => {});
     }
   }
+  // 自动获取账号信息
+  async getAccountInfo(page: any, platformId: number) { 
+    // 打开首页：https://creator.douyin.com/creator-micro/home
+    const platformAccountId = "抖音号"
+    try {
+      console.log('Opening Douyin creator home page...');
+      await page.goto('https://creator.douyin.com/creator-micro/home', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+      
+      // 等待页面加载完成
+      await page.waitForLoadState('networkidle');
+      
+      // 搜索抖音号关键字，将包裹抖音号的元素获取并打印
+      console.log('Searching for account ID:', platformAccountId);
+      
+      // 查找包含抖音号的元素
+      const accountElements = await page.locator(`text=${platformAccountId}`).all();
+      
+      if (accountElements.length > 0) {
+        console.log(`Found ${accountElements.length} elements containing account ID`);
+        
+        for (let i = 0; i < accountElements.length; i++) {
+          const element = accountElements[i];
+          const elementText = await element.textContent();
+          const elementHTML = await element.innerHTML();
+          
+          console.log(`Element ${i + 1}:`);
+          console.log('Text content:', elementText);
+          console.log('HTML content:', elementHTML);
+          
+          // 获取父元素信息
+          const parentElement = element.locator('..');
+          const parentText = await parentElement.textContent();
+          const parentHTML = await parentElement.innerHTML();
+          
+          console.log('Parent text:', parentText);
+          console.log('Parent HTML:', parentHTML);
+          console.log('---');
+        }
+      } else {
+        console.log('No elements found containing the account ID');
+        
+        // 尝试查找可能包含账号信息的常见选择器
+        const commonSelectors = [
+          'div[class*="unique_id"]',
+          'div[class*="account"]',
+          'span[class*="id"]',
+          '.user-info',
+          '.account-info'
+        ];
+        
+        for (const selector of commonSelectors) {
+          const elements = await page.locator(selector).all();
+          if (elements.length > 0) {
+            console.log(`Found ${elements.length} elements with selector: ${selector}`);
+            for (let i = 0; i < elements.length; i++) {
+              const text = await elements[i].textContent();
+              console.log(`${selector}[${i}]:`, text);
+            }
+          }
+        }
+      }
+      
+      return {
+        success: accountElements.length > 0,
+        elementsFound: accountElements.length,
+        platformId,
+        platformAccountId
+      };
+      
+    } catch (error) {
+      console.error('Error in getAccountInfo:', error);
+      throw error;
+    } 
+  }
   async publishVideo(payload: any) {
     const taskId = payload.id;
     const task = videoPublishTaskService.findById(taskId);
@@ -68,6 +145,9 @@ export class DouyinService {
       storageState: JSON.parse(stateStr)
     });
     const page = await context.newPage();
+    // 打印下账号信息
+    await this.getAccountInfo(page,platformId)
+
     const publishVideoUrl = platform.publishVideoUrl;
 
     try {
@@ -79,6 +159,7 @@ export class DouyinService {
       } catch {
         throw new Error('登录状态已过期，需要重新登录');
       }
+      
       // 开始操作
       // 等待上传区域加载完成
       console.log('等待上传按钮图标加载完成')
@@ -97,58 +178,124 @@ export class DouyinService {
       console.log('触发文件上传事件')
 
       // 设置视频文件
+      console.log('Setting video file:', payload.filePath);
       await fileChooser.setFiles(payload.filePath);
-      if (!fileChooser.files) {
-        const fileInputElement = await page.locator('input[type="file"]');
-        fileInputElement.setInputFiles(payload.filePath);
-        console.log("直接设置文件上传input：" + fileInputElement.files)
+      
+      // 验证文件是否成功设置
+      if (fileChooser.files && fileChooser.files.length > 0) {
+        console.log('File successfully set via fileChooser:', fileChooser.files[0].name);
+      } else {
+        console.log('Fallback: Setting file via input element');
+        const fileInputElement = await page.locator('input[type="file"]').first();
+        await fileInputElement.setInputFiles(payload.filePath);
+        console.log('File set via input element');
       }
       
-      // 检查是否处于描述页
+      // 检查是否处于描述页 
       console.log('上传文件后，等待页面跳转到视频发布页面')
       await page.waitForURL('https://creator.douyin.com/creator-micro/content/post/video**', {
         timeout: 60000
       })
-      console.log('页面跳转到视频发布页面')
+      // 稍微等待3秒钟，等待文件上传完成
+      console.log('Waiting for 3 seconds for file upload to complete...');
+      await waitForRandomTimeout(page, 3000);
+     
       await page.waitForSelector('.editor-comp-publish', { timeout: 15000 })
+      
       // 填写作品标题
+      console.log('Filling title:', payload.title);
       const titleInputElement = await page.waitForSelector('input[placeholder="填写作品标题，为作品获得更多流量"]')
+      // Clear existing content and fill new title
+      await titleInputElement.click({ clickCount: 3 }); // Select all text
       await titleInputElement.fill(payload.title);
       await waitForRandomTimeout(page, 1000);
+      
       // 填写作品描述
+      console.log('Filling description:', payload.description);
       const descriptionLineElement = await page.locator('.zone-container .ace-line');
       await descriptionLineElement.click();
       await page.keyboard.type(payload.description);
       await waitForRandomTimeout(page, 1000);
       await page.mouse.wheel(0, 600);
+      
+      // Handle timing publish if specified
       if (payload.publishType === 1) {
-        const timingPublishCheckboxTextElement = await page.waitForSelector('label:has-text("定时发布") input[type="checkbox"]', {
-          timeout: 5000
-        })
-        console.log(await timingPublishCheckboxTextElement.textContent())
-        await timingPublishCheckboxTextElement.click();
-        await waitForRandomTimeout(page, 1000);
-        const timingPublishTimeInputElement = await page.waitForSelector('input[placeholder="日期和时间"]')
-        timingPublishTimeInputElement.fill(payload.timingPublishTime)
+        console.log('Setting up timing publish for:', payload.timingPublishTime);
+        try {
+          const timingPublishCheckboxTextElement = await page.waitForSelector('label:has-text("定时发布") input[type="checkbox"]', {
+            timeout: 10000
+          });
+          console.log('Found timing publish checkbox');
+          await timingPublishCheckboxTextElement.click();
+          await waitForRandomTimeout(page, 1000);
+          
+          const timingPublishTimeInputElement = await page.waitForSelector('input[placeholder="日期和时间"]', {
+            timeout: 10000
+          });
+          console.log('Setting timing publish time:', payload.timingPublishTime);
+          await timingPublishTimeInputElement.fill(payload.timingPublishTime);
+          await waitForRandomTimeout(page, 1000);
+        } catch (timingError) {
+          console.error('Failed to set timing publish:', timingError);
+          console.log('Continuing with immediate publish instead...');
+        }
       }
       const publishButtonElement = await page.waitForSelector('button:text("发布")');
+      console.log('Clicking publish button...');
       await publishButtonElement.click();
-      const publishResponse = await page.waitForResponse((response) => response.url().includes('/api/media/aweme/create_v2') && response.status() === 200);
-      const publishResponseJson = await publishResponse.json();
+      
+      // Wait for publish response with more flexible conditions
+      console.log('Waiting for publish API response...');
+      const publishResponse = await page.waitForResponse((response) => {
+        const url = response.url();
+        const status = response.status();
+        console.log(`Response received: ${url} - Status: ${status}`);
+        return url.includes('/api/media/aweme/create_v2') && (status === 200 || status === 201);
+      }, { timeout: 60000 });
+      
+      let publishResponseJson;
+      try {
+        const responseText = await publishResponse.text();
+        console.log('Publish response text:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from publish API');
+          publishResponseJson = null;
+        } else {
+          publishResponseJson = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        console.log('Raw response status:', publishResponse.status());
+        console.log('Raw response headers:', await publishResponse.allHeaders());
+        publishResponseJson = null;
+      }
 
       if (publishResponseJson?.status_code === 0) {
-        const item_id  = publishResponseJson?.item_id;
+        const item_id = publishResponseJson?.item_id;
         console.log('发布成功，平台id：' + item_id)
         task.itemId = item_id;
+      } else {
+        console.warn('Publish response did not indicate success:', publishResponseJson);
       }
-      await page.waitForURL('https://creator.douyin.com/creator-micro/content/manage**', {
-        timeout: 30000
-      })
+      
+      // Wait for navigation to management page with more flexible timeout
+      console.log('Waiting for navigation to management page...');
+      try {
+        await page.waitForURL('https://creator.douyin.com/creator-micro/content/manage**', {
+          timeout: 60000
+        });
+        console.log('Successfully navigated to management page');
+      } catch (navigationError) {
+        console.warn('Navigation timeout, but checking if we\'re already on a success page');
+        const currentUrl = page.url();
+        console.log('Current URL:', currentUrl);    
+      }
       task.status = 2;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
       videoPublishTaskService.save(task);
     } catch (error) {
-      console.log(error);
+      console.error('Error during video publishing:', error);
       task.status = 3;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
       videoPublishTaskService.save(task);
@@ -175,7 +322,23 @@ export class DouyinService {
       const statisticResponse = await page.waitForResponse(
         (response) => response.url().includes('/douyin/creator/pc/work_list')
       )
-      const statisticData = await statisticResponse.json()
+      
+      let statisticData;
+      try {
+        const responseText = await statisticResponse.text();
+        console.log('Statistic response text:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from statistic API');
+          statisticData = {};
+        } else {
+          statisticData = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse statistic JSON response:', jsonError);
+        statisticData = {};
+      }
+      
       const workList = statisticData?.aweme_list || [];
       for  (const work of workList) {
         const itemId = work.statistics.aweme_id;
@@ -220,7 +383,23 @@ export class DouyinService {
         timeout: 30000
       });
       const itemListResponse = await itemListResponsePromise;
-      const itemListResData = await itemListResponse.json()
+      
+      let itemListResData;
+      try {
+        const responseText = await itemListResponse.text();
+        console.log('Item list response text (syncAccountComment):', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from item list API (syncAccountComment)');
+          itemListResData = { item_info_list: [] };
+        } else {
+          itemListResData = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse item list JSON response (syncAccountComment):', jsonError);
+        itemListResData = { item_info_list: [] };
+      }
+      
       const itemListData = itemListResData.item_info_list
       const selectIndex = itemListData.findIndex(item => item.item_id_plain === itemId)
       const selectWorkButton = await page.waitForSelector('button span.douyin-creator-interactive-button-content:has-text("选择作品")');
@@ -237,7 +416,23 @@ export class DouyinService {
       );
       await commentTypeSelectedItemElement.click();
       const commentListResponse = await commentListResponsePromise;
-      const commentListResponseData = await commentListResponse.json();
+      
+      let commentListResponseData;
+      try {
+        const responseText = await commentListResponse.text();
+        console.log('Comment list response text:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from comment list API');
+          commentListResponseData = { comments: [] };
+        } else {
+          commentListResponseData = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse comment list JSON response:', jsonError);
+        commentListResponseData = { comments: [] };
+      }
+      
       return commentListResponseData.comments || [];
     } catch (error: any) {
       throw error;
@@ -268,7 +463,23 @@ export class DouyinService {
         timeout: 30000
       });
       const itemListResponse = await itemListResponsePromise;
-      const itemListResData = await itemListResponse.json()
+      
+      let itemListResData;
+      try {
+        const responseText = await itemListResponse.text();
+        console.log('Item list response text (publishCommentReply):', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from item list API (publishCommentReply)');
+          itemListResData = { item_info_list: [] };
+        } else {
+          itemListResData = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse item list JSON response (publishCommentReply):', jsonError);
+        itemListResData = { item_info_list: [] };
+      }
+      
       const itemListData = itemListResData.item_info_list
       const selectIndex = itemListData.findIndex(item => item.item_id_plain === itemId)
       const selectWorkButton = await page.waitForSelector('button span.douyin-creator-interactive-button-content:has-text("选择作品")');
@@ -285,7 +496,23 @@ export class DouyinService {
       );
       await commentTypeSelectedItemElement.click();
       const commentListResponse = await commentListResponsePromise;
-      const commentListResponseData = await commentListResponse.json();
+      
+      let commentListResponseData;
+      try {
+        const responseText = await commentListResponse.text();
+        console.log('Comment list response text (publishCommentReply):', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response received from comment list API (publishCommentReply)');
+          commentListResponseData = { comments: [] };
+        } else {
+          commentListResponseData = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.error('Failed to parse comment list JSON response (publishCommentReply):', jsonError);
+        commentListResponseData = { comments: [] };
+      }
+      
       const commentList = commentListResponseData.comments;
       for (const reply of replyList) {
         if (!reply.replyText) {

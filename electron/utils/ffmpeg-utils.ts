@@ -19,27 +19,86 @@ export function setupFFmpeg() {
     // 生产环境
     basePath = process.resourcesPath;
   }
+  
   ffmpegPath = path.join(basePath, ffmpegExecutableName);
   ffprobePath = path.join(basePath, ffprobeExecutableName);
-  ffmpeg.setFfmpegPath(ffmpegPath);
-  ffmpeg.setFfprobePath(ffprobePath);
-  checkFFmpeg();
+  
+  // Check if binaries exist, fallback to system or alternative paths
+  if (!fs.existsSync(ffmpegPath)) {
+    // Try to find system FFmpeg or use alternative paths
+    const systemPaths = getSystemFFmpegPaths(platform);
+    ffmpegPath = findFFmpegExecutable(systemPaths.ffmpeg) || ffmpegPath;
+  }
+  
+  if (!fs.existsSync(ffprobePath)) {
+    const systemPaths = getSystemFFmpegPaths(platform);
+    ffprobePath = findFFmpegExecutable(systemPaths.ffprobe) || ffprobePath;
+  }
+  
+  console.log('FFmpeg path:', ffmpegPath);
+  console.log('FFprobe path:', ffprobePath);
+  
+  try {
+    ffmpeg.setFfmpegPath(ffmpegPath);
+    ffmpeg.setFfprobePath(ffprobePath);
+    checkFFmpeg().catch(err => {
+      console.warn('FFmpeg check failed:', err.message);
+      console.warn('Please ensure FFmpeg is installed or run: npm run setup:ffmpeg');
+    });
+  } catch (error) {
+    console.error('Failed to setup FFmpeg:', error);
+    console.error('Please install FFmpeg or run: npm run setup:ffmpeg');
+  }
+}
+
+function getSystemFFmpegPaths(platform: string) {
+  switch (platform) {
+    case 'darwin':
+      return {
+        ffmpeg: ['/usr/local/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg'],
+        ffprobe: ['/usr/local/bin/ffprobe', '/opt/homebrew/bin/ffprobe']
+      };
+    case 'linux':
+      return {
+        ffmpeg: ['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'],
+        ffprobe: ['/usr/bin/ffprobe', '/usr/local/bin/ffprobe']
+      };
+    case 'win32':
+    default:
+      return {
+        ffmpeg: [],
+        ffprobe: []
+      };
+  }
+}
+
+function findFFmpegExecutable(paths: string[]): string | null {
+  for (const path of paths) {
+    if (fs.existsSync(path)) {
+      return path;
+    }
+  }
+  return null;
 }
 
 function checkFFmpeg(): Promise<string> {
   return new Promise((resolve, reject) => {
-    const command = ffmpeg();
-    command.on('stderr', (line) => console.log('FFmpeg:', line));
-    
-    command
-      .output('-') // 输出到stdout
-      .addOption('-version')
-      .on('error', reject)
-      .on('end', (stdout, stderr) => {
-        const versionLine = stderr.split('\n').find(line => line.includes('ffmpeg version'));
-        resolve(versionLine || 'FFmpeg version unknown');
-      })
-      .run();
+    try {
+      const command = ffmpeg();
+      command.on('stderr', (line) => console.log('FFmpeg:', line));
+      
+      command
+        .output('-') // 输出到stdout
+        .addOption('-version')
+        .on('error', reject)
+        .on('end', (stdout, stderr) => {
+          const versionLine = stderr.split('\n').find(line => line.includes('ffmpeg version'));
+          resolve(versionLine || 'FFmpeg version unknown');
+        })
+        .run();
+    } catch (error) {
+      reject(error);
+    }
   });
 }
 
@@ -78,7 +137,11 @@ export function generateSrtFile(filePath: string, subtitles: any[]) {
   subtitles.forEach((sub, index) => {
     const startTime = formatTime(sub.start);
     const endTime = formatTime(sub.start + sub.duration);
-    srtContent += `${index + 1}\n${startTime} --> ${endTime}\n${sub.text}\n\n`;
+    srtContent += `${index + 1}
+${startTime} --> ${endTime}
+${sub.text}
+
+`;
   });
   fs.writeFileSync(filePath, srtContent);
 }
