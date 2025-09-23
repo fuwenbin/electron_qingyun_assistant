@@ -8,6 +8,8 @@ import { decodeArg } from '../utils';
 import BusinessException from '../exception/business-exception';
 import testService from './test';
 import platfromAccountCommentService from './platform-account-comment-service';
+import { getAllFilesInDirectory } from '../utils/fs-utils';
+import path from 'path';
 export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
@@ -88,6 +90,22 @@ export function initApiController() {
         return {
           code: 0,
           message: 'success'
+        }
+      } else if (url === '/file/list-video-files' && method.toLowerCase() === 'post') {
+        const { directoryPath } = data
+        if (!directoryPath) {
+          throw new BusinessException(400, '目录路径不能为空')
+        }
+        const allFiles = await getAllFilesInDirectory(directoryPath, false)
+        const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm']
+        const videoFiles = allFiles.filter(filePath => {
+          const ext = path.extname(filePath).toLowerCase()
+          return videoExtensions.includes(ext)
+        })
+        return {
+          code: 0,
+          message: 'success',
+          data: videoFiles
         }
       } else {
         throw new BusinessException(404, '请求的服务不存在')

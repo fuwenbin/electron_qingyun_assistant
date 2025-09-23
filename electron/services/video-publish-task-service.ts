@@ -3,12 +3,17 @@ import VideoPublishTask from "../entities/video-publish-task";
 import platformAccountService from "./platform-account-service";
 import platformService from './platform-service'
 import dayjs from "dayjs";
-import path from "path";
 
 export class VideoPublishTaskService {
   dao: VideoPublishTaskDao;
   constructor() {
     this.dao = new VideoPublishTaskDao();
+  }
+
+  // Helper function to get filename from full path
+  private getFileName(filePath: string): string {
+    const parts = filePath.replace(/\\/g, '/').split('/')
+    return parts[parts.length - 1]
   }
 
   list() {
@@ -26,7 +31,18 @@ export class VideoPublishTaskService {
   publish(params: any) {
     // Add null/undefined checks and handle both string and array formats
     console.info("publish params: ",params)
-    const videoList = Array.isArray(params.filePath) ? params.filePath : (params.filePath || '').split('_,_').filter(Boolean);
+    
+    // Handle new directory-based approach
+    let videoList: string[] = []
+    if (params.directoryPath) {
+      // Get video files from the selected directory
+      // This should be populated by the frontend after selecting folder
+      videoList = params.filePath || []
+    } else {
+      // Legacy approach - direct file paths
+      videoList = Array.isArray(params.filePath) ? params.filePath : (params.filePath || '').split('_,_').filter(Boolean);
+    }
+    
     const titleList = Array.isArray(params.title) ? params.title : (params.title || '').split('_,_').filter(Boolean);
     const descriptionList = Array.isArray(params.description) ? params.description : (params.description || '').split('_,_').filter(Boolean);
     const topicGroup1List = Array.isArray(params.topicGroup1) ? params.topicGroup1 : (params.topicGroup1 || '').split(',').filter(Boolean);
@@ -42,17 +58,27 @@ export class VideoPublishTaskService {
     if (descriptionList.length === 0) {
       throw new Error('没有设置视频描述');
     }
+    
     console.info("platformData 1 : ",params.platformData)
     const platformData = JSON.parse(params.platformData || '{}');
     console.info("platformData 2")
     const platformAccountList = params.platformAccountList || [];
-    const publishType = params.publishType || 0;
-    const publishTime = params.publishTime || '';
+    const publishType = params.publishType || 1; // Fixed to 1 for scheduled publishing
+    
+    // New scheduling parameters
+    const frequency = params.frequency || 'minutes'; // 'minutes' | 'hours' | 'time'
+    const frequencyValue = params.frequencyValue || 5;
+    const dailyTime = params.dailyTime; // For 'time' frequency (HH:mm format)
     
     // Validate platform account list
     if (platformAccountList.length === 0) {
       throw new Error('没有选择发布账号');
     }
+    
+    // Generate publish times based on frequency and video count
+    const publishTimes = this._generatePublishTimes(frequency, frequencyValue, dailyTime, videoList.length);
+    
+    let taskIndex = 0;
     videoList.forEach(filePath => {
       // Validate file path
       if (!filePath || filePath.trim() === '') {
@@ -72,6 +98,7 @@ export class VideoPublishTaskService {
       if (topicList.length > 0) {
         description += ' ' + topicList.map(v => `#${v}`).join(' ');
       }
+      
       platformAccountList.forEach(accountId => {
         try {
           const account = platformAccountService.findById(accountId);
@@ -83,7 +110,7 @@ export class VideoPublishTaskService {
           const platformId = account.platformId;
           const task = new VideoPublishTask();
           task.filePath = filePath;
-          task.fileName = path.basename(filePath);
+          task.fileName = this.getFileName(filePath);
           task.title = title;
           task.description = description;
           task.topic = topicList.join(' ');
@@ -91,13 +118,11 @@ export class VideoPublishTaskService {
           task.accountId = accountId;
           task.platformId = platformId;
           task.publishType = publishType;
-          task.publishTime = publishTime;
           
-          if (publishType === 0 || publishType === 1) {
-            task.scheduledStartTime = publishTime ? publishTime : dayjs().format('YYYY-MM-DD HH:mm');
-          } else {
-            task.scheduledStartTime = publishTime;
-          }
+          // Assign publish time based on frequency
+          const publishTime = publishTimes[taskIndex % publishTimes.length];
+          task.publishTime = publishTime;
+          task.scheduledStartTime = publishTime;
           
           task.startTime = '';
           task.endTime = '';
@@ -112,13 +137,13 @@ export class VideoPublishTaskService {
           task.shareCount = 0;
           
           this.save(task);
+          taskIndex++;
         } catch (error: any) {
           console.error(`创建发布任务失败 - 账号ID: ${accountId}, 文件: ${filePath}`);
           console.error(error.message);
           // Continue with next account instead of stopping entirely
         }
       });
-      
     })
   }
 
@@ -143,6 +168,50 @@ export class VideoPublishTaskService {
       }
       return result;
     }
+  }
+
+  private _generatePublishTimes(frequency: string, frequencyValue: number, dailyTime: string | undefined, videoCount: number): string[] {
+    const publishTimes: string[] = [];
+    const now = dayjs();
+    const minPublishTime = now.add(3, 'hours'); // Minimum: 3 hours from now
+    const maxPublishTime = now.add(14, 'days'); // Maximum: 14 days from now
+    
+    let currentTime = minPublishTime;
+    
+    for (let i = 0; i < videoCount; i++) {
+      if (frequency === 'minutes') {
+        // Every X minutes
+        if (i > 0) {
+          currentTime = currentTime.add(frequencyValue, 'minutes');
+        }
+      } else if (frequency === 'hours') {
+        // Every X hours
+        if (i > 0) {
+          currentTime = currentTime.add(frequencyValue, 'hours');
+        }
+      } else if (frequency === 'time' && dailyTime) {
+        // Daily at specific time
+        const [hours, minutes] = dailyTime.split(':').map(Number);
+        let nextPublishDate = currentTime.hour(hours).minute(minutes).second(0);
+        
+        // If the time has passed today, schedule for tomorrow
+        if (nextPublishDate.isBefore(currentTime)) {
+          nextPublishDate = nextPublishDate.add(1, 'day');
+        }
+        
+        currentTime = nextPublishDate.add(i, 'days');
+      }
+      
+      // Ensure we don't exceed the maximum publish time
+      if (currentTime.isAfter(maxPublishTime)) {
+        console.warn(`发布时间超过了最大限制，停止生成更多任务`);
+        break;
+      }
+      
+      publishTimes.push(currentTime.format('YYYY-MM-DD HH:mm'));
+    }
+    
+    return publishTimes;
   }
 
   statisticVideoPublishPlatform(filenameList: string[]) {

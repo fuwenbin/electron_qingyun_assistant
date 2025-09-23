@@ -58,6 +58,7 @@ export default defineConfig({
       crypto: 'crypto-browserify',
       stream: 'stream-browserify',
       util: 'util',
+      path: 'path-browserify',
       ws: resolve(__dirname, 'src/utils/ws-polyfill.js')
     },
   },

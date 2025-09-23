@@ -2,12 +2,56 @@
   <div class="page-single-publish">
     <div class="page-body">
       <div class="publish-base-content">
-        <div class="base-content-title">视频发布配置</div>
+        <!-- <div class="base-content-title">视频发布配置</div> -->
         <div class="base-content-form">
           <div class="form-item">
-            <div class="item-label">添加视频</div>
+            <div class="item-label">
+              <div class="label-name">定时发布设置</div>
+              <div class="label-tip">设置视频发布的时间间隔（支持2小时后及14天内的定时发布）</div>
+            </div>
             <div class="item-input">
-              <PublishVideoChooser v-model="selectedVideos"/>
+              <div class="timing-schedule-config">
+                <div class="schedule-type">
+                  <a-radio-group v-model:value="scheduleConfig.frequency">
+                    <a-radio value="minutes">每隔分钟</a-radio>
+                    <a-radio value="hours">每隔小时</a-radio>
+                    <a-radio value="time">每天固定时间</a-radio>
+                  </a-radio-group>
+                </div>
+                <div class="schedule-value">
+                  <a-input-number 
+                    v-if="scheduleConfig.frequency === 'minutes'"
+                    v-model:value="scheduleConfig.value"
+                    :min="5"
+                    :max="59"
+                    placeholder="5-59分钟"
+                    addon-after="分钟"
+                  />
+                  <a-input-number 
+                    v-if="scheduleConfig.frequency === 'hours'"
+                    v-model:value="scheduleConfig.value"
+                    :min="1"
+                    :max="24"
+                    placeholder="1-24小时"
+                    addon-after="小时"
+                  />
+                  <a-time-picker 
+                    v-if="scheduleConfig.frequency === 'time'"
+                    v-model:value="scheduleConfig.timeValue"
+                    format="HH:mm"
+                    placeholder="选择时间"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <div class="item-label">
+              <div class="label-name">选择视频文件夹</div>
+              <div class="label-tip">选择包含视频文件的文件夹</div>
+            </div>
+            <div class="item-input">
+              <PublishVideoChooser v-model="selectedVideos" :selectedFolder="selectedFolder" @folderChange="handleFolderChange"/>
             </div>
           </div>
           <div class="form-item">
@@ -69,53 +113,32 @@
             </div>
           </div>
         </div>
-        <div class="form-item">
-          <div class="item-label">
-            <div class="label-name">选择发布账号</div>
-            <div class="label-tip">选择要发布视频的账号</div>
-          </div>
-          <div class="item-input">
-            <div class="input-content">
-              <div class="account-chooser-filter">
-                <div class="select-all">
-                  <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount"/>全选
-                </div>
+          <div class="form-item">
+            <div class="item-label">
+              <div class="label-name">选择发布账号</div>
+              <div class="label-tip">选择要发布视频的账号</div>
+               <div class="select-all ">
+                <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount">全选</a-checkbox>
               </div>
-              <div class="account-chooser-list">
-                <div v-for="item in platformAccountList" :key="item.id" class="account-chooser-item">
-                  <a-checkbox :checked="isAccountSelected(item)" @change="handleAccountCheckChange(item)" />
-                  <img :src="item.logo" class="item-logo" />
-                  <div class="item-info">
-                    <div class="item-name">{{ item.name }}</div>
-                    <div class="item-platform-info">
-                      <div class="platform-name">{{ item.platform?.name }}</div>
-                    </div>
+            </div>
+            <div class="item-input">
+              <div class="input-content">
+                <div class="account-chooser-list">
+                  <div v-for="item in platformAccountList" :key="item.id" >
+                    <a-checkbox :checked="isAccountSelected(item)" @change="handleAccountCheckChange(item)" >
+                      <div class="account-chooser-item">
+                        <img :src="item.logo" class="item-logo" />
+                        <div class="item-info">
+                          <div class="item-name">{{ item.name }}</div>
+                          <div class="platform-name">{{ item.platform?.name }}</div>
+                        </div>
+                      </div>
+                    </a-checkbox>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="form-item">
-          <div class="item-label">
-            <div class="label-name">发布设置</div>
-            <div class="label-tip">配置发布时间和方式</div>
-          </div>
-          <div class="item-input">
-            <div class="input-content">
-              <div class="timing-config">
-                <div class="timing-config-type">
-                  <a-checkbox v-model:checked="isTimingPublish" />定时发布
-                </div>
-                <div class="timing-config-time">
-                  <a-date-picker v-if="isTimingPublish" v-model:value="timingPublishTime" 
-                    format="YYYY-MM-DD HH:mm" :show-time="true" :disabled-date="disabledDate"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
       <div class="publish-platform-list">
         <div class="platform-list-title">平台</div>
@@ -142,12 +165,19 @@
 import { onMounted, reactive, ref, watch, computed } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
-import dayjs from 'dayjs'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'
 import BatchPublishDescription from './components/BatchPublishDescription.vue'
 import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
-const selectedVideos  = ref<any[]>([])
+const selectedVideos = ref<any[]>([])
+const selectedFolder = ref<string>('')
+
+// Schedule configuration
+const scheduleConfig = reactive({
+  frequency: 'minutes', // 'minutes' | 'hours' | 'time'
+  value: 5, // For minutes (5-59) or hours (1-24)
+  timeValue: undefined as any // For daily time (dayjs object)
+})
 
 const baseContentData = reactive<{
   id?: string;
@@ -167,10 +197,13 @@ const platformList = ref<any[]>([])
 const selectedPlatformId = ref()
 
 const selectedAccountList = ref<any[]>([])
-const isTimingPublish = ref(false)
-const timingPublishTime = ref('')
 const topicGroup1InputValue = ref('')
 const topicGroup2InputValue = ref('')
+
+// Folder selection handler
+const handleFolderChange = (folderPath: string) => {
+  selectedFolder.value = folderPath
+}
 
 // Account management variables and methods
 const platformAccountList = ref<any[]>([])
@@ -210,15 +243,9 @@ const handleAccountCheckChange = (item: any) => {
   }
 }
 
-const disabledDate = (currentDate: any) => {
-  const startDate = dayjs().add(2, 'hours')
-  const endDate = dayjs().add(14, 'days')
-  return currentDate.isBefore(startDate) || currentDate.isAfter(endDate)
-}
-
 watch (selectedVideos, (newValue) => {
   if (newValue && newValue.length) {
-    baseContentData.filePathList = newValue.map(v => v.path)
+    baseContentData.filePathList = newValue.map(v => v.filePath || v.path)
   } else {
     baseContentData.filePathList = []
   }
@@ -246,8 +273,8 @@ const getAccountList = async () => {
 }
 
 const save = async () => {
-  if (selectedVideos.value.length === 0) {
-    message.error('请选择视频')
+  if (selectedVideos.value.length === 0 && !selectedFolder.value) {
+    message.error('请选择视频文件夹或视频文件')
     return
   }
   if (baseContentData.titleList.length === 0) {
@@ -291,6 +318,27 @@ const handlePublish = async () => {
     return
   }
   
+  if (!selectedFolder.value) {
+    message.error("请选择视频文件夹")
+    return
+  }
+  
+  // Validate schedule configuration
+  if (scheduleConfig.frequency === 'minutes' && (!scheduleConfig.value || scheduleConfig.value < 5 || scheduleConfig.value > 59)) {
+    message.error("分钟间隔必须在5-59之间")
+    return
+  }
+  
+  if (scheduleConfig.frequency === 'hours' && (!scheduleConfig.value || scheduleConfig.value < 1 || scheduleConfig.value > 24)) {
+    message.error("小时间隔必须在1-24之间")
+    return
+  }
+  
+  if (scheduleConfig.frequency === 'time' && !scheduleConfig.timeValue) {
+    message.error("请选择每日发布时间")
+    return
+  }
+  
   if (!baseContentData.id) {
     const saveRes = await save();
     if (!saveRes) {
@@ -305,10 +353,12 @@ const handlePublish = async () => {
     description: baseContentData.descriptionList,
     topicGroup1: baseContentData.topicGroup1,
     topicGroup2: baseContentData.topicGroup2,
-    // platformData: {},
     platformAccountList: selectedAccountList.value.map(v => v.id),
-    publishType: isTimingPublish.value ? 1 : 0,
-    publishTime: isTimingPublish.value ? timingPublishTime.value : dayjs().format('YYYY-MM-DD HH:mm')
+    publishType: 1, // Fixed to 1 for timing publish
+    frequency: scheduleConfig.frequency,
+    frequencyValue: scheduleConfig.value,
+    dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
+    directoryPath: selectedFolder.value
   }))
   
   try {
@@ -323,8 +373,11 @@ const handlePublish = async () => {
       message.success("创建发布任务成功")
       // Reset form after successful publish
       selectedAccountList.value = []
-      isTimingPublish.value = false
-      timingPublishTime.value = ''
+      scheduleConfig.frequency = 'minutes'
+      scheduleConfig.value = 5
+      scheduleConfig.timeValue = undefined
+      selectedFolder.value = ''
+      selectedVideos.value = []
     } else {
       throw new Error(res.message)
     }
@@ -386,38 +439,18 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
-.base-content-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-.base-content-video {
-  margin-bottom: 30px;
-}
-.form-item {
-  margin-bottom: 20px;
-  .item-label {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-    .label-tip {
-      color: #1677ff;
-      margin-left: 10px;
-    }
-  }
-}
-.page-sider {
-  width: 150px;
-  margin-right: 20px;
-}
 .page-body {
   flex: 1;
   display: flex;
+  overflow: hidden;
   .publish-base-content {
     flex: 1;
     padding: 20px;
+    overflow-y: auto;
+    height: calc(100vh - 100px); /* Subtract footer height */
   }
   .publish-platform-list{
     border-left: 1px solid #dfdfdf;
@@ -446,13 +479,50 @@ onMounted(() => {
   }
     
 }
+
+.base-content-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+.base-content-video {
+  margin-bottom: 30px;
+}
+.form-item {
+  margin-bottom: 20px;
+  .item-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    .label-name { 
+      color: #111;
+    }
+    .label-tip {
+      color: #1677ff;
+      margin-left: 10px;
+    }
+    .select-all {
+      margin-left: 10px;
+    }
+  }
+}
+.page-sider {
+  width: 150px;
+  margin-right: 20px;
+}
 .page-footer {
-  height: 100px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #ffffff;
   gap: 20px;
+  border-top: 1px solid #f0f0f0;
+  z-index: 1000;
 }
 .publish-modal-body {
   height: 70vh;
@@ -482,31 +552,32 @@ onMounted(() => {
 .account-chooser-list {
   max-height: 300px;
   overflow-y: auto;
+  display: flex;
+  gap: 10px;
 }
 .account-chooser-item {
-  height: 50px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   padding: 5px 0;
-  border-bottom: 1px solid #f0f0f0;
   .item-logo {
-    width: 40px;
-    height: 40px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
   }
   .item-info {
     flex: 1;
+    display: flex;
+    align-items: center;
     .item-name {
       font-weight: 500;
       font-size: 14px;
       margin-bottom: 2px;
     }
-    .item-platform-info {
-      .platform-name {
-        color: #666;
-        font-size: 12px;
-      }
+    .platform-name {
+      color: #666;
+      font-size: 12px;
     }
   }
 }
@@ -514,5 +585,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.timing-schedule-config {
+  display: flex;
+  gap: 16px;
+  
+  .schedule-type {
+    display: flex;
+    align-items: center;
+  }
+  
+  .schedule-value {
+    display: flex;
+    align-items: center;
+  }
 }
 </style>
