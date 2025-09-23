@@ -22,7 +22,6 @@ export default class VideoPublishTaskDao extends BaseDao {
   insert(entity: VideoPublishTask): number {
     const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss')
     const columns = [
-      "id",
       "file_path",
       "file_name",
       "title",
@@ -49,7 +48,6 @@ export default class VideoPublishTaskDao extends BaseDao {
       "updated_at"
     ];
     const values = [
-      entity.id,
       entity.filePath,
       entity.fileName,
       entity.title,
@@ -75,7 +73,9 @@ export default class VideoPublishTaskDao extends BaseDao {
       currentTime,
       currentTime
     ];
-    return this.insertByMapping(columns, values)
+    const generatedId = this.insertAndGetId(columns, values);
+    entity.id = generatedId; // Set the generated ID back to the entity
+    return generatedId;
   }
   
   update(entity: VideoPublishTask): number {
@@ -111,6 +111,15 @@ export default class VideoPublishTaskDao extends BaseDao {
       entity.id
     ];
     return this.updateByMapping(columns, values);
+  }
+
+  save(entity: VideoPublishTask): VideoPublishTask {
+    if (entity.id && entity.id > 0) {
+      this.update(entity);
+    } else {
+      this.insert(entity); // insert method will set the generated ID
+    }
+    return entity;
   }
 
   getLatestTaskToPublish(): VideoPublishTask | undefined {

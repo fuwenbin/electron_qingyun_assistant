@@ -24,7 +24,8 @@ export class VideoPublishTaskManger {
     }
     this.isRunning = true;
     while (this.isRunning) {
-      await this.publish();
+      await this.toGenPublishTask();
+      // await this.publish();
     }
   }
 
@@ -40,7 +41,7 @@ export class VideoPublishTaskManger {
       
       if (!pendingSetting) {
         console.log('没有找到待执行的计划任务');
-        return null;
+        return await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
       console.log('找到待执行的计划任务:', pendingSetting.id);
@@ -64,7 +65,7 @@ export class VideoPublishTaskManger {
         platformAccountList: pendingSetting.accountIds ? pendingSetting.accountIds.split(',').filter(id => id.trim()) : []
       };
       
-      const generatedTaskIds = videoPublishTaskService.publish(publishParams);
+      const generatedTaskIds = await videoPublishTaskService.generatePublishTasks(publishParams);
       
       // 3. 生成完任务后，更新 video_publish_settings 中这条数据的状态和 task_ids
       pendingSetting.status = 2; // 完成

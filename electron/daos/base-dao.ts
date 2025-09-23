@@ -63,6 +63,21 @@ export class BaseDao {
     return rows
   }
 
+  insertAndGetId(columns: string[], values: any[]): number {
+    const valuePlaceholders = columns.map(_ => '?')
+    const sql = `INSERT INTO ${this.tableName} (${columns.join(', ')}) 
+      VALUES (${valuePlaceholders.join(', ')});
+    `;
+    databaseService.execute(sql, values);
+    
+    // Get the last inserted row ID
+    const lastIdSql = `SELECT last_insert_rowid() as id`;
+    const result = databaseService.query(lastIdSql);
+    databaseService.save()
+    
+    return result && result.length > 0 ? result[0].id : 0;
+  }
+
   updateByMapping(columns: string[], values: any[]) {
     let sql = `UPDATE ${this.tableName} SET `;
     for (let i = 0; i < columns.length - 1; i++) {

@@ -8,8 +8,7 @@ import { decodeArg } from '../utils';
 import BusinessException from '../exception/business-exception';
 import testService from './test';
 import platfromAccountCommentService from './platform-account-comment-service';
-import { getAllFilesInDirectory } from '../utils/fs-utils';
-import path from 'path';
+import { getVideoFilesInDirectory } from '../utils/fs-utils';
 export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
@@ -69,12 +68,13 @@ export function initApiController() {
           data: resData
         }
       } else if (url === '/video-publish-task/publish' && method.toLowerCase() === 'post') {
-        const resData = videoPublishTaskService.publish(data)
-        return {
-          code: 0,
-          message: 'success',
-          data: resData
-        }
+        // todo  将用于实时发布任务
+        // const resData = videoPublishTaskService.publish(data)
+        // return {
+        //   code: 0,
+        //   message: 'success',
+        //   data: resData
+        // }
       } else if (url === '/video-publish-task/list' && method.toLowerCase() === 'get') {
         const resData = videoPublishTaskService.list()
         return {
@@ -114,12 +114,7 @@ export function initApiController() {
         if (!directoryPath) {
           throw new BusinessException(400, '目录路径不能为空')
         }
-        const allFiles = await getAllFilesInDirectory(directoryPath, false)
-        const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm']
-        const videoFiles = allFiles.filter(filePath => {
-          const ext = path.extname(filePath).toLowerCase()
-          return videoExtensions.includes(ext)
-        })
+        const videoFiles = await getVideoFilesInDirectory(directoryPath, false)
         return {
           code: 0,
           message: 'success',

@@ -75,7 +75,7 @@ status: 0:未开始 1:进行中 2:成功 3:失败
 publish_type: 0:立即发布 1:平台定时固定时间发布 2：本地定时固定时间发布 3：本地定时固定间隔发布
 */
 CREATE TABLE IF NOT EXISTS video_publish_tasks (
-  id TEXT PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   file_path TEXT NOT NULL,
   file_name TEXT NOT NULL,
   title TEXT DEFAULT '',

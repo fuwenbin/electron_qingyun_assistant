@@ -3,6 +3,7 @@ import VideoPublishTask from "../entities/video-publish-task";
 import platformAccountService from "./platform-account-service";
 import platformService from './platform-service'
 import dayjs from "dayjs";
+import { getVideoFilesInDirectory } from '../utils/fs-utils';
 
 export class VideoPublishTaskService {
   dao: VideoPublishTaskDao;
@@ -28,21 +29,23 @@ export class VideoPublishTaskService {
     return this.dao.save(entity);
   }
 
-  publish(params: any) {
+  async generatePublishTasks(params: any) {
     // Add null/undefined checks and handle both string and array formats
     console.info("publish params: ",params)
     
-    const generatedTaskIds: string[] = []; // Track generated task IDs
+    const generatedTaskIds: number[] = []; // Track generated task IDs
     
-    // Handle new directory-based approach
+    // Get video files using the utility method
     let videoList: string[] = []
-    if (params.directoryPath) {
-      // Get video files from the selected directory
-      // This should be populated by the frontend after selecting folder
-      videoList = params.filePath || []
-    } else {
-      // Legacy approach - direct file paths
-      videoList = Array.isArray(params.filePath) ? params.filePath : (params.filePath || '').split('_,_').filter(Boolean);
+    if (params.filePath) {
+      try {
+        // Use getVideoFilesInDirectory to get video files from the directory
+        videoList = await getVideoFilesInDirectory(params.filePath, false);
+        console.info("Found video files:", videoList.length);
+      } catch (error) {
+        console.error("Error getting video files:", error);
+        throw new Error('目录:'+ params.filePath + '，没有找到视频文件');
+      }
     }
     
     const titleList = Array.isArray(params.title) ? params.title : (params.title || '').split('_,_').filter(Boolean);
@@ -52,7 +55,7 @@ export class VideoPublishTaskService {
     
     // Validate required data
     if (videoList.length === 0) {
-      throw new Error('没有选择视频文件');
+      throw new Error('目录:'+ params.filePath + '下没有视频文件');
     }
     if (titleList.length === 0) {
       throw new Error('没有设置视频标题');
@@ -65,7 +68,7 @@ export class VideoPublishTaskService {
     const platformData = JSON.parse(params.platformData || '{}');
     console.info("platformData 2")
     const platformAccountList = params.platformAccountList || [];
-    const publishType = params.publishType || 1; // Fixed to 1 for scheduled publishing
+    const publishType = params.publishType || 1; // Fixed to 1 for scheduled publishing  1代表定时发布任务 
     
     // New scheduling parameters
     const frequency = params.frequency || 'minutes'; // 'minutes' | 'hours' | 'time'
@@ -178,7 +181,7 @@ export class VideoPublishTaskService {
   private _generatePublishTimes(frequency: string, frequencyValue: number, dailyTime: string | undefined, videoCount: number): string[] {
     const publishTimes: string[] = [];
     const now = dayjs();
-    const minPublishTime = now.add(3, 'hours'); // Minimum: 3 hours from now
+    const minPublishTime = now.add(3, 'hours'); // Minimum: 3 hours from now 抖音实际支持2小时后发布，我这里设置大点保证后面不会触发
     const maxPublishTime = now.add(14, 'days'); // Maximum: 14 days from now
     
     let currentTime = minPublishTime;

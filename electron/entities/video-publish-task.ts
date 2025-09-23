@@ -1,5 +1,5 @@
 export default class VideoPublishTask {
-  id: string;
+  id: number;
   filePath: string;
   fileName: string;
   title: string;
