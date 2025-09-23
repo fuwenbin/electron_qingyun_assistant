@@ -20,7 +20,7 @@ const menuItems = ref<any[]>([
   },
   {
     path: '/publish-video/my-settings',
-    title: '我的配置'
+    title: '我的任务'
   },
   {
     path: '/publish-video/my-tasks',

@@ -48,7 +48,9 @@ CREATE TABLE IF NOT EXISTS platform_accounts_r_groups (
 );
 
 /*
-setting_type: 1:单条视频发布 2：批量发布
+
+frequency: minutes, hours, time
+status: 0-待执行 1-执行中 2-完成
 */
 CREATE TABLE IF NOT EXISTS video_publish_settings  (
   id TEXT PRIMARY KEY,
@@ -58,6 +60,13 @@ CREATE TABLE IF NOT EXISTS video_publish_settings  (
   topic_group1 TEXT,
   topic_group2 TEXT,
   platform_data TEXT,
+  frequency TEXT DEFAULT 'minutes',
+  frequency_value INTEGER DEFAULT 5,
+  daily_time TEXT,
+  status INTEGER DEFAULT 0,
+  task_ids TEXT DEFAULT '',
+  account_ids TEXT DEFAULT '',
+  platform_id INTEGER,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );

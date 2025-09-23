@@ -48,7 +48,9 @@ export class BaseDao {
   deleteById(id: any): number {
     const sql = `DELETE FROM ${this.tableName} WHERE id = ?`;
     const params = [id];
-    return databaseService.execute(sql, params)
+    const rows = databaseService.execute(sql, params);
+    databaseService.save();
+    return rows;
   }
 
   insertByMapping(columns: string[], values: any[]) {

@@ -101,7 +101,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .sidebar {
-  width: 240px;
+  width: 160px;
   height: 100%;
   background-color: #fff;
   border-right: 1px solid #e0e0e0;
@@ -121,7 +121,7 @@ onMounted(() => {
   text-decoration: none;
   transition: all 0.3s;
   cursor: pointer;
-  width: 240px;
+  width: 160px;
 
   i {
     width: 20px;

@@ -19,6 +19,10 @@ export class VideoPublishSettingService {
   list() {
     return this.dao.list();
   }
+
+  delete(id: string) {
+    return this.dao.deleteById(id);
+  }
 }
 
 export default new VideoPublishSettingService();

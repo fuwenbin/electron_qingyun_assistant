@@ -155,7 +155,6 @@
       </div>
     </div>
     <div class="page-footer">
-      <a-button @click="save">保存</a-button>
       <a-button @click="handlePublish">发布</a-button>
     </div>
   </div>
@@ -339,52 +338,97 @@ const handlePublish = async () => {
     return
   }
   
-  if (!baseContentData.id) {
-    const saveRes = await save();
-    if (!saveRes) {
-      return;
-    }
+  // First save the configuration
+  const saveResult = await saveConfiguration();
+  if (!saveResult) {
+    return;
   }
   
   console.info("提交数据: ", baseContentData)
-  const data = JSON.parse(JSON.stringify({
-    filePath: baseContentData.filePathList,
-    title: baseContentData.titleList,
-    description: baseContentData.descriptionList,
-    topicGroup1: baseContentData.topicGroup1,
-    topicGroup2: baseContentData.topicGroup2,
-    platformAccountList: selectedAccountList.value.map(v => v.id),
-    publishType: 1, // Fixed to 1 for timing publish
+  // const data = JSON.parse(JSON.stringify({
+  //   filePath: baseContentData.filePathList,
+  //   title: baseContentData.titleList,
+  //   description: baseContentData.descriptionList,
+  //   topicGroup1: baseContentData.topicGroup1,
+  //   topicGroup2: baseContentData.topicGroup2,
+  //   platformAccountList: selectedAccountList.value.map(v => v.id),
+  //   publishType: 1, // Fixed to 1 for timing publish
+  //   frequency: scheduleConfig.frequency,
+  //   frequencyValue: scheduleConfig.value,
+  //   dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
+  //   directoryPath: selectedFolder.value
+  // }))
+  
+  // try {
+  //   console.info('发布任务参数：', data)
+  //   const res = await window.electronAPI.apiRequest({
+  //     url: '/video-publish-task/publish',
+  //     method: 'POST',
+  //     data
+  //   })
+  //   console.log(res)
+  //   if (res.code === 0) {
+  //     message.success("创建发布任务成功")
+  //     // Reset form after successful publish
+  //     selectedAccountList.value = []
+  //     scheduleConfig.frequency = 'minutes'
+  //     scheduleConfig.value = 5
+  //     scheduleConfig.timeValue = undefined
+  //     selectedFolder.value = ''
+  //     selectedVideos.value = []
+  //   } else {
+  //     throw new Error(res.message)
+  //   }
+  // } catch (error: any) {
+  //   console.error('创建发布任务失败：' + error.message);
+  //   message.error('创建发布任务失败：' + error.message)
+  // }
+}
+
+// Separate save configuration function
+const saveConfiguration = async () => {
+  if (selectedVideos.value.length === 0 && !selectedFolder.value) {
+    message.error('请选择视频文件夹或视频文件')
+    return false
+  }
+  if (baseContentData.titleList.length === 0) {
+    message.error('请填写至少一个标题')
+    return false
+  }
+  if (baseContentData.descriptionList.length === 0) {
+    message.error('请填写至少一个视频简介')
+    return false
+  }
+  const data = {
+    filePath: selectedFolder.value || baseContentData.filePathList.join('_,_'),
+    title: baseContentData.titleList.join('_,_'),
+    description: baseContentData.descriptionList.join('_,_'),
+    topicGroup1: baseContentData.topicGroup1.join(','),
+    topicGroup2: baseContentData.topicGroup2.join(','),
+    platformData: JSON.stringify({}),
     frequency: scheduleConfig.frequency,
     frequencyValue: scheduleConfig.value,
     dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
-    directoryPath: selectedFolder.value
-  }))
-  
+    accountIds: selectedAccountList.value.map(account => account.id).join(','),
+    platformId: selectedPlatformId.value
+  }
   try {
-    console.info('发布任务参数：', data)
     const res = await window.electronAPI.apiRequest({
-      url: '/video-publish-task/publish',
+      url: '/video-publish-setting/save',
       method: 'POST',
       data
     })
-    console.log(res)
     if (res.code === 0) {
-      message.success("创建发布任务成功")
-      // Reset form after successful publish
-      selectedAccountList.value = []
-      scheduleConfig.frequency = 'minutes'
-      scheduleConfig.value = 5
-      scheduleConfig.timeValue = undefined
-      selectedFolder.value = ''
-      selectedVideos.value = []
+      message.success('配置保存成功', 2)
+      return true;
     } else {
-      throw new Error(res.message)
+      throw new Error( res.message)
     }
-  } catch (error: any) {
-    console.error('创建发布任务失败：' + error.message);
-    message.error('创建发布任务失败：' + error.message)
-  }
+ } catch (error: any) {
+  console.error('保存失败：' + error.message)
+  message.error('保存失败：' + error.message)
+  return false;
+ }
 }
 
 const handletopicGroup1InputConfirm = (e: any) => {

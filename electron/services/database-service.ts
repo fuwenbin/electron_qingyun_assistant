@@ -46,6 +46,8 @@ class DatabaseService {
         this.db = new SQL.Database(new Uint8Array(data));
         const initTableSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_table.sql');
         this.executeSqlFile(initTableSqlPath);
+        // Run migrations for existing databases
+        this.runMigrations();
         this.save();
       } else {
         this.db = new SQL.Database();
@@ -59,6 +61,46 @@ class DatabaseService {
       log.log('Database initialized');
     } catch (err) {
       log.error('Database initialization error:', err);
+    }
+  }
+
+  runMigrations() {
+    try {
+      // Check if video_publish_settings columns exist and add if missing
+      this.addColumnIfNotExists('video_publish_settings', 'frequency', 'TEXT DEFAULT \'minutes\'');
+      this.addColumnIfNotExists('video_publish_settings', 'frequency_value', 'INTEGER DEFAULT 5');
+      this.addColumnIfNotExists('video_publish_settings', 'daily_time', 'TEXT');
+      this.addColumnIfNotExists('video_publish_settings', 'status', 'INTEGER DEFAULT 0');
+      this.addColumnIfNotExists('video_publish_settings', 'task_ids', 'TEXT DEFAULT \'\'');
+      this.addColumnIfNotExists('video_publish_settings', 'account_ids', 'TEXT DEFAULT \'\'');
+      this.addColumnIfNotExists('video_publish_settings', 'platform_id', 'INTEGER');
+      log.log('Migrations completed successfully');
+    } catch (err) {
+      log.error('Migration error:', err);
+    }
+  }
+
+  addColumnIfNotExists(tableName: string, columnName: string, columnDefinition: string) {
+    try {
+      // Check if column exists by querying table info
+      const stmt = this.db.prepare(`PRAGMA table_info(${tableName})`);
+      const tableInfo: any[] = [];
+      while (stmt.step()) {
+        tableInfo.push(stmt.getAsObject());
+      }
+      stmt.free();
+      
+      const columnExists = tableInfo.some(column => column.name === columnName);
+      
+      if (!columnExists) {
+        const sql = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`;
+        this.executeSqlScript(sql);
+        log.log(`Added column ${columnName} to table ${tableName}`);
+      } else {
+        log.log(`Column ${columnName} already exists in table ${tableName}`);
+      }
+    } catch (err) {
+      log.error(`Error adding column ${columnName} to table ${tableName}:`, err);
     }
   }
 

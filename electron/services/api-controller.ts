@@ -50,6 +50,24 @@ export function initApiController() {
           message: 'success',
           data: resData
         }
+      } else if (url.startsWith('/video-publish-setting/') && method.toLowerCase() === 'get') {
+        // Handle GET /video-publish-setting/{id}
+        const id = url.split('/video-publish-setting/')[1]
+        const resData = videoPublishSettingService.findById(id)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
+      } else if (url.startsWith('/video-publish-setting/') && method.toLowerCase() === 'delete') {
+        // Handle DELETE /video-publish-setting/{id}
+        const id = url.split('/video-publish-setting/')[1]
+        const resData = videoPublishSettingService.delete(id)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
       } else if (url === '/video-publish-task/publish' && method.toLowerCase() === 'post') {
         const resData = videoPublishTaskService.publish(data)
         return {

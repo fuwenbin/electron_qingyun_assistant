@@ -6,6 +6,13 @@ export default class VideoPublishBaseSetting {
   topicGroup1: string;
   topicGroup2: string;
   platformData: string;
+  frequency: string;
+  frequencyValue: number;
+  dailyTime: string;
+  status: number;
+  taskIds: string;
+  accountIds: string;
+  platformId: number;
   createdAt: string;
   updatedAt: string;
 }
