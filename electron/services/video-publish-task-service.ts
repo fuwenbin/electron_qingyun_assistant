@@ -32,6 +32,8 @@ export class VideoPublishTaskService {
     // Add null/undefined checks and handle both string and array formats
     console.info("publish params: ",params)
     
+    const generatedTaskIds: string[] = []; // Track generated task IDs
+    
     // Handle new directory-based approach
     let videoList: string[] = []
     if (params.directoryPath) {
@@ -136,7 +138,8 @@ export class VideoPublishTaskService {
           task.playCount = 0;
           task.shareCount = 0;
           
-          this.save(task);
+          const savedTask = this.save(task);
+          generatedTaskIds.push(savedTask.id); // Collect generated task ID
           taskIndex++;
         } catch (error: any) {
           console.error(`创建发布任务失败 - 账号ID: ${accountId}, 文件: ${filePath}`);
@@ -145,6 +148,8 @@ export class VideoPublishTaskService {
         }
       });
     })
+    
+    return generatedTaskIds; // Return array of generated task IDs
   }
 
   getLatestTaskToPublish() {

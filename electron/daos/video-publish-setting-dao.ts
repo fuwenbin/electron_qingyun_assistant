@@ -1,6 +1,7 @@
 import VideoPublishSetting from "../entities/video-publish-setting";
 import { BaseDao } from "./base-dao";
 import dayjs from "dayjs";
+import { databaseService } from "../services/database-service";
 
 const BASE_SELECT = `SELECT id, file_path as filePath, title, description, 
   topic_group1 as topicGroup1, topic_group2 as topicGroup2, platform_data as platformData,
@@ -39,31 +40,42 @@ export default class VideoPublishSettingDao extends BaseDao {
       currentTime
      ]
      return this.insertByMapping(columns, values)
-    }
+  }
   
-    update(entity: VideoPublishSetting): number {
-      const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss');
-      const columns = ['file_path', 'title', 'description', 'topic_group1', 
-        'topic_group2', 'platform_data', 'frequency', 'frequency_value', 'daily_time', 'status', 'task_ids', 'account_ids', 'platform_id', 'updated_at', 'id'
-      ];
-      const values = [
-        entity.filePath,
-        entity.title,
-        entity.description,
-        entity.topicGroup1,
-        entity.topicGroup2,
-        entity.platformData,
-        entity.frequency,
-        entity.frequencyValue,
-        entity.dailyTime || null,
-        entity.status || 0,
-        entity.taskIds || '',
-        entity.accountIds || '',
-        entity.platformId || null,
-        currentTime,
-        entity.id
-      ]
-      return this.updateByMapping(columns, values)
+  update(entity: VideoPublishSetting): number {
+    const currentTime  = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const columns = ['file_path', 'title', 'description', 'topic_group1', 
+      'topic_group2', 'platform_data', 'frequency', 'frequency_value', 'daily_time', 'status', 'task_ids', 'account_ids', 'platform_id', 'updated_at', 'id'
+    ];
+    const values = [
+      entity.filePath,
+      entity.title,
+      entity.description,
+      entity.topicGroup1,
+      entity.topicGroup2,
+      entity.platformData,
+      entity.frequency,
+      entity.frequencyValue,
+      entity.dailyTime || null,
+      entity.status || 0,
+      entity.taskIds || '',
+      entity.accountIds || '',
+      entity.platformId || null,
+      currentTime,
+      entity.id
+    ]
+    return this.updateByMapping(columns, values)
+  }
+
+  findOneByStatus(status: number) {
+    const sql = `${BASE_SELECT} FROM video_publish_settings WHERE status = ? ORDER BY created_at ASC LIMIT 1`;
+    const params = [status];
+    const records = databaseService.query(sql, params);
+    if (records && records.length > 0) {
+      return records[0];
+    } else {
+      return null;
     }
+  }
   
 }

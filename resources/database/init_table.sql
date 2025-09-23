@@ -48,7 +48,6 @@ CREATE TABLE IF NOT EXISTS platform_accounts_r_groups (
 );
 
 /*
-
 frequency: minutes, hours, time
 status: 0-待执行 1-执行中 2-完成
 */

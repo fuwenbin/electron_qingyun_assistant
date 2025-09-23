@@ -12,6 +12,10 @@ export class VideoPublishSettingService {
     return this.dao.save(entity);
   }
 
+  update(entity: VideoPublishSetting) {
+    return this.dao.update(entity);
+  }
+
   findById(id: string) {
     return this.dao.findById(id);
   }
@@ -22,6 +26,10 @@ export class VideoPublishSettingService {
 
   delete(id: string) {
     return this.dao.deleteById(id);
+  }
+
+  findOneByStatus(status: number) {
+    return this.dao.findOneByStatus(status);
   }
 }
 

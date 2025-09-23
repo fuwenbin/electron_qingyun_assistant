@@ -13,6 +13,7 @@
     "build:renderer": "vue-tsc --noEmit && vite build",
     "build:main": "tsc -p tsconfig.node.json",
     "setup:ffmpeg": "node scripts/setup-ffmpeg.js",
+    "clear:video-tasks": "node scripts/clear-video-tasks.js",
     "type-check": "vue-tsc --noEmit",
     "type-check:main": "tsc -p tsconfig.node.json --noEmit",
     "rebuild": "electron-rebuild -f -w better-sqlite3",

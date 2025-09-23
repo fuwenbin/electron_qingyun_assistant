@@ -218,7 +218,7 @@ export class DouyinService {
       await waitForRandomTimeout(page, 1000);
       await page.mouse.wheel(0, 600);
       
-      // Handle timing publish if specified
+      // 是否定时发布的任务
       if (payload.publishType === 1) {
         console.log('Setting up timing publish for:', payload.timingPublishTime);
         try {
