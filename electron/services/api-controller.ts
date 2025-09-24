@@ -76,7 +76,13 @@ export function initApiController() {
         //   data: resData
         // }
       } else if (url === '/video-publish-task/list' && method.toLowerCase() === 'get') {
-        const resData = videoPublishTaskService.list()
+        const resData = videoPublishTaskService.listPaged({
+          id: data?.id,
+          status: data?.status,
+          keyword: data?.keyword,
+          page: data?.page,
+          pageSize: data?.pageSize,
+        })
         return {
           code: 0,
           message: 'success',

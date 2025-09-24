@@ -36,10 +36,11 @@ const menuItems = ref<any[]>([
 <style lang="scss" scoped>
 .page-publish-video {
   display: flex;
+  height: calc(100vh - 60px); // 这个高度是content area的高度，不包括Page的padding
 }
 .page-content {
   flex: 1;
   background: #f4f4f4;
-  min-height: calc(100vh - 60px);
+  overflow: hidden; // 防止内容溢出
 }
 </style>

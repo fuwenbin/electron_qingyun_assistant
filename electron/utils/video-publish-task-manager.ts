@@ -25,7 +25,7 @@ export class VideoPublishTaskManger {
     this.isRunning = true;
     while (this.isRunning) {
       await this.toGenPublishTask();
-      // await this.publish();
+      await this.publish();
     }
   }
 
@@ -40,7 +40,7 @@ export class VideoPublishTaskManger {
       const pendingSetting = videoPublishSettingService.findOneByStatus(0);
       
       if (!pendingSetting) {
-        console.log('没有找到待执行的计划任务');
+        // console.log('没有找到待执行的计划任务');
         return await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
@@ -90,7 +90,7 @@ export class VideoPublishTaskManger {
   async publish() {
     const latestTask = videoPublishTaskService.getLatestTaskToPublish();
     if (!latestTask) {
-      // console.log("开始执行视频发布任务：没有需要执行的任务");
+      console.log("开始执行视频发布任务：没有需要执行的任务");
       return await new Promise(resolve => setTimeout(resolve, 5000));
     } else {
       console.log("开始执行视频发布任务：" + JSON.stringify(latestTask));

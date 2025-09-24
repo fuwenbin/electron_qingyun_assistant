@@ -179,9 +179,9 @@ onMounted(() => {
 }
 
 .main-content {
-  min-height: calc(100vh - 60px);
+  height: calc(100vh - 60px);
   transition: margin-left 0.3s ease;
-  
+  margin-top: 60px;
   &.content-expanded {
     margin-left: 60px;
   }

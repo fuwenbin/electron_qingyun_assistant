@@ -4,6 +4,7 @@ import platformAccountService from "./platform-account-service";
 import platformService from './platform-service'
 import dayjs from "dayjs";
 import { getVideoFilesInDirectory } from '../utils/fs-utils';
+import log from 'electron-log';
 
 export class VideoPublishTaskService {
   dao: VideoPublishTaskDao;
@@ -21,6 +22,18 @@ export class VideoPublishTaskService {
     return this.dao.list();
   }
 
+  listPaged(params: {
+    id?: number,
+    status?: number,
+    keyword?: string,
+    page?: number,
+    pageSize?: number,
+  }) {
+    return (this.dao as any).listPaged(params)
+  }
+
+  // listByConditions removed for now to keep API stable
+
   findById(id: string) {
     return this.dao.findById(id);
   }
@@ -31,7 +44,7 @@ export class VideoPublishTaskService {
 
   async generatePublishTasks(params: any) {
     // Add null/undefined checks and handle both string and array formats
-    console.info("publish params: ",params)
+    log.info("publish params: ",params)
     
     const generatedTaskIds: number[] = []; // Track generated task IDs
     
@@ -41,9 +54,10 @@ export class VideoPublishTaskService {
       try {
         // Use getVideoFilesInDirectory to get video files from the directory
         videoList = await getVideoFilesInDirectory(params.filePath, false);
-        console.info("Found video files:", videoList.length);
+        log.info("Found video files:", videoList.length);
+        
       } catch (error) {
-        console.error("Error getting video files:", error);
+        log.error("Error getting video files:", error);
         throw new Error('目录:'+ params.filePath + '，没有找到视频文件');
       }
     }
@@ -113,6 +127,19 @@ export class VideoPublishTaskService {
           }
           
           const platformId = account.platformId;
+          
+          // Check if this file already exists for this account (by filename comparison)
+          const existingFilePaths = this.dao.getFilePathsByAccountAndPlatform(accountId, platformId);
+          const existingFileNames = new Set(
+            existingFilePaths.map(path => this.getFileName(path))
+          );
+          
+          const currentFileName = this.getFileName(filePath);
+          if (existingFileNames.has(currentFileName)) {
+            console.info(`文件 ${currentFileName} 已存在于账号 ${accountId}，跳过任务创建`);
+            return;
+          }
+          
           const task = new VideoPublishTask();
           task.filePath = filePath;
           task.fileName = this.getFileName(filePath);

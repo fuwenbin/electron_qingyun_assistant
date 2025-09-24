@@ -9,7 +9,5 @@
 </script>
 
 <style lang="scss" scoped>
-.page {
-  padding-top: 60px;
-}
+
 </style>

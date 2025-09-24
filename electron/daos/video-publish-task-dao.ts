@@ -123,10 +123,10 @@ export default class VideoPublishTaskDao extends BaseDao {
   }
 
   getLatestTaskToPublish(): VideoPublishTask | undefined {
-    const currentTime = dayjs().format('YYYY-MM-DD HH:mm');
+    // const currentTime = dayjs().format('YYYY-MM-DD HH:mm');
     const sql = `${this.baseSelect} FROM ${this.tableName} 
-      WHERE status = 0 AND scheduled_start_time <= '${currentTime}'
-      ORDER BY scheduled_start_time ASC 
+      WHERE status = 0 
+      ORDER BY id ASC 
       LIMIT 1`;
     const records = databaseService.query(sql);
     if (records && records.length > 0) {
@@ -161,6 +161,67 @@ export default class VideoPublishTaskDao extends BaseDao {
     } else {
       return null
     }
+
   }
 
+  listPaged(params: {
+    id?: number,
+    status?: number,
+    keyword?: string,
+    page?: number,
+    pageSize?: number,
+  }): { list: any[]; total: number } {
+    const whereSql: string[] = []
+    const whereParams: any[] = []
+
+    if (params.id !== undefined && params.id !== null && `${params.id}`.trim() !== '') {
+      whereSql.push('id = ?')
+      whereParams.push(params.id)
+    }
+
+    if (params.status !== undefined && params.status !== null && `${params.status}`.trim() !== '') {
+      whereSql.push('status = ?')
+      whereParams.push(params.status)
+    }
+
+    if (params.keyword && params.keyword.trim()) {
+      whereSql.push('(file_name LIKE ? OR title LIKE ?)')
+      const like = `%${params.keyword.trim()}%`
+      whereParams.push(like, like)
+    }
+
+    const page = Math.max(1, Number(params.page || 1))
+    const pageSize = Math.max(1, Number(params.pageSize || 10))
+    const offset = (page - 1) * pageSize
+
+    const whereClause = whereSql.length ? `WHERE ${whereSql.join(' AND ')}` : ''
+
+    const countSql = `SELECT COUNT(1) as total FROM ${this.tableName} ${whereClause};`
+    const countRes = databaseService.query(countSql, whereParams)
+    const total = (countRes && countRes.length > 0) ? Number(countRes[0].total || 0) : 0
+
+    const listSql = `
+      ${this.baseSelect}
+      FROM ${this.tableName}
+      ${whereClause}
+      ORDER BY id DESC
+      LIMIT ? OFFSET ?
+    `
+    const listParams = [...whereParams, pageSize, offset]
+    const list = databaseService.query(listSql, listParams)
+
+    return { list, total }
+  }
+
+  getFilePathsByAccountAndPlatform(accountId: string, platformId: number): string[] {
+    const sql = `SELECT file_path FROM ${this.tableName} WHERE account_id = ? AND platform_id = ?`;
+    const params = [accountId, platformId];
+    const records = databaseService.query(sql, params);
+    
+    if (records && records.length > 0) {
+      return records.map(record => record.file_path);
+    } else {
+      return [];
+    }
+  }
 }

@@ -1,12 +1,12 @@
 <template>
-   <div class="my-setting">
-    <a-table :data-source="dataList">
-      <!-- <a-table-column key="index" title="序号">
-        <template #default="{index}">
-          <div>{{ index + 1 }}</div>
-        </template>
-      </a-table-column> -->
-      <a-table-column key="filePath" title="文件夹">
+  <div class="page-my-settings" ref="pageRef">
+    <a-table
+      :data-source="dataList"
+      :pagination="false"
+      rowKey="id"
+      :scroll="{ y: tableScrollY }"
+    >
+      <a-table-column key="filePath" title="文件夹" :width="380">
         <template #default="{record}">
           <div class="folder-item">
             <FolderOpenOutlined />
@@ -23,7 +23,7 @@
           </div>
         </template>
       </a-table-column>
-      <a-table-column key="status" title="状态">
+      <a-table-column key="status" title="状态" >
         <template #default="{record}">
           <div class="status-item">
             <a-tag v-if="record.status === 0" color="default">待执行</a-tag>
@@ -47,24 +47,34 @@
           <div v-for="titleItem in getTitleList(record)" class="title-item">{{ titleItem }}</div>
         </template>
       </a-table-column>
-      <a-table-column key="details" title="详情">
+      <a-table-column key="details" title="详情" :width="80">
         <template #default="{record}">
           <div class="details-item">
             <a-button type="link" size="small" @click="openDetailModal(record)">详情</a-button>
           </div>
         </template>
       </a-table-column>
-      <a-table-column key="actions" title="操作">
+      <a-table-column key="actions" title="操作" :width="80">
         <template #default="{record}">
           <div class="actions">
-            <!-- <a-button type="primary" size="small" @click="openPublishModal(record)">发布</a-button> -->
-            <!-- <a-button type="primary" size="small">编辑</a-button>
-            <a-button type="primary" size="small">复制</a-button> -->
             <a-button type="primary" size="small" @click="handleDelete(record)">删除</a-button>
           </div>
         </template>
       </a-table-column>
     </a-table>
+
+    <div class="table-pagination" ref="footerRef">
+      <a-pagination
+        :current="pagination.current"
+        :pageSize="pagination.pageSize"
+        :total="pagination.total"
+        :showTotal="pagination.showTotal"
+        :showSizeChanger="true"
+        :pageSizeOptions="pagination.pageSizeOptions"
+        @change="onPageChange"
+        @showSizeChange="onPageSizeChange"
+      />
+    </div>
   </div>
   <PublishSettingDialog :open="publishModalOpen" :setting="selectedSetting"
     @update:open="() => closePublishModal()"/>
@@ -168,12 +178,23 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { FolderOpenOutlined } from '@ant-design/icons-vue'
 import PublishSettingDialog from './components/PublishSettingDialog.vue'
 
 const dataList = ref<any[]>([])
+const pageRef = ref<HTMLElement | null>(null)
+const footerRef = ref<HTMLElement | null>(null)
+const tableScrollY = ref<number>(640)
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showTotal: (total: number) => `共 ${total} 条`,
+  showSizeChanger: true,
+  pageSizeOptions: ['10','20','50','100']
+})
 const publishModalOpen = ref(false)
 const selectedSetting = ref<any>(null)
 const detailModalOpen = ref(false)
@@ -184,10 +205,21 @@ const getDataList = async () => {
   try {
     const res = await window.electronAPI.apiRequest({
       url: '/video-publish-setting/list',
-      method: 'GET'
+      method: 'GET',
+      data: {
+        page: pagination.current,
+        pageSize: pagination.pageSize
+      }
     })
     if (res.code === 0) {
-      dataList.value = res.data
+      if (Array.isArray(res.data)) {
+        // 兼容老接口返回数组
+        dataList.value = res.data
+        pagination.total = res.data.length
+      } else {
+        dataList.value = res.data.list || []
+        pagination.total = res.data.total || 0
+      }
     } else {
       throw new Error(res.message)
     }
@@ -241,13 +273,6 @@ const getFolderPath = (item: any) => {
   return ''
 }
 
-const getVideoList = (item: any) => {
-  if (item.filePath) {
-    return item.filePath.split('_,_')
-  } else {
-    return []
-  }
-}
 
 const getTitleList = (item: any) => {
   if (item.title) {
@@ -311,10 +336,6 @@ const hasTopic2 = (record: any) => {
   return record.topicGroup2 && record.topicGroup2.trim() && record.topicGroup2 !== ''
 }
 
-const openPublishModal = (record: any) => {
-  selectedSetting.value = record
-  publishModalOpen.value = true
-}
 
 const closePublishModal = () => {
   publishModalOpen.value = false
@@ -352,6 +373,31 @@ const getSelectedAccounts = (accountIds: string) => {
   })
 }
 
+const onPageChange = async (page: number, pageSize: number) => {
+  pagination.current = page
+  pagination.pageSize = pageSize
+  await getDataList()
+}
+
+const onPageSizeChange = async (_current: number, size: number) => {
+  pagination.current = 1
+  pagination.pageSize = size
+  await getDataList()
+}
+
+const recalcTableHeight = () => {
+  try {
+    const pageEl = pageRef.value
+    const footerEl = footerRef.value
+    if (!pageEl) return
+    const pageRect = pageEl.getBoundingClientRect()
+    const footerH = footerEl ? footerEl.getBoundingClientRect().height : 0
+    const padding = 24
+    const y = Math.max(200, Math.floor(pageRect.height - footerH - padding))
+    tableScrollY.value = y
+  } catch {}
+}
+
 const handleDelete = async (record: any) => {
   // 首先检查执行状态，不允许删除正在执行中的配置
   if (record.status === 1) {
@@ -363,7 +409,7 @@ const handleDelete = async (record: any) => {
   const confirmResult = await new Promise<boolean>((resolve) => {
     Modal.confirm({
       title: '确认删除',
-      content: `确定要删除配置“${record.title ? record.title.split('_,_')[0] : '未命名'}”吗？此操作不可恢复。`,
+      content: `确定要删除配置"${record.title ? record.title.split('_,_')[0] : '未命名'}"吗？此操作不可恢复。`,
       okText: '确认删除',
       okType: 'danger',
       cancelText: '取消',
@@ -409,14 +455,44 @@ const handleDelete = async (record: any) => {
   }
 }
 
-onMounted(() => {
-  getDataList()
-  getPlatformList()
-  getAccountList()
+onMounted(async () => {
+  console.log('MySettings onMounted')
+  await getDataList()
+  await getPlatformList()
+  await getAccountList()
+  await nextTick()
+  recalcTableHeight()
+  window.addEventListener('resize', recalcTableHeight)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', recalcTableHeight)
 })
 </script>
 
 <style lang="scss" scoped>
+.page-my-settings{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%; // 占满父容器高度
+  overflow: hidden; // 隐藏外层溢出，仅表格区域内部滚动
+  
+  :deep(.ant-table-wrapper){
+    flex: 1 1 auto;
+    min-height: 0; // 使中间区域可压缩
+  }
+  .table-pagination{
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 8px 12px;
+    text-align: right;
+    border-top: 1px solid #f0f0f0;
+    z-index: 2;
+  }
+}
+
 .video-item {
   display: flex;
   align-items: center;
