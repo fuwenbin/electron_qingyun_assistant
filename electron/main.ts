@@ -4,6 +4,7 @@ import initShowSaveDialog from './services/show-save-dialog';
 import initOpenFile from './services/open-file';
 import { initAliyunTTS } from './services/aliyun-tts';
 import { setupLogger } from './services/logger';
+import log from 'electron-log';
 import { ensureAppDataSaveDir, initAppDataSaveDir } from './services/default-save-path';
 import { initVideoMixAndCut } from './services/video-mix-and-cut';
 import { initOpenFileDialog } from './services/open-file-dialog';
@@ -108,14 +109,24 @@ const initializeAppAfterCreateWindow = async (win: BrowserWindow) => {
 }
 
 app.whenReady().then(async () => {
-  await databaseService.init();
+  // 基础应用初始化（必须执行）
   app.commandLine.appendSwitch('disable-direct-write');
   ensureAppDataSaveDir();
   initProtocolCustom();
   createWindow();
   initializeAppAfterCreateWindow(win as BrowserWindow);
-  initApiController();
-  videoPublishTaskManager.start();
+  initApiController(); // 确保 API 控制器总是被初始化
+  
+  // 数据库初始化（可以失败）
+  try {
+    log.info('Starting database initialization...');
+    await databaseService.init();
+    log.info('Database initialization completed.');
+    videoPublishTaskManager.start();
+  } catch (error) {
+    log.error('Database initialization failed, but application will continue:', error);
+    // 数据库失败不影响应用的基本功能
+  }
 })
 
 app.on('window-all-closed', () => {

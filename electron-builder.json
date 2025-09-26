@@ -4,23 +4,46 @@
   "directories": {
     "output": "dist_electron"
   },
+  "compression": "maximum",
+  "removePackageScripts": true,
+  "buildDependenciesFromSource": false,
+  "nodeGypRebuild": false,
+  "extraMetadata": {
+    "main": "dist-electron/main.js"
+  },
   "files": [
     "dist/**/*",
-    "dist-electron/**/*",
-    "!node_modules/ffmpeg-static/**/*",
-    "!node_modules/ffprobe-static/**/*"
+    "dist-electron/main.js",
+    "dist-electron/preload.js",
+    "resources/**/*",
+    "bin/**/*",
+    "package.json"
+  ],
+  "asarUnpack": [
+    "resources/**/*",
+    "bin/**/*"
   ],
   "mac": {
     "category": "public.app-category.utilities"
   },
   "win": {
     "target": [
-      "nsis"
-    ]
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "requestedExecutionLevel": "asInvoker"
   },
-  "linux": {
-    "target": [
-      "AppImage"
-    ]
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "allowElevation": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "剪辑助手",
+    "runAfterFinish": false,
+    "perMachine": false,
+    "deleteAppDataOnUninstall": false
   }
 } 

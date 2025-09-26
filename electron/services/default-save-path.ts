@@ -7,6 +7,15 @@ const APP_NAME = 'zhushou'
 export function getInstallationDirectory() {
   // 对于打包后的应用
   if (app.isPackaged) {
+    // 在 macOS 中，execPath 是 .app/Contents/MacOS/appName
+    // 但资源文件在 .app/Contents/Resources/ 中
+    if (process.platform === 'darwin') {
+      return path.join(path.dirname(process.execPath), '..', 'Resources');
+    }
+    // 在 Windows 中，使用 process.resourcesPath 更可靠
+    if (process.platform === 'win32') {
+      return process.resourcesPath;
+    }
     return path.dirname(process.execPath);
   }
   // 开发环境下返回项目根目录

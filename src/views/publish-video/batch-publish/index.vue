@@ -271,45 +271,6 @@ const getAccountList = async () => {
   }
 }
 
-const save = async () => {
-  if (selectedVideos.value.length === 0 && !selectedFolder.value) {
-    message.error('请选择视频文件夹或视频文件')
-    return
-  }
-  if (baseContentData.titleList.length === 0) {
-    message.error('请填写至少一个标题')
-    return
-  }
-  if (baseContentData.descriptionList.length === 0) {
-    message.error('请填写至少一个视频简介')
-    return
-  }
-  const data = {
-    filePath: baseContentData.filePathList.join('_,_'),
-    title: baseContentData.titleList.join('_,_'),
-    description: baseContentData.descriptionList.join('_,_'),
-    topicGroup1: baseContentData.topicGroup1.join(','),
-    topicGroup2: baseContentData.topicGroup2.join(','),
-    platformData: JSON.stringify({})
-  }
-  try {
-    const res = await window.electronAPI.apiRequest({
-      url: '/video-publish-setting/save',
-      method: 'POST',
-      data
-    })
-    if (res.code === 0) {
-      message.success('保存成功', 3)
-    } else {
-      throw new Error( res.message)
-    }
-    return true;
- } catch (error: any) {
-  console.error('保存失败：' + error.message)
-  message.error('保存失败：' + error.message)
-  return false;
- }
-}
 
 const handlePublish = async () => {
   if (selectedAccountList.value.length === 0) {

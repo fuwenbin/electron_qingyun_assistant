@@ -17,7 +17,7 @@ export async function getBrowser(headless: boolean = true) {
   const platform = process.platform;
   
   if (platform === 'win32') {
-    browserPath = path.join(rootPath, 'resources', 'chrome-win', 'chrome.exe');
+    browserPath = path.join(rootPath, 'chrome-win', 'chrome.exe');
   } else if (platform === 'darwin') {
     // On macOS, try to use system Chrome or let Playwright use its bundled Chromium
     const systemChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';

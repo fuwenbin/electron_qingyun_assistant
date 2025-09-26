@@ -16,8 +16,14 @@ export function setupFFmpeg() {
     // 开发环境
     basePath = path.join(app.getAppPath(), 'bin');
   } else {
-    // 生产环境
-    basePath = process.resourcesPath;
+    // 生产环境：Windows 和 macOS 使用不同的资源路径
+    if (platform === 'win32') {
+      basePath = process.resourcesPath;
+    } else if (platform === 'darwin') {
+      basePath = process.resourcesPath;
+    } else {
+      basePath = path.join(path.dirname(process.execPath), 'resources');
+    }
   }
   
   ffmpegPath = path.join(basePath, ffmpegExecutableName);
@@ -180,9 +186,9 @@ export function getFontPath(fontName: string): string {
       return localFont;
     } else {
       const systemFonts = {
-        win32: 'C:/Windows/Fonts/',
-        darwin: '/System/Library/Fonts/',
-        linux: '/usr/share/fonts/'
+        win32: 'C:\\Windows\\Fonts',
+        darwin: '/System/Library/Fonts',
+        linux: '/usr/share/fonts'
       };
       const platform = process.platform;
       return path.join(systemFonts[platform] || '', fontPathName);
@@ -201,9 +207,9 @@ export function getFontsdir(): string {
       return localFont;
     } else {
       const systemFonts = {
-        win32: 'C:/Windows/Fonts/',
-        darwin: '/System/Library/Fonts/',
-        linux: '/usr/share/fonts/'
+        win32: 'C:\\Windows\\Fonts',
+        darwin: '/System/Library/Fonts',
+        linux: '/usr/share/fonts'
       };
       const platform = process.platform;
       return path.join(systemFonts[platform] || '');

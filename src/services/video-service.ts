@@ -66,7 +66,7 @@ export class VideoMerger {
       
       return {
         success: true,
-        output: new Blob([data], { type: 'video/mp4' })
+        output: new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: 'video/mp4' })
       };
     } catch (error) {
       return {

@@ -1,6 +1,7 @@
 const initSqlJs = require('sql.js')
 import fs from 'fs'
 import path from 'path'
+import { app } from 'electron'
 import { getPlatformAppDataPath, getInstallationDirectory } from './default-save-path'
 import log from 'electron-log'
 
@@ -25,17 +26,29 @@ class DatabaseService {
       return;
     }
     try {
-      // 初始化 SQL.js
-      const SQL = await initSqlJs({
-        locateFile: file => {
-          // 在生产环境中使用本地文件
-          const localPath = path.join(getInstallationDirectory(), 'resources', 'database', file);
-          log.info('localPath: ' + localPath)
-          return fs.existsSync(localPath) 
-            ? localPath 
-            : `https://sql.js.org/dist/${file}`;
-        }
-      });
+      // 初始化 SQL.js - 直接提供 WASM 文件内容
+      const installDir = getInstallationDirectory();
+      log.info('Installation directory: ' + installDir);
+      log.info('App is packaged: ' + app.isPackaged);
+      log.info('Process execPath: ' + process.execPath);
+      
+      const wasmPath = path.join(installDir, 'database', 'sql-wasm.wasm');
+      log.info('WASM file path: ' + wasmPath);
+      log.info('WASM file exists: ' + fs.existsSync(wasmPath));
+      
+      let SQL;
+      if (fs.existsSync(wasmPath)) {
+        // 直接读取 WASM 文件内容
+        const wasmBuffer = fs.readFileSync(wasmPath);
+        SQL = await initSqlJs({
+          wasmBinary: wasmBuffer
+        });
+        log.info('SQL.js initialized with local WASM binary');
+      } else {
+        // 回退到默认方式
+        SQL = await initSqlJs();
+        log.warn('Using default SQL.js initialization (will download from CDN)');
+      }
       log.info('SQL.js初始化完成')
       this.dbPath = path.join(getPlatformAppDataPath(), 'database.sqlite')
       log.info('数据库文件路径：' + this.dbPath)
@@ -44,16 +57,22 @@ class DatabaseService {
       if (databaseExists) {
         const data = fs.readFileSync(this.dbPath);
         this.db = new SQL.Database(new Uint8Array(data));
-        const initTableSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_table.sql');
+        const initTableSqlPath = path.join(getInstallationDirectory(), 'database', 'init_table.sql');
+        log.info('Init table SQL path (existing DB): ' + initTableSqlPath);
+        log.info('Init table SQL file exists (existing DB): ' + fs.existsSync(initTableSqlPath));
         this.executeSqlFile(initTableSqlPath);
         // Run migrations for existing databases
         this.runMigrations();
         this.save();
       } else {
         this.db = new SQL.Database();
-        const initTableSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_table.sql');
+        const initTableSqlPath = path.join(getInstallationDirectory(), 'database', 'init_table.sql');
+        log.info('Init table SQL path (new DB): ' + initTableSqlPath);
+        log.info('Init table SQL file exists (new DB): ' + fs.existsSync(initTableSqlPath));
         this.executeSqlFile(initTableSqlPath);
-        const initDataSqlPath = path.join(getInstallationDirectory(), 'resources', 'database', 'init_data.sql');
+        const initDataSqlPath = path.join(getInstallationDirectory(), 'database', 'init_data.sql');
+        log.info('Init data SQL path (new DB): ' + initDataSqlPath);
+        log.info('Init data SQL file exists (new DB): ' + fs.existsSync(initDataSqlPath));
         this.executeSqlFile(initDataSqlPath);
         this.save();
       }
@@ -61,6 +80,7 @@ class DatabaseService {
       log.log('Database initialized');
     } catch (err) {
       log.error('Database initialization error:', err);
+      throw err; // 重新抛出错误，确保调用者知道初始化失败
     }
   }
 
