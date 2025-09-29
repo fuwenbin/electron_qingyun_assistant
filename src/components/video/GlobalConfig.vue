@@ -9,11 +9,11 @@
     </div>
     <div class="config-body">
       <div class="config-body-item">
-        <div class="item-title">存放路径</div>
+        <div class="item-title">存放路径:</div>
         <div class="item-content">
           <div>{{ props.modelValue.outputDir }}</div>
-          <a-button style="margin-left: 8px;" @click="changeSaveFolder">修改</a-button>
         </div>
+        <a-button style="margin-left: 8px;" @click="changeSaveFolder">修改</a-button>
       </div>
       <div v-if="false" class="config-body-item">
         <div class="item-title">全局字幕与配音</div>
@@ -62,7 +62,7 @@
         </div>
       </div>
       <div class="config-body-item">
-        <div class="item-title">背景音乐</div>
+        <div class="item-title">背景音乐:</div>
         <div class="item-content">
           <template v-if="props.modelValue.backgroundAudioConfig">
             <a-button @click="emit('changeConfigIndex', 'globalBackgroundAudioConfig')">
@@ -85,7 +85,7 @@
         </div>
       </div>
       <div class="config-body-item">
-        <div class="item-title">视频比例</div>
+        <div class="item-title">视频比例:</div>
         <div class="item-content">
           <a-radio-group :value="props.modelValue.videoRatio" button-style="solid"
             @update:value="handleChangeVideoRatio">
@@ -95,7 +95,7 @@
         </div>
       </div>
       <div class="config-body-item">
-        <div class="item-title">视频分辨率</div>
+        <div class="item-title">视频分辨率:</div>
         <div class="item-content">
           <a-radio-group :value="props.modelValue.videoResolution" button-style="solid"
             @update:value="handleChangeVideoResolution">
@@ -186,8 +186,9 @@ const deleteGlobalBackgroundAudioConfig = () => {
 }
 .config-body-item {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   .item-title {
     width: 100px;

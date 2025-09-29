@@ -4,6 +4,7 @@ import platformAccountService from "./platform-account-service";
 import platformService from './platform-service'
 import dayjs from "dayjs";
 import { getVideoFilesInDirectory } from '../utils/fs-utils';
+import { databaseService } from "./database-service";
 import log from 'electron-log';
 
 export class VideoPublishTaskService {
@@ -45,6 +46,12 @@ export class VideoPublishTaskService {
   async generatePublishTasks(params: any) {
     // Add null/undefined checks and handle both string and array formats
     log.info("publish params: ",params)
+    
+    // 确保数据库已初始化
+    if (!databaseService.isInitialized) {
+      log.warn('Database not initialized when generatePublishTasks called, skipping...');
+      return [];
+    }
     
     const generatedTaskIds: number[] = []; // Track generated task IDs
     

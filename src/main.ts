@@ -1,3 +1,6 @@
+// Import process polyfill first to ensure it's available globally
+import './utils/process-polyfill'
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { Quasar, Dialog, Notify } from 'quasar'

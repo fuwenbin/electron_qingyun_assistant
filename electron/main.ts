@@ -132,12 +132,13 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
-    win = null
   }
+  win = null
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  // 在 macOS 上，当点击 dock 图标并且没有其他窗口打开时，重新创建窗口
+  if (process.platform === 'darwin' && BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
 }) 

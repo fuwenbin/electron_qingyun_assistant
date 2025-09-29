@@ -4,10 +4,11 @@
   "directories": {
     "output": "dist_electron"
   },
-  "compression": "maximum",
-  "removePackageScripts": true,
+  "compression": "normal",
+  "removePackageScripts": false,
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
+  "forceCodeSigning": false,
   "asar": true,
   "electronVersion": "36.9.1",
   "electronDist": "node_modules/electron/dist",
@@ -24,12 +25,50 @@
     "resources/**/*",
     "bin/**/*"
   ],
+  "extraResources": [
+    {
+      "from": "resources/fonts",
+      "to": "fonts",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "resources/database",
+      "to": "database",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "resources/chrome-win",
+      "to": "chrome-win",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "bin/ffmpeg.exe",
+      "to": "ffmpeg.exe"
+    },
+    {
+      "from": "bin/ffprobe.exe",
+      "to": "ffprobe.exe"
+    },
+    {
+      "from": "bin/ffplay.exe",
+      "to": "ffplay.exe"
+    }
+  ],
   "mac": {
     "category": "public.app-category.utilities",
     "target": [
       {
         "target": "dmg",
-        "arch": ["arm64", "x64"]
+        "arch": [
+          "arm64",
+          "x64"
+        ]
       }
     ],
     "minimumSystemVersion": "10.13.0",
@@ -50,18 +89,21 @@
     ]
   },
   "dmg": {
-    "format": "ULFO",
-    "compressionLevel": 9
+    "format": "ULFO"
   },
   "win": {
     "target": [
       {
-        "target": "nsis",
-        "arch": ["x64"]
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
       },
       {
-        "target": "portable",
-        "arch": ["x64"]
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
       }
     ],
     "requestedExecutionLevel": "asInvoker",
@@ -69,23 +111,25 @@
       "dist/**/*",
       "dist-electron/main.js",
       "dist-electron/preload.js",
-      "resources/**/*",
-      "bin/*.exe",
-      "package.json",
-      "!bin/ffmpeg",
-      "!bin/ffprobe",
-      "!bin/ffplay"
+      "resources/database/**/*",
+      "resources/fonts/**/*",
+      "resources/chrome-win/**/*",
+      "bin/ffmpeg.exe",
+      "bin/ffprobe.exe",
+      "bin/ffplay.exe",
+      "package.json"
     ]
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "allowElevation": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "剪辑助手",
     "runAfterFinish": false,
     "perMachine": false,
-    "deleteAppDataOnUninstall": false
+    "allowElevation": true
+  },
+  "portable": {
+    "requestExecutionLevel": "user"
   }
-} 
+}

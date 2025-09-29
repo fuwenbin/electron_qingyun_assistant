@@ -432,10 +432,10 @@ export function initVideoMixAndCut() {
   ipcMain.handle('video-mix-and-cut', async (event, paramsStr: string) => {
     const params = JSON.parse(decodeArg(paramsStr));
     // 注册判断
-    const expireDay = dayjs('2025-08-14', 'YYYY-MM-DD');
-    if(dayjs().isAfter(expireDay)) {
-      throw new Error('日期已失效');
-    }
+    // const expireDay = dayjs('2025-08-14', 'YYYY-MM-DD');
+    // if(dayjs().isAfter(expireDay)) {
+    //   throw new Error('日期已失效');
+    // }
     return processVideoClipList(params);
   })
 

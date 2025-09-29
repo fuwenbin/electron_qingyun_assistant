@@ -8,6 +8,11 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    global: 'globalThis',
+    'process.env': 'import.meta.env',
+    __dirname: JSON.stringify(path.resolve()),
+  },
   plugins: [
     vue({
       template: { 
@@ -59,7 +64,8 @@ export default defineConfig({
       stream: 'stream-browserify',
       util: 'util',
       path: 'path-browserify',
-      ws: resolve(__dirname, 'src/utils/ws-polyfill.js')
+      ws: resolve(__dirname, 'src/utils/ws-polyfill.js'),
+      process: 'process/browser'
     },
   },
   build: {
@@ -97,6 +103,7 @@ export default defineConfig({
   },
   base: './', // 确保相对路径
   optimizeDeps: {
+    include: ['process'],
     exclude: [
       'electron',
       'sql.js'

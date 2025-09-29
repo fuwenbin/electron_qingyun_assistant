@@ -43,8 +43,7 @@ const menuItems = ref<MenuItem[]>([
 
 .content-area {
   display: flex;
-  height: calc(100vh - 60px);
-  margin-top: 60px;
+  height: 100%
 }
 
 .main-content {

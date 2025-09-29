@@ -6,12 +6,14 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "electron:dev": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron .\"",
-    "electron:dev:debug": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && electron . --inspect=9229\"",
+    "electron:dev": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:3000 && tsc -p tsconfig.node.json && electron .\"",
+    "electron:dev:debug": "npm run setup:ffmpeg && concurrently -k \"vite\" \"wait-on http://localhost:3000 && tsc -p tsconfig.node.json && electron . --inspect=9229\"",
     "electron:build": "npm run setup:ffmpeg && npm run build:renderer && npm run build:main && electron-builder",
     "electron:build:mac": "npm run setup:ffmpeg && npm run build:renderer && npm run build:main && electron-builder --mac",
     "electron:build:mac:optimized": "node scripts/build-mac-optimized.js",
     "electron:build:win": "npm run setup:ffmpeg && npm run build:renderer && npm run build:main && electron-builder --win",
+    "electron:build:win:optimized": "node scripts/build-win-optimized.js",
+    "electron:build:win:portable": "node scripts/build-win-portable.js",
     "electron:preview": "npm run build:renderer && npm run build:main && electron .",
     "build:renderer": "vue-tsc --noEmit && vite build",
     "build:main": "tsc -p tsconfig.node.json",
@@ -29,6 +31,7 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@quasar/extras": "^1.16.17",
+    "@stackframe/stack": "^2.8.41",
     "alibabacloud-nls": "^1.0.4",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.8.4",
@@ -49,6 +52,7 @@
     "playwright": "^1.52.0",
     "playwright-extra": "^4.3.6",
     "playwright-stealth": "^0.0.1",
+    "process": "^0.11.10",
     "qs": "^6.14.0",
     "quasar": "^2.18.1",
     "safer-buffer": "^2.1.2",
@@ -81,68 +85,5 @@
     "vue-tsc": "^2.2.10",
     "wait-on": "^8.0.3"
   },
-  "main": "dist-electron/main.js",
-  "build": {
-    "appId": "com.vue3-electron.app",
-    "productName": "剪辑助手",
-    "directories": {
-      "output": "dist_electron"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.utilities"
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "public/logo.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": false
-    },
-    "linux": {
-      "target": [
-        "AppImage"
-      ]
-    },
-    "extraFiles": [
-      {
-        "from": "bin/",
-        "to": "resources/",
-        "filter": ["ffmpeg*", "!*.md"]
-      },
-      {
-        "from": "resources/chrome-win",
-        "to": "resources/chrome-win",
-        "filter": ["**/*"]
-      }
-    ],
-    "extraResources": [
-      {
-        "from": "resources/fonts",
-        "to": "fonts",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "resources/database",
-        "to": "database",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ]
-  }
+  "main": "dist-electron/main.js"
 }

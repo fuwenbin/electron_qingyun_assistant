@@ -5,14 +5,30 @@ import { app } from 'electron'
 import { getPlatformAppDataPath, getInstallationDirectory } from './default-save-path'
 import log from 'electron-log'
 
+// 获取数据库资源文件路径的辅助函数
+function getDatabaseResourcePath(filename: string): string {
+  const installDir = getInstallationDirectory();
+  // 在开发环境中，数据库文件在 resources/database/ 目录下
+  // 在打包环境中，数据库文件在 database/ 目录下
+  const dbDir = app.isPackaged ? 'database' : 'resources/database';
+  return path.join(installDir, dbDir, filename);
+}
+
 class DatabaseService {
   static instance: any;
   dbPath: string;
   db: any;
-  private isInitialized: boolean = false;
+  private _isInitialized: boolean = false;
+  
+  public get isInitialized(): boolean {
+    return this._isInitialized;
+  }
   public static getInstance() {
     if  (!DatabaseService.instance) {
       DatabaseService.instance = new DatabaseService();
+      log.info('Creating new DatabaseService instance');
+    } else {
+      log.debug('Returning existing DatabaseService instance');
     }
     return DatabaseService.instance;
   }
@@ -32,7 +48,7 @@ class DatabaseService {
       log.info('App is packaged: ' + app.isPackaged);
       log.info('Process execPath: ' + process.execPath);
       
-      const wasmPath = path.join(installDir, 'database', 'sql-wasm.wasm');
+      const wasmPath = getDatabaseResourcePath('sql-wasm.wasm');
       log.info('WASM file path: ' + wasmPath);
       log.info('WASM file exists: ' + fs.existsSync(wasmPath));
       
@@ -57,7 +73,7 @@ class DatabaseService {
       if (databaseExists) {
         const data = fs.readFileSync(this.dbPath);
         this.db = new SQL.Database(new Uint8Array(data));
-        const initTableSqlPath = path.join(getInstallationDirectory(), 'database', 'init_table.sql');
+        const initTableSqlPath = getDatabaseResourcePath('init_table.sql');
         log.info('Init table SQL path (existing DB): ' + initTableSqlPath);
         log.info('Init table SQL file exists (existing DB): ' + fs.existsSync(initTableSqlPath));
         this.executeSqlFile(initTableSqlPath);
@@ -66,17 +82,17 @@ class DatabaseService {
         this.save();
       } else {
         this.db = new SQL.Database();
-        const initTableSqlPath = path.join(getInstallationDirectory(), 'database', 'init_table.sql');
+        const initTableSqlPath = getDatabaseResourcePath('init_table.sql');
         log.info('Init table SQL path (new DB): ' + initTableSqlPath);
         log.info('Init table SQL file exists (new DB): ' + fs.existsSync(initTableSqlPath));
         this.executeSqlFile(initTableSqlPath);
-        const initDataSqlPath = path.join(getInstallationDirectory(), 'database', 'init_data.sql');
+        const initDataSqlPath = getDatabaseResourcePath('init_data.sql');
         log.info('Init data SQL path (new DB): ' + initDataSqlPath);
         log.info('Init data SQL file exists (new DB): ' + fs.existsSync(initDataSqlPath));
         this.executeSqlFile(initDataSqlPath);
         this.save();
       }
-      this.isInitialized = true;
+      this._isInitialized = true;
       log.log('Database initialized');
     } catch (err) {
       log.error('Database initialization error:', err);
@@ -145,7 +161,11 @@ class DatabaseService {
   }
 
   public query(sql: string, params: any[] = []): any[] {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
+      log.error('Database service not initialized when calling query:', {
+        sql: sql.substring(0, 100),
+        stackTrace: new Error().stack
+      });
       throw new Error('Database service not initialized');
     }
 
@@ -169,7 +189,11 @@ class DatabaseService {
   }
 
   public execute(sql: string, params: any[] = []): number {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
+      log.error('Database service not initialized when calling execute:', {
+        sql: sql.substring(0, 100),
+        stackTrace: new Error().stack
+      });
       throw new Error('Database service not initialized');
     }
 
@@ -195,7 +219,7 @@ class DatabaseService {
   }
 
   public async transaction(operations: () => Promise<void>): Promise<void> {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       throw new Error('Database service not initialized');
     }
 
@@ -221,7 +245,7 @@ class DatabaseService {
     if (this.db) {
       this.save();
       this.db.close();
-      this.isInitialized = false;
+      this._isInitialized = false;
       log.log('Database connection closed');
     }
   }
@@ -231,7 +255,7 @@ class DatabaseService {
   }
 
   public generateIntegerID(tableName: string, idColumnName = 'id'): number {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       throw new Error('Database service not initialized');
     }
     const sql = `SELECT MAX(${idColumnName}) AS max_id FROM ${tableName};`
