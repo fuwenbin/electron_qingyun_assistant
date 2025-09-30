@@ -71,6 +71,12 @@ watch(() => props.selectedFolder, (newFolder) => {
   if (newFolder) {
     selectedFolder.value = newFolder
     loadVideoFiles()
+  }else{
+    selectedFolder.value = ''
+    videoFiles.value = []
+    videoStatistics.value = []
+    emit('update:modelValue', [])
+    emit('folderChange', '')
   }
 })
 

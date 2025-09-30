@@ -22,7 +22,8 @@ import { videoPublishTaskManager } from './utils/video-publish-task-manager';
 // The built directory structure
 //
 // ├─┬─┬ dist
-// │ │ └── index.html
+// │ │ └── index.html1
+1
 // │ │
 // │ ├─┬ dist-electron
 // │ │ ├── main.js
@@ -83,8 +84,8 @@ function createWindow() {
     // Auto-open Developer Tools in development mode
     win.webContents.openDevTools()
   } else {
-    // win.loadFile('dist/index.html')
     win.loadFile(path.join(process.env.DIST as string, 'index.html'))
+    win.webContents.openDevTools()
   }
 }
 

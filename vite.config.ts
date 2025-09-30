@@ -10,8 +10,10 @@ import path from 'path'
 export default defineConfig({
   define: {
     global: 'globalThis',
-    'process.env': 'import.meta.env',
+    'process.env': '(typeof process !== "undefined" ? process.env : {})',
     __dirname: JSON.stringify(path.resolve()),
+    // 修复 @stackframe/stack 的 Next.js 兼容性问题 - 直接替换整个表达式
+    'import.meta.env.__NEXT_CACHE_COMPONENTS': 'undefined',
   },
   plugins: [
     vue({
@@ -56,6 +58,16 @@ export default defineConfig({
       },
     ]),
     renderer(),
+    // 修复 @stackframe/stack 包的路径问题
+    {
+      name: 'fix-stackframe-imports',
+      resolveId(id, importer) {
+        if (id.includes('globalThis-css.js') && importer?.includes('@stackframe/stack')) {
+          return resolve(__dirname, 'node_modules/@stackframe/stack/dist/esm/generated/global-css.js')
+        }
+        return null
+      }
+    },
   ],
   resolve: {
     alias: {
@@ -65,7 +77,10 @@ export default defineConfig({
       util: 'util',
       path: 'path-browserify',
       ws: resolve(__dirname, 'src/utils/ws-polyfill.js'),
-      process: 'process/browser'
+      process: 'process/browser',
+      // 修复 @stackframe/stack 包的路径问题
+      '../generated/globalThis-css.js': 
+        resolve(__dirname, 'node_modules/@stackframe/stack/dist/esm/generated/global-css.js'),
     },
   },
   build: {

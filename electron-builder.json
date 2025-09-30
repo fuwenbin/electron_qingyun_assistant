@@ -41,13 +41,6 @@
       ]
     },
     {
-      "from": "resources/chrome-win",
-      "to": "chrome-win",
-      "filter": [
-        "**/*"
-      ]
-    },
-    {
       "from": "bin/ffmpeg.exe",
       "to": "ffmpeg.exe"
     },
@@ -107,13 +100,21 @@
       }
     ],
     "requestedExecutionLevel": "asInvoker",
+    "extraResources": [
+      {
+        "from": "resources/chrome-win",
+        "to": "chrome-win",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/main.js",
       "dist-electron/preload.js",
       "resources/database/**/*",
       "resources/fonts/**/*",
-      "resources/chrome-win/**/*",
       "bin/ffmpeg.exe",
       "bin/ffprobe.exe",
       "bin/ffplay.exe",

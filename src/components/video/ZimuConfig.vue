@@ -4,12 +4,12 @@
     <div class="config-content">
       <div class="content-header">
         <div class="content-header-title">
-          <span class="title-text">添加字幕内容</span>
-          <span class="title-description">shift + enter 折行，enter 添加字幕中台词</span>
+          <div class="title-text">添加字幕内容</div>
+          <div class="title-description">shift + enter 折行，enter 添加字幕中台词</div>
         </div>
         <div class="content-header-description">
           <ExclamationCircleOutlined />
-          <span>若添加多条字幕，最终每条成片会随机选其一来使用</span>
+          <span>多条字幕，每条成片会随机选其一来使用</span>
         </div>
       </div>
       <div class="content-body">
@@ -153,8 +153,8 @@ if (_value?.datas.length === 0) {
 <style scoped lang="scss">
 .config-content {
   .content-header {
+
     .content-header-title {
-      height: 32px;
       align-items: center;
       .title-text {
         font-size: 16px;
@@ -164,12 +164,11 @@ if (_value?.datas.length === 0) {
       .title-description {
         font-size: 12px;
         color: #999;
-        margin-left: 8px;
       }
     }
     .content-header-description {
       color: #1677ff;
-      
+      font-size: 12px;
     }
   } 
 }

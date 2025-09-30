@@ -155,13 +155,15 @@
       </div>
     </div>
     <div class="page-footer">
-      <a-button @click="handlePublish">发布</a-button>
+      <!-- <a-button @click="clearFormCache" style="margin-right: 10px;">清空缓存</a-button> -->
+      <a-button @click="resetForm" style="margin-right: 10px;">重置表单</a-button>
+      <a-button type="primary" @click="handlePublish">发布</a-button>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref, watch, computed } from 'vue'
+import { onMounted, reactive, ref, watch, computed, onUnmounted, nextTick } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'
@@ -170,6 +172,9 @@ import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
 const selectedVideos = ref<any[]>([])
 const selectedFolder = ref<string>('')
+
+// 缓存键名常量
+const CACHE_KEY = 'batch_publish_form_cache'
 
 // Schedule configuration
 const scheduleConfig = reactive({
@@ -198,6 +203,129 @@ const selectedPlatformId = ref()
 const selectedAccountList = ref<any[]>([])
 const topicGroup1InputValue = ref('')
 const topicGroup2InputValue = ref('')
+
+// 缓存管理函数
+const saveFormCache = () => {
+  try {
+    const cacheData = {
+      selectedVideos: selectedVideos.value,
+      selectedFolder: selectedFolder.value,
+      scheduleConfig: {
+        frequency: scheduleConfig.frequency,
+        value: scheduleConfig.value,
+        timeValue: scheduleConfig.timeValue ? scheduleConfig.timeValue.format('HH:mm') : undefined
+      },
+      baseContentData: {
+        titleList: baseContentData.titleList,
+        descriptionList: baseContentData.descriptionList,
+        topicGroup1: baseContentData.topicGroup1,
+        topicGroup2: baseContentData.topicGroup2,
+        filePathList: baseContentData.filePathList
+      },
+      selectedAccountList: selectedAccountList.value.map(account => ({
+        id: account.id,
+        name: account.name,
+        logo: account.logo,
+        platform: account.platform
+      })),
+      selectedPlatformId: selectedPlatformId.value,
+      timestamp: new Date().getTime()
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+  } catch (error) {
+    console.warn('保存表单缓存失败:', error)
+  }
+}
+
+const loadFormCache = async () => {
+  try {
+    const cacheStr = localStorage.getItem(CACHE_KEY)
+    if (!cacheStr) return
+
+    const cacheData = JSON.parse(cacheStr)
+    console.info("cacheData", cacheData)
+    // 检查缓存是否过期（24小时）
+    const now = new Date().getTime()
+    const cacheAge = now - (cacheData.timestamp || 0)
+    const maxAge = 24 * 60 * 60 * 1000 // 24小时
+    
+    if (cacheAge > maxAge) {
+      clearFormCache()
+      return
+    }
+
+    // 恢复数据
+    if (cacheData.selectedVideos) {
+      selectedVideos.value = cacheData.selectedVideos
+    }
+    
+    if (cacheData.selectedFolder) {
+      selectedFolder.value = cacheData.selectedFolder
+    }
+    
+    if (cacheData.scheduleConfig) {
+      scheduleConfig.frequency = cacheData.scheduleConfig.frequency || 'minutes'
+      scheduleConfig.value = cacheData.scheduleConfig.value || 5
+      if (cacheData.scheduleConfig.timeValue) {
+        // 需要等到组件挂载后再设置时间值
+        await nextTick()
+        try {
+          const dayjs = (await import('dayjs')).default
+          scheduleConfig.timeValue = dayjs(cacheData.scheduleConfig.timeValue, 'HH:mm')
+        } catch (error) {
+          console.warn('恢复时间值失败:', error)
+        }
+      }
+    }
+    
+    if (cacheData.baseContentData) {
+      Object.assign(baseContentData, {
+        titleList: cacheData.baseContentData.titleList || [],
+        descriptionList: cacheData.baseContentData.descriptionList || [],
+        topicGroup1: cacheData.baseContentData.topicGroup1 || [],
+        topicGroup2: cacheData.baseContentData.topicGroup2 || [],
+        filePathList: cacheData.baseContentData.filePathList || []
+      })
+    }
+    
+    if (cacheData.selectedPlatformId) {
+      selectedPlatformId.value = cacheData.selectedPlatformId
+    }
+    
+    // 等待账号列表加载完成后再恢复选中的账号
+    if (cacheData.selectedAccountList && cacheData.selectedAccountList.length > 0) {
+      // 使用定时器等待账号列表加载
+      const restoreAccounts = () => {
+        if (platformAccountList.value.length > 0) {
+          const cachedAccountIds = cacheData.selectedAccountList.map((acc: any) => acc.id)
+          selectedAccountList.value = platformAccountList.value.filter(account => 
+            cachedAccountIds.includes(account.id)
+          )
+        } else {
+          // 如果账号列表还没加载，继续等待
+          setTimeout(restoreAccounts, 100)
+        }
+      }
+      restoreAccounts()
+    }
+    
+    console.log('表单缓存恢复成功')
+  } catch (error) {
+    console.warn('加载表单缓存失败:', error)
+    clearFormCache()
+  }
+}
+
+const clearFormCache = () => {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+    message.success('表单缓存已清空')
+    console.log('表单缓存已清空')
+  } catch (error) {
+    console.warn('清空表单缓存失败:', error)
+    message.error('清空表单缓存失败')
+  }
+}
 
 // Folder selection handler
 const handleFolderChange = (folderPath: string) => {
@@ -242,13 +370,22 @@ const handleAccountCheckChange = (item: any) => {
   }
 }
 
-watch (selectedVideos, (newValue) => {
-  if (newValue && newValue.length) {
-    baseContentData.filePathList = newValue.map(v => v.filePath || v.path)
-  } else {
-    baseContentData.filePathList = []
-  }
-})
+// 监听数据变化，自动保存缓存
+// watch (selectedVideos, (newValue) => {
+//   if (newValue && newValue.length) {
+//     baseContentData.filePathList = newValue.map(v => v.filePath || v.path)
+//   } else {
+//     baseContentData.filePathList = []
+//   }
+//   saveFormCache()
+// })
+
+// 监听其他关键数据变化
+// watch(selectedFolder, () => saveFormCache())
+// watch(scheduleConfig, () => saveFormCache(), { deep: true })
+// watch(baseContentData, () => saveFormCache(), { deep: true })
+// watch(selectedAccountList, () => saveFormCache(), { deep: true })
+// watch(selectedPlatformId, () => saveFormCache())
 
 const getPlatformList = async () => {
   const res = await window.electronAPI.apiRequest({
@@ -306,44 +443,42 @@ const handlePublish = async () => {
   }
   
   console.info("提交数据: ", baseContentData)
-  // const data = JSON.parse(JSON.stringify({
-  //   filePath: baseContentData.filePathList,
-  //   title: baseContentData.titleList,
-  //   description: baseContentData.descriptionList,
-  //   topicGroup1: baseContentData.topicGroup1,
-  //   topicGroup2: baseContentData.topicGroup2,
-  //   platformAccountList: selectedAccountList.value.map(v => v.id),
-  //   publishType: 1, // Fixed to 1 for timing publish
-  //   frequency: scheduleConfig.frequency,
-  //   frequencyValue: scheduleConfig.value,
-  //   dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
-  //   directoryPath: selectedFolder.value
-  // }))
   
-  // try {
-  //   console.info('发布任务参数：', data)
-  //   const res = await window.electronAPI.apiRequest({
-  //     url: '/video-publish-task/publish',
-  //     method: 'POST',
-  //     data
-  //   })
-  //   console.log(res)
-  //   if (res.code === 0) {
-  //     message.success("创建发布任务成功")
-  //     // Reset form after successful publish
-  //     selectedAccountList.value = []
-  //     scheduleConfig.frequency = 'minutes'
-  //     scheduleConfig.value = 5
-  //     scheduleConfig.timeValue = undefined
-  //     selectedFolder.value = ''
-  //     selectedVideos.value = []
-  //   } else {
-  //     throw new Error(res.message)
-  //   }
-  // } catch (error: any) {
-  //   console.error('创建发布任务失败：' + error.message);
-  //   message.error('创建发布任务失败：' + error.message)
-  // }
+  const data = JSON.parse(JSON.stringify({
+    filePath: baseContentData.filePathList,
+    title: baseContentData.titleList,
+    description: baseContentData.descriptionList,
+    topicGroup1: baseContentData.topicGroup1,
+    topicGroup2: baseContentData.topicGroup2,
+    platformAccountList: selectedAccountList.value.map(v => v.id),
+    publishType: 1, // Fixed to 1 for timing publish
+    frequency: scheduleConfig.frequency,
+    frequencyValue: scheduleConfig.value,
+    dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
+    directoryPath: selectedFolder.value
+  }))
+  
+  try {
+    console.info('发布任务参数：', data)
+    const res = await window.electronAPI.apiRequest({
+      url: '/video-publish-task/publish',
+      method: 'POST',
+      data
+    })
+    console.log(res)
+    if (res.code === 0) {
+      message.success("创建发布任务成功")
+      
+      // 发布成功后清空缓存和表单
+      // clearFormCache()
+      resetForm()
+    } else {
+      throw new Error(res.message)
+    }
+  } catch (error: any) {
+    console.error('创建发布任务失败：' + error.message);
+    message.error('创建发布任务失败：' + error.message)
+  }
 }
 
 // Separate save configuration function
@@ -418,21 +553,55 @@ const handletopicGroup2InputConfirm = (e: any) => {
   topicGroup2InputValue.value = ''
 }
 
-// const reset = () => {
-//   selectedVideos.value = []
-//   baseContentData.titleList = []
-//   baseContentData.filePathList = []
-//   baseContentData.descriptionList = []
-//   baseContentData.topicGroup1 = []
-//   baseContentData.topicGroup2 = []
-//   selectedAccountList.value = []
-//   isTimingPublish.value = false
-//   timingPublishTime.value = ''
-// }
+// 重置表单函数
+const resetForm = () => {
+  selectedVideos.value = []
+  selectedFolder.value = ''
+  baseContentData.titleList = []
+  baseContentData.filePathList = []
+  baseContentData.descriptionList = []
+  baseContentData.topicGroup1 = []
+  baseContentData.topicGroup2 = []
+  selectedAccountList.value = []
+  scheduleConfig.frequency = 'minutes'
+  scheduleConfig.value = 5
+  scheduleConfig.timeValue = undefined
+  topicGroup1InputValue.value = ''
+  topicGroup2InputValue.value = ''
+  clearFormCache()
+}
 
-onMounted(() => { 
-  getPlatformList()
-  getAccountList()
+// 页面可见性变化处理
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'hidden') {
+    // 页面隐藏时保存缓存
+    saveFormCache()
+  }
+}
+
+onMounted(async () => { 
+  // 添加页面可见性变化监听
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  
+  // 添加页面卸载前保存缓存
+  window.addEventListener('beforeunload', saveFormCache)
+  
+  // 获取基础数据
+  await getPlatformList()
+  await getAccountList()
+
+  // 加载缓存数据
+  await loadFormCache()
+  console.info("onmounted")
+})
+
+onUnmounted(() => {
+  // 页面卸载时保存缓存
+  saveFormCache()
+  console.info("onunmounted")
+  // 移除事件监听
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('beforeunload', saveFormCache)
 })
 </script>
 

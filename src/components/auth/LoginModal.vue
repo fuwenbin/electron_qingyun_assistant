@@ -14,7 +14,7 @@
       <div class="login-form">
         <a-form :model="loginForm" layout="vertical" @finish="handlePasswordLogin">
           <a-form-item 
-            label="用户名/邮箱/手机号" 
+            label="邮箱" 
             name="username"
             :rules="[{ required: true, message: '请输入用户名' }]"
           >

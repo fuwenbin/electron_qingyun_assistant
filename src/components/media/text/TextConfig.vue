@@ -1,7 +1,7 @@
 <template>
   <div class="text-config">
     <div class="text-config-item">
-      <div class="item-label">字体设置</div>
+      <div class="item-label">字体设置:</div>
       <div class="item-content">
         <div class="font-basic-config">
           <div class="left-part part-box">
@@ -10,24 +10,25 @@
             <FontSizeSelect v-model="_value.fontSize" />
             <a-divider type="vertical" class="divider" />
             <ColorPicker v-model:value="_value.fontColor"/>
-            <a-divider type="vertical" class="divider" />
+            
             <FontStyleConfig v-model:fontWeight="_value.fontWeight" v-model:underline="_value.underline" 
               v-model:italic="_value.italic" />
+              <a-divider type="vertical" class="divider" />
+              <TextAlignChooser v-model="_value.textAlign" />
           </div>
           <div class="right-part part-box">
-            <TextAlignChooser v-model="_value.textAlign" />
           </div>
         </div>
       </div>
     </div>
     <div class="text-config-item">
-      <div class="item-label">字体样式</div>
+      <div class="item-label">字体样式:</div>
       <div class="item-content">
         <FontLevelChooser :value="_value" @update:value="handleFontLevelChange"/>
       </div>
     </div>
     <div class="text-config-item">
-      <div class="item-label">花字设置</div>
+      <div class="item-label">花字设置:</div>
       <div class="item-content">
         <FontCustomStyleChooser :model-value="_value.customStyle" @update:model-value="(value: string) => handleCustomStyleChange(value)" />
       </div>
@@ -80,22 +81,22 @@ const handleCustomStyleChange = (value: any) => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 10px;
+  width: 100%;
 }
 .font-basic-config {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
   .part-box {
     display: flex;
     align-items: center;
-    padding: 5px;
-    border: 1px solid #999;
+    justify-content: flex-start;
     border-radius: 4px;
     flex-wrap: wrap;
     gap: 4px;
-    height: 44px;
     .divider {
       height: 20px;
     }

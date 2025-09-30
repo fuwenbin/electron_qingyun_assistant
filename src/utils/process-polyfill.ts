@@ -1,7 +1,6 @@
 // Process polyfill for browser environment
 export const processPolyfill = {
   env: {
-    NODE_ENV: import.meta.env.MODE || 'development',
     ...import.meta.env
   },
   browser: true,
