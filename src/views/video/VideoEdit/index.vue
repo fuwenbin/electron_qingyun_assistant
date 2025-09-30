@@ -220,7 +220,7 @@ const generateAudios = async () => {
 }
 
 const generateAssFiles = async () => {
-  const videoRatio = state.globalConfig.videoRatio;
+  const videoRatio = state.globalConfig?.videoRatio;
   const videoResolution = state.globalConfig.videoResolution;
   const videoResolutionParts = videoResolution.split('x');
   const isVertical = videoRatio === '9:16';

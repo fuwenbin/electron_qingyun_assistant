@@ -53,7 +53,7 @@ const previewPlaceholderVideoUrl = computed(() => {
 })
 
 const previewBoxDirection = computed(() => {
-  return props.globalConfig.videoRatio === '9:16' ? 'vertical' : 'horizontal'
+  return props.globalConfig?.videoRatio === '9:16' ? 'vertical' : 'horizontal'
 })
 
 </script>

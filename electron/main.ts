@@ -85,7 +85,7 @@ function createWindow() {
     win.webContents.openDevTools()
   } else {
     win.loadFile(path.join(process.env.DIST as string, 'index.html'))
-    win.webContents.openDevTools()
+    // win.webContents.openDevTools()
   }
 }
 

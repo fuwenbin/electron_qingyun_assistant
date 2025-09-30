@@ -35,7 +35,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { FireFilled } from '@ant-design/icons-vue'
 import logoDouyin from '@/assets/images/platform-logos/logo_douyin.svg'
-import message from 'ant-design-vue/es/message'
+import { message } from 'ant-design-vue'
 
 const props = defineProps<{
   open: boolean;

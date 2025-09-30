@@ -118,7 +118,8 @@
       "bin/ffmpeg.exe",
       "bin/ffprobe.exe",
       "bin/ffplay.exe",
-      "package.json"
+      "package.json",
+      "resources/chrome-win/**/*"
     ]
   },
   "nsis": {

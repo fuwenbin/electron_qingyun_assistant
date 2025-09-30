@@ -163,7 +163,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref, watch, computed, onUnmounted, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, onUnmounted, nextTick } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
 import BatchPublishTitle from './components/BatchPublishTitle.vue'

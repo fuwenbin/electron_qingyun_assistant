@@ -16,3 +16,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// 扩展全局类型声明，支持 Ant Design Vue 的全局函数
+declare global {
+  var getRootPrefixCls: (suffixCls?: string, customizePrefixCls?: string) => string
+  var getIconPrefixCls: () => string
+}
