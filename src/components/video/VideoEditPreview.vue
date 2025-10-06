@@ -17,9 +17,13 @@
     <div class="preview-body">
       <div class="preview-box" :class="{[previewBoxDirection]: true}">
         <div v-if="previewPlaceholderVideoUrl"  class="preview-placeholder-content">
-          <VideoEditPreviewBox :videoUrl="previewPlaceholderVideoUrl" 
-            :global-config="props.globalConfig"
-            :clips="props.clips" :selected-config-index="props.selectedConfigIndex"
+          <!-- 添加 key 确保配置切换时组件正确重新渲染 -->
+          <VideoEditPreviewBox 
+            :key="`preview-${props.selectedConfigIndex}`"
+            :videoUrl="previewPlaceholderVideoUrl" 
+            :video-config="props.videoConfig"
+            :clips="props.clips" 
+            :selected-config-index="props.selectedConfigIndex"
             :direction="previewBoxDirection" 
             @change-zimu-position="(value: number) => emit('changeZimuPosition', value)"
             @change-title-position="(value: number) => emit('changeTitlePosition', value)"
@@ -32,12 +36,12 @@
 </template>
 
 <script lang="ts" setup>
-import { computed} from 'vue'
+import { computed } from 'vue'
 import { FileSearchOutlined } from '@ant-design/icons-vue';
 import VideoEditPreviewBox from './VideoEditPreviewBox.vue';
 
 const props = defineProps<{
-  globalConfig: any;
+  videoConfig: any;
   clips: any[];
   selectedConfigIndex: string;
 }>()
@@ -47,13 +51,13 @@ const emit = defineEmits(['changeZimuPosition', 'changeTitlePosition'])
 const previewPlaceholderVideoUrl = computed(() => {
   if (props.clips.length > 0 && props.clips[0].videoList.length > 0) {
     return props.clips[0].videoList[0].url;
-  } else {
-    return '';
   }
+  return '';
 })
 
 const previewBoxDirection = computed(() => {
-  return props.globalConfig?.videoRatio === '9:16' ? 'vertical' : 'horizontal'
+  const videoRatio = props.videoConfig?.videoRatio || '9:16'
+  return videoRatio === '9:16' ? 'vertical' : 'horizontal'
 })
 
 </script>

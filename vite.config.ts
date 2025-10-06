@@ -9,14 +9,11 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   define: {
-    global: 'globalThis',
+    //global: 'globalThis',
     'process.env': '(typeof process !== "undefined" ? process.env : {})',
     __dirname: JSON.stringify(path.resolve()),
     // 修复 @stackframe/stack 的 Next.js 兼容性问题 - 直接替换整个表达式
     'import.meta.env.__NEXT_CACHE_COMPONENTS': 'undefined',
-    // 修复 Windows 打包环境中 Ant Design Vue 的全局函数问题
-    'globalThis.getRootPrefixCls': '((suffixCls, customizePrefixCls) => customizePrefixCls || (suffixCls ? `ant-${suffixCls}` : "ant"))',
-    'globalThis.getIconPrefixCls': '(() => "anticon")',
   },
   plugins: [
     vue({

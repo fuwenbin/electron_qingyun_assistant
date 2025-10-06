@@ -11,7 +11,7 @@
   "forceCodeSigning": false,
   "asar": true,
   "electronVersion": "36.9.1",
-  "electronDist": "node_modules/electron/dist",
+  "electronDist": "/tmp/electron-cache/electron-win32-x64",
   "extraMetadata": {
     "main": "dist-electron/main.js"
   },

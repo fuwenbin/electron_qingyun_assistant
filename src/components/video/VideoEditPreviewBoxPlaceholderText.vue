@@ -7,9 +7,10 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+
 const props = defineProps<{
   textType: string;
-  globalConfig: any;
+  videoConfig: any;
   text: string;
   textConfig: any;
   container?: HTMLElement
@@ -22,32 +23,21 @@ const placeholderDragStartY = ref(0);
 const placeholderDragEndY = ref(0);
 
 const previewBoxHeight = computed(() => {
-  if (props.container) {
-    return props.container.clientHeight
-  } else {
-    return 0;
-  }
+  return props.container ? props.container.clientHeight : 0;
 })
 
 const defaultPosition = computed(() => {
-  if (props.textType === 'title') {
-    return 0.15;
-  } else {
-    return 2/3;
-  }
+  return props.textType === 'title' ? 0.15 : 2/3;
 })
 
 const placeholderTop = computed(() => {
-  if (props.textConfig) {
-    return props.textConfig.posYPercent;
-  } else {
-    return defaultPosition.value;
-  }
+  return props.textConfig?.posYPercent ?? defaultPosition.value;
 })
 
 const placeholderStyleObj = computed(() => {
   const obj: any = {};
   const textConfig = props.textConfig;
+  
   if (textConfig) {
     obj['font-family'] = textConfig.fontFamily;
     obj['font-size'] = `${textConfig.fontSize / 100 / 0.6}vw`;
@@ -59,12 +49,13 @@ const placeholderStyleObj = computed(() => {
     obj['height'] = fontHeight.value + 'px';
     obj['top'] = (Math.floor(placeholderTop.value * previewBoxHeight.value)) + 'px';
   }
+  
   return obj;
 })
 
 const placeholderStyle = computed(() => {
   let result = '';
-  for (let key in  placeholderStyleObj.value) {
+  for (let key in placeholderStyleObj.value) {
     if (placeholderStyleObj.value[key]) {
       result += `${key}: ${placeholderStyleObj.value[key]};`;
     }
@@ -73,21 +64,20 @@ const placeholderStyle = computed(() => {
 })
 
 const fontHeight = computed(() => {
-  if (props.container && props.textConfig) {
+  if (props.container && props.textConfig && props.videoConfig) {
     const placeholderFontSize = props.textConfig.fontSize;
-    const isVertical = props.globalConfig.videoRatio === '9:16';
-    if (isVertical) {
-      return props.container.clientWidth * (placeholderFontSize / 100) * 0.6 / 2;
-    } else {
-      return props.container.clientHeight * (placeholderFontSize / 100) * 0.6 / 2;
-    }
-  } else {
-    return 0;
+    const videoRatio = props.videoConfig?.videoRatio || '9:16';
+    const isVertical = videoRatio === '9:16';
+    
+    return isVertical 
+      ? props.container.clientWidth * (placeholderFontSize / 100) * 0.6 / 2
+      : props.container.clientHeight * (placeholderFontSize / 100) * 0.6 / 2;
   }
+  return 0;
 })
 
 const placeholderClass = computed(() => {
-  return props.textConfig?.customStyle || ''
+  return props.textConfig?.customStyle || '';
 })
 
 const dragStart = (e: any) => {

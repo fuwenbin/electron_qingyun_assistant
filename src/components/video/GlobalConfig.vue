@@ -121,12 +121,14 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['changeConfigIndex',  'close', 'update:modelValue'])
+
 const handleChangeVideoRatio = (value: string) => {
   emit('update:modelValue', {
     ...props.modelValue,
     videoRatio: value
   })
 }
+
 const handleChangeVideoResolution = (value: string) => {
   emit('update:modelValue', {
     ...props.modelValue,

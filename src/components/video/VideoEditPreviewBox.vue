@@ -2,16 +2,25 @@
   <div ref="previewBoxRef" class="video-edit-preview-box">
     <video v-if="videoUrl" :src="videoUrl" crossorigin="anonymous"
       class="preview-placeholder-video" :class="{[direction]: direction}"></video>
-    <VideoEditPreviewBoxPlaceholderText v-if="zimuTextConfig" 
-      class="preview-placeholder-text" key="zimuPreview"
-      :global-config="props.globalConfig" text-type="zimu"
-      :text-config="zimuTextConfig" :text="zimuText"
+    <!-- 使用完整的 key 确保组件在配置切换时正确更新 -->
+    <VideoEditPreviewBoxPlaceholderText 
+      v-if="zimuTextConfig && props.videoConfig" 
+      class="preview-placeholder-text" 
+      :key="`zimu-${props.selectedConfigIndex}-${zimuText}`"
+      :video-config="props.videoConfig" 
+      text-type="zimu"
+      :text-config="zimuTextConfig" 
+      :text="zimuText"
       :container="previewBoxRef"
       @change-position="(value: number) => emit('changeZimuPosition', value)"/>
-    <VideoEditPreviewBoxPlaceholderText v-if="titleTextConfig" 
-      class="preview-placeholder-text" key="titlePreview"
-      :global-config="props.globalConfig" text-type="title"
-      :text-config="titleTextConfig" :text="titleText"
+    <VideoEditPreviewBoxPlaceholderText 
+      v-if="titleTextConfig && props.videoConfig" 
+      class="preview-placeholder-text" 
+      :key="`title-${props.selectedConfigIndex}-${titleText}`"
+      :video-config="props.videoConfig" 
+      text-type="title"
+      :text-config="titleTextConfig" 
+      :text="titleText"
       :container="previewBoxRef"
       @change-position="(value: number) => emit('changeTitlePosition', value)"/>
     <div ref="previewPlaceholderTitleRef"></div>
@@ -23,7 +32,7 @@ import { ref, computed } from 'vue';
 import VideoEditPreviewBoxPlaceholderText  from './VideoEditPreviewBoxPlaceholderText.vue';
 
 const props = defineProps<{
-  globalConfig: any;
+  videoConfig: any;
   clips: any[];
   selectedConfigIndex: string;
   videoUrl: string;
@@ -37,10 +46,9 @@ const zimuConfig = computed(() => {
   const INDEX_PREFIX = 'zimu-';
   if (props.selectedConfigIndex && props.selectedConfigIndex.startsWith(INDEX_PREFIX)) {
     const selectedClipIndex = Number(props.selectedConfigIndex.substring(INDEX_PREFIX.length));
-    return props.clips[selectedClipIndex].zimuConfig;
-  } else {
-    return null;
+    return props.clips[selectedClipIndex]?.zimuConfig || null;
   }
+  return null;
 })
 
 const zimuTextConfig = computed(() => {
@@ -49,36 +57,35 @@ const zimuTextConfig = computed(() => {
 
 const zimuText = computed(() => {
   if (zimuConfig.value && zimuConfig.value.datas) {
-    return zimuConfig.value.datas[zimuConfig.value.selectedIndex].text;
-  } else {
-    return '';
+    const selectedIndex = zimuConfig.value.selectedIndex ?? 0;
+    return zimuConfig.value.datas[selectedIndex]?.text || '';
   }
+  return '';
 })
 
 const titleConfig = computed(() => {
   const INDEX_PREFIX = 'title-';
   if (props.selectedConfigIndex && props.selectedConfigIndex.startsWith(INDEX_PREFIX)) {
     const selectedClipIndex = Number(props.selectedConfigIndex.substring(INDEX_PREFIX.length));
-    return props.clips[selectedClipIndex].videoTitleConfig;
-  } else {
-    return null;
+    return props.clips[selectedClipIndex]?.videoTitleConfig || null;
   }
+  return null;
 })
 
 const titleTextConfig = computed(() => {
   if (titleConfig.value && titleConfig.value.datas) {
-    return titleConfig.value.datas[titleConfig.value.selectedIndex].textConfig;
-  } else {
-    return null;
+    const selectedIndex = titleConfig.value.selectedIndex ?? 0;
+    return titleConfig.value.datas[selectedIndex]?.textConfig;
   }
+  return null;
 })
 
 const titleText = computed(() => {
   if (titleConfig.value && titleConfig.value.datas) {
-    return titleConfig.value.datas[titleConfig.value.selectedIndex].text;
-  } else {
-    return null;
+    const selectedIndex = titleConfig.value.selectedIndex ?? 0;
+    return titleConfig.value.datas[selectedIndex]?.text || null;
   }
+  return null;
 })
 
 </script>

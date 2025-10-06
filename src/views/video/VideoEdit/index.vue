@@ -92,7 +92,7 @@
         </div>
       </div>
       <div class="center-panel">
-        <VideoEditPreview :clips="state.clips" :global-config="state.globalConfig" 
+        <VideoEditPreview :clips="state.clips" :video-config="state.videoConfig" 
           :selected-config-index="selectedRightConfigIndex"
           @change-zimu-position="changePreviewZimuPosition"
           @change-title-position="changePreviewTitlePosition"/>
@@ -101,16 +101,16 @@
       <!-- 右侧面板 -->
       <div class="right-panel custom-scroll">
         <GlobalConfig v-if="selectedRightConfigIndex === ''" 
-          v-model="state.globalConfig" :closeable="false"
+          v-model="state.videoConfig" :closeable="false"
           @changeConfigIndex="(value) => selectedRightConfigIndex = value"/>
         <ZimuConfig v-if="selectedRightConfigIndex === `globalZimuConfig`" 
-          :rootName="videoTitle" title="全局配置" v-model="state.globalConfig.zimuConfig" 
+          :rootName="videoTitle" title="全局配置" v-model="state.videoConfig.zimuConfig" 
           @close="closeConfigPanel" />
         <VideoTitleConfig v-if="selectedRightConfigIndex === `globalTitleConfig`" 
-          :rootName="videoTitle" title="全局配置" v-model="state.globalConfig.titleConfig" 
+          :rootName="videoTitle" title="全局配置" v-model="state.videoConfig.titleConfig" 
           @close="closeConfigPanel" />
         <BackgroundAudioConfig v-if="selectedRightConfigIndex === `globalBackgroundAudioConfig`" 
-          v-model="state.globalConfig.backgroundAudioConfig" 
+          v-model="state.videoConfig.backgroundAudioConfig" 
           @close="closeConfigPanel"/>
         <template v-for="(clip, index) in state.clips" :key="clip.name">
           <ZimuConfig v-if="selectedRightConfigIndex === `zimu-${index}`" 
@@ -141,18 +141,21 @@ import VideoEditPreview from '@/components/video/VideoEditPreview.vue'
 
 const router = useRouter()
 
+// 创建默认的视频配置
+const createDefaultVideoConfig = () => ({
+  zimuConfig: undefined,
+  titleConfig: undefined,
+  backgroundAudioConfig: undefined,
+  videoRatio: '9:16',
+  videoResolution: '1080x1920',
+  outputDir: undefined
+})
+
 // 状态
 const videoTitle = ref('批量混剪_' + dayjs().format('YYYYMMDDHHmm'))
 const state = reactive<any>({
   clips: [],
-  globalConfig: {
-    zimuConfig: undefined,
-    titleConfig: undefined,
-    backgroundAudioConfig: undefined,
-    videoRatio: '9:16',
-    videoResolution: '1080x1920',
-    outputDir: undefined
-  }
+  videoConfig: createDefaultVideoConfig()
 })
 const clipListRef = ref();
 const clipListItemRefs = ref<HTMLElement[]>([]);
@@ -194,7 +197,7 @@ const checkVideoList = (clips: any) => {
 
 
 const generateAudios = async () => {
-  const outputDir = state.globalConfig.outputDir;
+  const outputDir = state.videoConfig.outputDir;
   for (let i = 0; i < state.clips.length; i++) {
     const clip = state.clips[i];
     const audio = clip.zimuConfig.datas[0];
@@ -220,8 +223,8 @@ const generateAudios = async () => {
 }
 
 const generateAssFiles = async () => {
-  const videoRatio = state.globalConfig?.videoRatio;
-  const videoResolution = state.globalConfig.videoResolution;
+  const videoRatio = state.videoConfig?.videoRatio;
+  const videoResolution = state.videoConfig.videoResolution;
   const videoResolutionParts = videoResolution.split('x');
   const isVertical = videoRatio === '9:16';
   const videoWidth = isVertical ? videoResolutionParts[0] : videoResolutionParts[1];
@@ -261,7 +264,7 @@ const generateAssFiles = async () => {
     const params = JSON.parse(JSON.stringify({
       zimuConfig: clip.zimuConfig,
       videoTitleConfig: clip.videoTitleConfig,
-      globalConfig: state.globalConfig,
+      globalConfig: state.videoConfig,
       outputPath
     }))
     console.log('合成字幕文件开始');
@@ -303,7 +306,7 @@ const generateVideo = async () => {
   if (!checkZimuList(state.clips)) {
     return;
   }
-  if (!checkGlobalConfig(state.globalConfig)) {
+  if (!checkGlobalConfig(state.videoConfig)) {
     return;
   }
   try {
@@ -315,7 +318,7 @@ const generateVideo = async () => {
     // 生成字幕与标题的ass文件
     await generateAssFiles();
     const params = JSON.parse(JSON.stringify({
-      globalConfig: state.globalConfig,
+      globalConfig: state.videoConfig,
       clips: state.clips,
       outputFileName: videoTitle.value,
     }))
@@ -398,7 +401,7 @@ const closeConfigPanel = () => {
 
 const getDefaultSavePath = async () => {
   const res = await window.electronAPI.getDefaultSavePath();
-  state.globalConfig.outputDir = res;
+  state.videoConfig.outputDir = res;
 }
 
 const changePreviewZimuPosition = (value: number) => {

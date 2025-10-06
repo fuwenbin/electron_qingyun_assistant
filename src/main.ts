@@ -1,5 +1,7 @@
 // Import process polyfill first to ensure it's available globally
 import './utils/process-polyfill'
+// Import Ant Design Vue polyfill to fix global functions
+import './utils/antd-polyfill'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

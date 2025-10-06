@@ -21,4 +21,9 @@ interface ImportMeta {
 declare global {
   var getRootPrefixCls: (suffixCls?: string, customizePrefixCls?: string) => string
   var getIconPrefixCls: () => string
+  
+  interface Window {
+    getRootPrefixCls?: (suffixCls?: string, customizePrefixCls?: string) => string
+    getIconPrefixCls?: () => string
+  }
 }
