@@ -39,6 +39,8 @@ declare global {
       playwrightAction(params: any): Promise<any>;
       onPlatformLoginFinished(callback: Function): void;
       apiRequest(params: any): Promise<any>;
+      getAppSettings(): Promise<any>;
+      saveAppSettings(settings: any): Promise<void>;
     };
   }
 }

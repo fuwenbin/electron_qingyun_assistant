@@ -155,9 +155,9 @@
       </div>
     </div>
     <div class="page-footer">
-      <!-- <a-button @click="clearFormCache" style="margin-right: 10px;">清空缓存</a-button> -->
+      <a-button @click="saveConfiguration(-1)" style="margin-right: 10px;">保存配置</a-button>
       <a-button @click="resetForm" style="margin-right: 10px;">重置表单</a-button>
-      <a-button type="primary" @click="handlePublish">发布</a-button>
+      <a-button type="primary" @click="saveConfiguration(0)">发布</a-button>
     </div>
   </div>
 </template>
@@ -409,80 +409,80 @@ const getAccountList = async () => {
 }
 
 
-const handlePublish = async () => {
+// const handlePublish = async () => {
+//   
+//   // First save the configuration
+//   const saveResult = await saveConfiguration();
+//   if (!saveResult) {
+//     return;
+//   }
+//   
+//   console.info("提交数据: ", baseContentData)
+//   
+//   const data = JSON.parse(JSON.stringify({
+//     filePath: baseContentData.filePathList,
+//     title: baseContentData.titleList,
+//     description: baseContentData.descriptionList,
+//     topicGroup1: baseContentData.topicGroup1,
+//     topicGroup2: baseContentData.topicGroup2,
+//     platformAccountList: selectedAccountList.value.map(v => v.id),
+//     publishType: 1, // Fixed to 1 for timing publish
+//     frequency: scheduleConfig.frequency,
+//     frequencyValue: scheduleConfig.value,
+//     dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
+//     directoryPath: selectedFolder.value
+//   }))
+//   
+//   try {
+//     console.info('发布任务参数：', data)
+//     const res = await window.electronAPI.apiRequest({
+//       url: '/video-publish-task/publish',
+//       method: 'POST',
+//       data
+//     })
+//     console.log(res)
+//     if (res.code === 0) {
+//       message.success("创建发布任务成功")
+//       
+//       // 发布成功后清空缓存和表单
+//       // clearFormCache()
+//       resetForm()
+//     } else {
+//       throw new Error(res.message)
+//     }
+//   } catch (error: any) {
+//     console.error('创建发布任务失败：' + error.message);
+//     message.error('创建发布任务失败：' + error.message)
+//   }
+// }
+
+// Separate save configuration function
+const saveConfiguration = async (status: number) => {
   if (selectedAccountList.value.length === 0) {
     message.error("请选择账号")
-    return
+    return false
   }
   
   if (!selectedFolder.value) {
     message.error("请选择视频文件夹")
-    return
+    return false
   }
   
   // Validate schedule configuration
   if (scheduleConfig.frequency === 'minutes' && (!scheduleConfig.value || scheduleConfig.value < 5 || scheduleConfig.value > 59)) {
     message.error("分钟间隔必须在5-59之间")
-    return
+    return false
   }
   
   if (scheduleConfig.frequency === 'hours' && (!scheduleConfig.value || scheduleConfig.value < 1 || scheduleConfig.value > 24)) {
     message.error("小时间隔必须在1-24之间")
-    return
+    return false
   }
   
   if (scheduleConfig.frequency === 'time' && !scheduleConfig.timeValue) {
     message.error("请选择每日发布时间")
     return
   }
-  
-  // First save the configuration
-  const saveResult = await saveConfiguration();
-  if (!saveResult) {
-    return;
-  }
-  
-  console.info("提交数据: ", baseContentData)
-  
-  const data = JSON.parse(JSON.stringify({
-    filePath: baseContentData.filePathList,
-    title: baseContentData.titleList,
-    description: baseContentData.descriptionList,
-    topicGroup1: baseContentData.topicGroup1,
-    topicGroup2: baseContentData.topicGroup2,
-    platformAccountList: selectedAccountList.value.map(v => v.id),
-    publishType: 1, // Fixed to 1 for timing publish
-    frequency: scheduleConfig.frequency,
-    frequencyValue: scheduleConfig.value,
-    dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
-    directoryPath: selectedFolder.value
-  }))
-  
-  try {
-    console.info('发布任务参数：', data)
-    const res = await window.electronAPI.apiRequest({
-      url: '/video-publish-task/publish',
-      method: 'POST',
-      data
-    })
-    console.log(res)
-    if (res.code === 0) {
-      message.success("创建发布任务成功")
-      
-      // 发布成功后清空缓存和表单
-      // clearFormCache()
-      resetForm()
-    } else {
-      throw new Error(res.message)
-    }
-  } catch (error: any) {
-    console.error('创建发布任务失败：' + error.message);
-    message.error('创建发布任务失败：' + error.message)
-  }
-}
-
-// Separate save configuration function
-const saveConfiguration = async () => {
   if (selectedVideos.value.length === 0 && !selectedFolder.value) {
     message.error('请选择视频文件夹或视频文件')
     return false
@@ -506,7 +506,8 @@ const saveConfiguration = async () => {
     frequencyValue: scheduleConfig.value,
     dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
     accountIds: selectedAccountList.value.map(account => account.id).join(','),
-    platformId: selectedPlatformId.value
+    platformId: selectedPlatformId.value,
+    status: status
   }
   try {
     const res = await window.electronAPI.apiRequest({
@@ -516,6 +517,7 @@ const saveConfiguration = async () => {
     })
     if (res.code === 0) {
       message.success('配置保存成功', 2)
+      resetForm()
       return true;
     } else {
       throw new Error( res.message)

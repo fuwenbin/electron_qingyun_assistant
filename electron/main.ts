@@ -18,6 +18,7 @@ import { initPlaywright } from './services/playwright';
 import { databaseService } from './services/database-service';
 import { initApiController } from './services/api-controller';
 import { videoPublishTaskManager } from './utils/video-publish-task-manager';
+import { initAppSettings } from './services/app-settings';
 
 // The built directory structure
 //
@@ -117,6 +118,7 @@ app.whenReady().then(async () => {
   createWindow();
   initializeAppAfterCreateWindow(win as BrowserWindow);
   initApiController(); // 确保 API 控制器总是被初始化
+  initAppSettings(); // 初始化应用设置
   
   // 数据库初始化（可以失败）
   try {

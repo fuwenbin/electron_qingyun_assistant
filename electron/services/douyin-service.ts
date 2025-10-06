@@ -5,6 +5,7 @@ import { getBrowser } from "./playwright";
 import videoPublishTaskService from "./video-publish-task-service";
 import dayjs from "dayjs";
 import log from "electron-log";
+import appSettingsService from './app-settings-service';
 
 export class DouyinService {
 
@@ -136,7 +137,14 @@ export class DouyinService {
     task.status = 1;
     task.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
     videoPublishTaskService.save(task);
-    const browser = await getBrowser(false);
+    
+    // 从设置中获取是否显示浏览器的配置
+    const settings = appSettingsService.getSettings();
+    const shouldShowBrowser = settings.showBrowser;
+    
+    // 发布视频时根据设置决定是否显示浏览器
+    const browser = await getBrowser(!shouldShowBrowser);
+    
     const platformId = payload.platformId;
     const platform = platformService.findById(platformId);
     // 读取保存的状态

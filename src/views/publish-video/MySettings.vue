@@ -26,7 +26,8 @@
       <a-table-column key="status" title="状态" >
         <template #default="{record}">
           <div class="status-item">
-            <a-tag v-if="record.status === 0" color="default">待执行</a-tag>
+            <a-tag v-if="record.status === -1" color="default">未激活</a-tag>
+            <a-tag v-else-if="record.status === 0" color="default">待执行</a-tag>
             <a-tag v-else-if="record.status === 1" color="processing">执行中</a-tag>
             <a-tag v-else-if="record.status === 2" color="success">完成</a-tag>
           </div>
@@ -54,9 +55,18 @@
           </div>
         </template>
       </a-table-column>
-      <a-table-column key="actions" title="操作" :width="80">
+      <a-table-column key="actions" title="操作" :width="120">
         <template #default="{record}">
           <div class="actions">
+            <a-button 
+              v-if="record.status === -1" 
+              type="primary" 
+              size="small" 
+              @click="handleExecute(record)"
+              style="margin-right: 8px;"
+            >
+              执行
+            </a-button>
             <a-button type="primary" size="small" @click="handleDelete(record)">删除</a-button>
           </div>
         </template>
@@ -103,7 +113,8 @@
         <div class="detail-item">
           <label>状态:</label>
           <span>
-            <a-tag v-if="selectedDetail.status === 0" color="default">待执行</a-tag>
+            <a-tag v-if="selectedDetail.status === -1" color="default">未激活</a-tag>
+            <a-tag v-else-if="selectedDetail.status === 0" color="default">待执行</a-tag>
             <a-tag v-else-if="selectedDetail.status === 1" color="processing">执行中</a-tag>
             <a-tag v-else-if="selectedDetail.status === 2" color="success">完成</a-tag>
           </span>
@@ -396,6 +407,31 @@ const recalcTableHeight = () => {
     const y = Math.max(200, Math.floor(pageRect.height - footerH - padding))
     tableScrollY.value = y
   } catch {}
+}
+
+const handleExecute = async (record: any) => {
+  try {
+    // 调用更新接口，将状态设置为0
+    const res = await window.electronAPI.apiRequest({
+      url: '/video-publish-setting/update',
+      method: 'POST',
+      data: {
+        ...record,
+        status: 0
+      }
+    })
+    
+    if (res.code === 0) {
+      message.success('配置已激活，开始执行')
+      // 刷新列表
+      await getDataList()
+    } else {
+      throw new Error(res.message)
+    }
+  } catch (error: any) {
+    console.error('激活配置失败：' + error.message)
+    message.error('激活配置失败：' + error.message)
+  }
 }
 
 const handleDelete = async (record: any) => {

@@ -42,6 +42,13 @@ export function initApiController() {
           message: 'success',
           data: resData
         }
+      } else if (url === '/video-publish-setting/update' && method.toLowerCase() === 'post') {
+        const resData = videoPublishSettingService.update(data)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
       } else if (url === '/video-publish-setting/list' && method.toLowerCase() === 'get') {
         const resData = videoPublishSettingService.list()
         return {

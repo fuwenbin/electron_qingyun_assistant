@@ -75,6 +75,9 @@
     <main class="main-content" :class="{ 'content-expanded': isSidebarCollapsed }">
       <slot></slot>
     </main>
+    
+    <!-- 设置弹窗 -->
+    <SettingsModal v-model:open="settingsModalOpen" />
   </div>
 </template>
 
@@ -83,9 +86,11 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import eventBus, { sidebarState, SIDEBAR_EVENTS } from '@/utils/eventBus'
 import { useUserStore } from '@/stores/user'
+import SettingsModal from '@/components/settings/SettingsModal.vue'
 
 const userStore = useUserStore()
 const isSidebarCollapsed = ref(sidebarState.isCollapsed.value)
+const settingsModalOpen = ref(false)
 
 // 显示登录弹窗
 const showLogin = () => {
@@ -100,7 +105,7 @@ const showNotifications = () => {
 
 // 显示设置
 const showSettings = () => {
-  message.info('设置功能开发中...')
+  settingsModalOpen.value = true
 }
 
 // 处理用户菜单点击事件

@@ -8,6 +8,7 @@ import log from 'electron-log';
 import { getInstallationDirectory } from "./default-save-path";
 import path from "path";
 import fs from "fs";
+import appSettingsService from './app-settings-service';
 
 export async function getBrowser(headless: boolean = true) {
   let rootPath = getInstallationDirectory()
@@ -69,7 +70,13 @@ export function initPlaywright() {
         }
       }
     } else if (action === 'publish-video') {
-      const browser = await getBrowser();
+      // 从设置中获取是否显示浏览器的配置
+      const settings = appSettingsService.getSettings();
+      const shouldShowBrowser = settings.showBrowser;
+      
+      // 发布视频时根据设置决定是否显示浏览器
+      const browser = await getBrowser(!shouldShowBrowser);
+      
       const platformId = payload.platformId;
       const platformAccountList = payload.accountList;
       try {

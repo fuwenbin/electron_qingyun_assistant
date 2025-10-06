@@ -70,4 +70,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playwrightAction: (params: any) => ipcRenderer.invoke('playwright-action', encodeArg(JSON.stringify(params))),
   onPlatformLoginFinished: (callback: Function) => ipcRenderer.on('platform-login-finished', (_, params) => callback(params)),
   apiRequest: (params: any) => ipcRenderer.invoke('api-request', encodeArg(JSON.stringify(params))),
+  getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
+  saveAppSettings: (settings: any) => ipcRenderer.invoke('save-app-settings', encodeArg(JSON.stringify(settings))),
 });
