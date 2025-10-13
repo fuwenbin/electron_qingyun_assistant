@@ -10,18 +10,18 @@
     class="login-modal"
   >
     <div class="login-container">
-      <!-- 账号密码登录 -->
+      <!-- Django 登录表单 -->
       <div class="login-form">
-        <a-form :model="loginForm" layout="vertical" @finish="handlePasswordLogin">
+        <a-form :model="loginForm" layout="vertical" @finish="handleDjangoLogin">
           <a-form-item 
-            label="邮箱" 
+            label="账号" 
             name="username"
-            :rules="[{ required: true, message: '请输入用户名' }]"
+            :rules="[{ required: true, message: '请输入账号、邮箱或手机号' }]"
           >
             <a-input 
               v-model:value="loginForm.username" 
               size="large"
-              placeholder="请输入用户名、邮箱或手机号"
+              placeholder="请输入账号、邮箱或手机号"
               :prefix="h(UserOutlined)"
             />
           </a-form-item>
@@ -37,6 +37,29 @@
               placeholder="请输入密码"
               :prefix="h(LockOutlined)"
             />
+          </a-form-item>
+
+          <!-- 验证码 -->
+          <a-form-item 
+            label="验证码" 
+            name="captcha"
+            :rules="[{ required: true, message: '请输入验证码' }]"
+          >
+            <div class="captcha-input-group">
+              <a-input 
+                v-model:value="loginForm.captcha" 
+                size="large"
+                placeholder="请输入验证码"
+                maxlength="4"
+              />
+              <img 
+                :src="captchaImage" 
+                class="captcha-image"
+                @click="refreshCaptcha"
+                alt="验证码"
+                title="点击刷新验证码"
+              />
+            </div>
           </a-form-item>
           
           <a-form-item>
@@ -74,29 +97,32 @@
 </template>
 
 <script setup lang="ts">
-// Import process polyfill first
-import '@/utils/process-polyfill'
-import { ref, reactive, h } from 'vue'
+import { ref, reactive, h, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { StackClientApp } from '@stackframe/stack';
-
 import { 
   UserOutlined, 
   LockOutlined
 } from '@ant-design/icons-vue'
 import { useUserStore } from '@/stores/user'
-console.info('Stack环境变量:', import.meta.env.VITE_STACK_PROJECT_ID, import.meta.env.VITE_STACK_PUBLISHABLE_KEY)
+import * as djangoApi from '@/api/login'
 
-// Validate environment variables
-if (!import.meta.env.VITE_STACK_PROJECT_ID || !import.meta.env.VITE_STACK_PUBLISHABLE_KEY) {
-  console.warn('Stack environment variables not configured. Please set VITE_STACK_PROJECT_ID and VITE_STACK_PUBLISHABLE_KEY in your .env file.')
-}
-
-const stackClient = new StackClientApp({
-  projectId: import.meta.env.VITE_STACK_PROJECT_ID || 'your-project-id',
-  publishableClientKey: import.meta.env.VITE_STACK_PUBLISHABLE_KEY || 'your-publishable-key',
-  tokenStore: 'memory' // 使用memory存储
-})
+// ==================== 原 Stack 登录代码（已保留但注释） ====================
+// import '@/utils/process-polyfill'
+// import { StackClientApp } from '@stackframe/stack'
+// 
+// console.info('Stack环境变量:', import.meta.env.VITE_STACK_PROJECT_ID, import.meta.env.VITE_STACK_PUBLISHABLE_KEY)
+// 
+// // Validate environment variables
+// if (!import.meta.env.VITE_STACK_PROJECT_ID || !import.meta.env.VITE_STACK_PUBLISHABLE_KEY) {
+//   console.warn('Stack environment variables not configured. Please set VITE_STACK_PROJECT_ID and VITE_STACK_PUBLISHABLE_KEY in your .env file.')
+// }
+// 
+// const stackClient = new StackClientApp({
+//   projectId: import.meta.env.VITE_STACK_PROJECT_ID || 'your-project-id',
+//   publishableClientKey: import.meta.env.VITE_STACK_PUBLISHABLE_KEY || 'your-publishable-key',
+//   tokenStore: 'memory' // 使用memory存储
+// })
+// ==================== 原 Stack 登录代码（已保留但注释） ====================
 
 interface Props {
   open: boolean
@@ -117,17 +143,17 @@ const emit = defineEmits<{
 }>()
 
 const userStore = useUserStore()
-
-// 只使用密码登录
 const loading = ref(false)
+const captchaImage = ref('')
+const captchaKey = ref('')
 
-// 账号密码登录表单
+// Django 登录表单
 const loginForm = reactive({
   username: '',
   password: '',
+  captcha: '',
   rememberMe: false
 })
-
 
 // 处理模态框关闭
 const handleModalClose = (value: boolean) => {
@@ -139,70 +165,175 @@ const handleModalClose = (value: boolean) => {
   }
 }
 
-// 账号密码登录
-const handlePasswordLogin = async () => {
+// 获取验证码
+const getCaptcha = async () => {
+  try {
+    const res = await djangoApi.getCaptcha()
+    const data = res.data
+    if (data) {
+      captchaImage.value = data.image_base
+      captchaKey.value = data.key
+    }
+  } catch (error: any) {
+    console.error('获取验证码失败:', error)
+    message.error('获取验证码失败:', error)
+  }
+}
+
+// 刷新验证码
+const refreshCaptcha = async () => {
+  loginForm.captcha = ''
+  await getCaptcha()
+}
+
+// Django 登录处理
+const handleDjangoLogin = async () => {
   try {
     loading.value = true
     
-    // 使用StackClient进行登录
-    const result = await stackClient.signInWithCredential({
-      email: loginForm.username,
-      password: loginForm.password,
-      noRedirect: true // 不自动重定向，手动处理登录后逻辑
-    })
+    const loginParams: any = {
+      username: loginForm.username,
+      password: loginForm.password
+    }
     
-    if (result.status === 'ok') {
-      // 登录成功，获取用户信息
-      const user = await stackClient.getUser()
+    // 如果需要验证码，添加验证码参数
+    
+    loginParams.captcha = loginForm.captcha
+    loginParams.captchaKey = captchaKey.value
+    
+    
+    const response = await djangoApi.djangoLogin(loginParams)
+    
+    if (response.code === 2000) {
+      const data = response.data
       
-      if (user) {
-        // 构造用户信息对象
-        const userInfo = {
-          id: user.id,
-          name: user.displayName || user.primaryEmail || '用户',
-          email: user.primaryEmail || '',
-          avatar: user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1890ff&color=fff`,
-          unreadNotifications: 0
-        }
-        
-        // 更新用户状态（会自动保存到localStorage）
-        userStore.login(userInfo)
-        
-        message.success('登录成功')
-        emit('success', userInfo)
-        emit('update:open', false)
-        
-        if (props.onSuccess) {
-          props.onSuccess()
-        }
-      } else {
-        message.error('获取用户信息失败')
+      if (!data) {
+        message.error('登录响应数据为空')
+        return
       }
-    } else {
-      // 登录失败，处理错误
-      message.error('登录失败，请检查用户名和密码')
+      
+      // 保存 token
+      localStorage.setItem('django_token', data.access)
+      if (data.refresh) {
+        localStorage.setItem('django_refresh_token', data.refresh)
+      }
+      
+      // 检查是否需要修改密码（首次登录）
+      // if (data.pwd_change_count === 0) {
+      //   message.warning('首次登录，请修改密码')
+      //   // TODO: 打开修改密码对话框
+      //   return
+      // }
+      
+      // 构造用户信息
+      const userInfo = {
+        id: data.userId,
+        name: data.name || data.username,
+        username: data.username,
+        email: data.username.includes('@') ? data.username : '',
+        avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || data.username)}&background=1890ff&color=fff`,
+        user_type: data.user_type,
+        pwd_change_count: data.pwd_change_count,
+        expire_date: data.expire_date,  // 租期
+        edite_count: data.edite_count,  // 剪辑点位数
+        unreadNotifications: 0
+      }
+      
+      // 保存用户信息到 store
+      userStore.login(userInfo, 'django')
+      
+      message.success('登录成功')
+      emit('success', userInfo)
+      emit('update:open', false)
+      
+      if (props.onSuccess) {
+        props.onSuccess()
+      }
+      
+      // 清空表单
+      loginForm.username = ''
+      loginForm.password = ''
+      loginForm.captcha = ''
     }
   } catch (error: any) {
     console.error('登录失败:', error)
-    let errorMessage = '登录失败'
     
-    // 处理常见的错误类型
-    if (error?.message) {
-      if (error.message.includes('Invalid credentials') || error.message.includes('EMAIL_PASSWORD_MISMATCH')) {
-        errorMessage = '用户名或密码错误'
-      } else if (error.message.includes('User not found')) {
-        errorMessage = '用户不存在'
-      } else {
-        errorMessage = error.message
-      }
-    }
+    // 登录失败后刷新验证码
     
-    message.error(errorMessage)
+    await refreshCaptcha()
+    
+    
+    // 错误信息已在 request 拦截器中处理
   } finally {
     loading.value = false
   }
 }
 
+// ==================== 原 Stack 登录代码（已保留但注释） ====================
+// // 账号密码登录
+// const handlePasswordLogin = async () => {
+//   try {
+//     loading.value = true
+//     
+//     // 使用StackClient进行登录
+//     const result = await stackClient.signInWithCredential({
+//       email: loginForm.username,
+//       password: loginForm.password,
+//       noRedirect: true // 不自动重定向，手动处理登录后逻辑
+//     })
+//     
+//     if (result.status === 'ok') {
+//       // 登录成功，获取用户信息
+//       const user = await stackClient.getUser()
+//       
+//       if (user) {
+//         // 构造用户信息对象
+//         const userInfo = {
+//           id: user.id,
+//           name: user.displayName || user.primaryEmail || '用户',
+//           email: user.primaryEmail || '',
+//           avatar: user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1890ff&color=fff`,
+//           unreadNotifications: 0
+//         }
+//         
+//         // 更新用户状态（会自动保存到localStorage）
+//         userStore.login(userInfo)
+//         
+//         message.success('登录成功')
+//         emit('success', userInfo)
+//         emit('update:open', false)
+//         
+//         if (props.onSuccess) {
+//           props.onSuccess()
+//         }
+//       } else {
+//         message.error('获取用户信息失败')
+//       }
+//     } else {
+//       // 登录失败，处理错误
+//       message.error('登录失败，请检查用户名和密码')
+//     }
+//   } catch (error: any) {
+//     console.error('登录失败:', error)
+//     let errorMessage = '登录失败'
+//     
+//     // 处理常见的错误类型
+//     if (error?.message) {
+//       if (error.message.includes('Invalid credentials') || error.message.includes('EMAIL_PASSWORD_MISMATCH')) {
+//         errorMessage = '用户名或密码错误'
+//       } else if (error.message.includes('User not found')) {
+//         errorMessage = '用户不存在'
+//       } else {
+//         errorMessage = error.message
+//       }
+//     }
+//     
+//     message.error(errorMessage)
+//   } finally {
+//     loading.value = false
+//   }
+// }
+// ==================== 原 Stack 登录代码（已保留但注释） ====================
 
 // 其他操作
 const showForgotPassword = () => {
@@ -221,6 +352,10 @@ const showPrivacy = () => {
   message.info('隐私政策功能开发中...')
 }
 
+// 组件挂载时获取验证码
+onMounted(() => {
+  getCaptcha()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -233,45 +368,6 @@ const showPrivacy = () => {
 
 .login-container {
   padding: 20px 0;
-}
-
-.login-methods {
-  margin-bottom: 30px;
-  
-  .method-tabs {
-    display: flex;
-    border-radius: 8px;
-    background-color: #f5f5f5;
-    padding: 4px;
-    
-    .method-tab {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 14px;
-      color: #666;
-      
-      &:hover {
-        color: var(--ant-primary-color, #1890ff);
-      }
-      
-      &.active {
-        background-color: #fff;
-        color: var(--ant-primary-color, #1890ff);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      
-      i {
-        font-size: 16px;
-      }
-    }
-  }
 }
 
 .login-form {
@@ -291,68 +387,24 @@ const showPrivacy = () => {
     }
   }
   
-  .code-input-group {
+  .captcha-input-group {
     display: flex;
     gap: 12px;
+    align-items: center;
     
     .ant-input {
       flex: 1;
     }
     
-    .ant-btn {
-      white-space: nowrap;
-    }
-  }
-}
-
-.quick-login {
-  .quick-login-options {
-    display: flex;
-    justify-content: space-around;
-    gap: 20px;
-    
-    .quick-option {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
+    .captcha-image {
+      width: 120px;
+      height: 40px;
       cursor: pointer;
-      padding: 20px;
-      border-radius: 8px;
-      transition: all 0.3s ease;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
       
       &:hover {
-        background-color: #f5f5f5;
-        transform: translateY(-2px);
-      }
-      
-      .option-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 24px;
-        
-        &.wechat {
-          background-color: #07c160;
-        }
-        
-        &.qq {
-          background-color: #12b7f5;
-        }
-        
-        &.alipay {
-          background-color: #1677ff;
-        }
-      }
-      
-      .option-label {
-        font-size: 14px;
-        color: #666;
-        text-align: center;
+        border-color: var(--ant-primary-color, #1890ff);
       }
     }
   }
@@ -401,31 +453,10 @@ const showPrivacy = () => {
     padding: 16px 0;
   }
   
-  .method-tabs {
-    flex-direction: column;
-    gap: 8px;
-    
-    .method-tab {
-      justify-content: flex-start;
-      padding: 16px;
-    }
-  }
-  
-  .quick-login-options {
-    flex-direction: column;
-    gap: 16px;
-    
-    .quick-option {
-      flex-direction: row;
-      justify-content: flex-start;
-      text-align: left;
-      padding: 16px;
-      
-      .option-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-      }
+  .captcha-input-group {
+    .captcha-image {
+      width: 100px;
+      height: 36px;
     }
   }
 }

@@ -6,7 +6,7 @@
         <div class="header-subtitle">预览视频整体效果</div>
       </div>
       <div class="header-right">
-        <a-button type="primary">
+        <a-button type="primary" @click="handlePreview" :loading="previewLoading">
           <template #icon>
             <FileSearchOutlined />
           </template>
@@ -36,9 +36,12 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { FileSearchOutlined } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 import VideoEditPreviewBox from './VideoEditPreviewBox.vue';
+import { executeWithDeduct } from '@/utils/permission-check';
+import { useUserStore } from '@/stores/user';
 
 const props = defineProps<{
   videoConfig: any;
@@ -47,6 +50,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['changeZimuPosition', 'changeTitlePosition'])
+
+// 预览按钮loading状态
+const previewLoading = ref(false)
 
 const previewPlaceholderVideoUrl = computed(() => {
   if (props.clips.length > 0 && props.clips[0].videoList.length > 0) {
@@ -59,6 +65,32 @@ const previewBoxDirection = computed(() => {
   const videoRatio = props.videoConfig?.videoRatio || '9:16'
   return videoRatio === '9:16' ? 'vertical' : 'horizontal'
 })
+
+const userStore = useUserStore()
+
+// 处理预览按钮点击
+const handlePreview = async () => {
+  try {
+    previewLoading.value = true
+    
+    // 执行预览操作并扣除100个点数
+    // 会自动检查：租期是否过期 + 点数是否足够 + 扣除点数
+    const result = await executeWithDeduct(100, true)
+    
+    if (result.success) {
+      message.success(`预览成功！${result.message}，剩余：${result.newCount}`)
+      
+      // 这里可以添加实际的预览逻辑
+      console.log('开始预览视频...')
+      console.log('当前剩余点数:', userStore.userInfo?.edite_count)
+    }
+  } catch (error) {
+    console.error('预览失败:', error)
+    // 错误提示已在 request.ts 拦截器中处理
+  } finally {
+    previewLoading.value = false
+  }
+}
 
 </script>
 
