@@ -25,6 +25,8 @@ export interface LoginResponse {
   avatar: string
   user_type: number
   pwd_change_count: number
+  expire_date?: string | null
+  edite_count?: number
   dept_info?: {
     dept_id: number
     dept_name: string
@@ -50,6 +52,8 @@ export interface UserInfoResponse {
   is_superuser: boolean
   role: number[]
   pwd_change_count: number
+  expire_date?: string | null
+  edite_count?: number
   dept_info?: {
     dept_id: number
     dept_name: string

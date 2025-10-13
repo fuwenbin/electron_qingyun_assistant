@@ -2,7 +2,7 @@ import { app, BrowserWindow, globalShortcut, session } from 'electron'
 import path from 'path'
 import initShowSaveDialog from './services/show-save-dialog';
 import initOpenFile from './services/open-file';
-import { initAliyunTTS } from './services/aliyun-tts';
+import { initTTSManager } from './services/ttsservice';
 import { setupLogger } from './services/logger';
 import log from 'electron-log';
 import { ensureAppDataSaveDir, initAppDataSaveDir } from './services/default-save-path';
@@ -94,7 +94,7 @@ setupLogger();
 setupFFmpeg();
 initShowSaveDialog();
 initOpenFile();
-initAliyunTTS();
+initTTSManager();
 initAppDataSaveDir();
 initVideoMixAndCut();
 initVideoAss();

@@ -52,18 +52,53 @@ async function buildWinOptimized() {
       }
     }
     
-    // 4. 运行构建步骤
+    // 4. 设置 Python 环境
+    console.log('🐍 设置 Python 环境...');
+    await runCommand('node', ['scripts/setup-python.js', 'setup']);
+    await runCommand('node', ['scripts/setup-python.js', 'portable']);
+    
+    // 5. 运行构建步骤
     console.log('🔨 运行 Windows 构建...');
     await runCommand('npm', ['run', 'setup:ffmpeg']);
     await runCommand('npm', ['run', 'build:renderer']);
     await runCommand('npm', ['run', 'build:main']);
     
-    // 5. 临时修改 electron-builder 配置
+    // 6. 复制 Python 环境到构建目录
+    console.log('📦 复制 Python 环境...');
+    const pythonPortablePath = 'python-portable';
+    const buildPythonPath = 'dist_electron/python';
+    
+    if (await fs.pathExists(pythonPortablePath)) {
+      await fs.copy(pythonPortablePath, buildPythonPath);
+      console.log('✅ Python 环境已复制到构建目录');
+    } else {
+      console.warn('⚠️  Python 便携式环境不存在，跳过复制');
+    }
+    
+    // 7. 临时修改 electron-builder 配置
     console.log('⚙️  更新构建配置...');
     const configPath = 'electron-builder.json';
     const config = await fs.readJson(configPath);
     const originalElectronDist = config.electronDist;
     config.electronDist = electronWinDir;
+    
+    // 添加 Python 环境到额外资源（如果存在）
+    if (!config.extraResources) {
+      config.extraResources = [];
+    }
+    
+    // 检查 python-portable 目录是否存在
+    if (await fs.pathExists('python-portable')) {
+      config.extraResources.push({
+        from: 'python-portable',
+        to: 'python',
+        filter: ['**/*']
+      });
+      console.log('✅ 已添加 Python 环境到打包资源');
+    } else {
+      console.log('⚠️  python-portable 目录不存在，跳过 Python 环境打包');
+    }
+    
     await fs.writeJson(configPath, config, { spaces: 2 });
     
     try {
@@ -83,6 +118,9 @@ async function buildWinOptimized() {
       // 恢复原始配置
       console.log('🔄 恢复构建配置...');
       config.electronDist = originalElectronDist;
+      config.extraResources = config.extraResources.filter(resource => 
+        !resource.from || resource.from !== 'python-portable'
+      );
       await fs.writeJson(configPath, config, { spaces: 2 });
     }
     

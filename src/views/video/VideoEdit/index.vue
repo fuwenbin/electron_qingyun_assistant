@@ -138,8 +138,10 @@ import VideoTitleConfig from '@/components/video/VideoTitleConfig.vue'
 import BackgroundAudioConfig from '@/components/video/BackgroundAudioConfig.vue'
 import { formatDuration } from '@/utils/common-utils'
 import VideoEditPreview from '@/components/video/VideoEditPreview.vue'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 创建默认的视频配置
 const createDefaultVideoConfig = () => ({
@@ -309,6 +311,14 @@ const generateVideo = async () => {
   if (!checkGlobalConfig(state.videoConfig)) {
     return;
   }
+  
+  // 检查本地缓存的剪辑点数
+  const currentEditeCount = userStore.userInfo?.edite_count || 0
+  if (currentEditeCount <= 0) {
+    message.error(`剪辑点位数不足，当前剩余：${currentEditeCount}，无法进行视频合成`)
+    return
+  }
+  
   try {
     isGeneratingVideo.value = true;
     // 为没有合成配音的字幕合成配音
@@ -323,9 +333,29 @@ const generateVideo = async () => {
       outputFileName: videoTitle.value,
     }))
     console.log('开始合成视频，参数：' + JSON.stringify(params));
+    
+    // 监听视频合并完成事件，扣除剪辑点数
+    const handleVideoMerged = async (cutCount: number) => {
+      try {
+        const { executeWithDeduct } = await import('@/utils/permission-check')
+        const result = await executeWithDeduct(cutCount, false) // 不显示提示，静默扣除
+        if (result.success) {
+          console.log(`视频合并成功，已扣除 ${cutCount} 个剪辑点数，剩余：${result.newCount}`)
+        }
+      } catch (error) {
+        console.error('扣除剪辑点数失败:', error)
+      }
+    }
+    
+    // 注册 IPC 监听器
+    window.electronAPI.onDeductEditeCount(handleVideoMerged)
+    
     const result = await window.electronAPI.videoMixAndCut(params);
     message.success('合成视频成功')
     console.log('合成视频成功，结果：' + JSON.stringify(result));
+    
+    // 清理监听器
+    window.electronAPI.removeDeductEditeCountListener(handleVideoMerged)
   } catch (error: any) {
     console.log(error)
     message.error('合成视频失败：' + error.message)

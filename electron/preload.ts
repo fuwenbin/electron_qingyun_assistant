@@ -38,6 +38,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDefaultSavePath: () => ipcRenderer.invoke('get-default-save-path'),
 
   text2voice: (params: any) => ipcRenderer.invoke('text2voice', encodeArg(JSON.stringify(params))),
+  
+  // TTS 管理接口
+  getAvailableVoices: () => ipcRenderer.invoke('get-available-voices'),
+  setTTSConfig: (config: any) => ipcRenderer.invoke('set-tts-config', encodeArg(JSON.stringify(config))),
+  getTTSConfig: () => ipcRenderer.invoke('get-tts-config'),
 
   videoMixAndCut: (params: any) => ipcRenderer.invoke('video-mix-and-cut', encodeArg(JSON.stringify(params))),
 
@@ -72,4 +77,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   apiRequest: (params: any) => ipcRenderer.invoke('api-request', encodeArg(JSON.stringify(params))),
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (settings: any) => ipcRenderer.invoke('save-app-settings', encodeArg(JSON.stringify(settings))),
+  
+  // 视频合并时扣除剪辑点数的 IPC 通信
+  onDeductEditeCount: (callback: (cutCount: number) => void) => {
+    ipcRenderer.on('deduct-edite-count', (_, cutCount) => callback(cutCount))
+  },
+  removeDeductEditeCountListener: (callback: (cutCount: number) => void) => {
+    ipcRenderer.removeListener('deduct-edite-count', (_, cutCount) => callback(cutCount))
+  },
 });

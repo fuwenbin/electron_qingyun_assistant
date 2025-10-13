@@ -4,7 +4,7 @@ import { getPlatformAppDataPath } from './default-save-path'
 import { ipcMain } from 'electron'
 import { decodeArg, escapedFilePath } from '../utils'
 import log from 'electron-log';
-import { generateAudio } from './aliyun-tts'
+import { generateAudio } from './ttsservice/tts-manager'
 import dayjs from 'dayjs'
 import pLimit from 'p-limit'
 import fs from 'fs';
@@ -265,8 +265,8 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   return clipSegments;
 }
 
-async function concatVideos(videos: string[], outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+async function concatVideos(videos: string[], outputPath: string, onVideoMerged?: () => Promise<void>): Promise<void> {
+  return new Promise(async (resolve, reject) => {
     const outputExtName = path.extname(outputPath);
     const tempFilePath = outputPath.slice(0, outputPath.length - outputExtName.length) + "_temp.txt";
     log.log('生成临时文件：' + tempFilePath);
@@ -278,8 +278,20 @@ async function concatVideos(videos: string[], outputPath: string): Promise<void>
       .outputOptions(['-c copy'])
       .on('start', (cmd) => console.log('执行命令:', cmd))
       .on('progress', (progress) => console.log(`处理进度: ${Math.round(progress.percent)}%`))
-      .on('end', () => {
+      .on('end', async () => {
         fs.unlinkSync(tempFilePath);
+        
+        // 如果提供了回调函数，在视频合并成功后调用
+        if (onVideoMerged) {
+          try {
+            await onVideoMerged();
+            log.log('视频合并成功，已扣除剪辑点数');
+          } catch (error) {
+            log.error('扣除剪辑点数失败:', error);
+            // 不阻止视频合成完成，只记录错误
+          }
+        }
+        
         resolve();
       })
       .on('error', (err) => {
@@ -290,7 +302,7 @@ async function concatVideos(videos: string[], outputPath: string): Promise<void>
   })
 }
 
-async function processVideoClipList(params) {
+async function processVideoClipList(params, event?: any) {
   log.log('accept params：')
   log.log(JSON.stringify(params));
   const clipList = params.clips;
@@ -356,7 +368,15 @@ async function processVideoClipList(params) {
           reject(new Error('视频合成操作超时（5分钟）'));
         }, 300000); // 5分钟 = 300000毫秒
       });
-      const concatPromise = concatVideos(segments.videos, segments.outputPath);
+      // 创建扣除剪辑点数的回调函数
+      const onVideoMerged = async () => {
+        if (event) {
+          // 通过 IPC 发送事件到前端
+          event.sender.send('deduct-edite-count', 1);
+        }
+      };
+      
+      const concatPromise = concatVideos(segments.videos, segments.outputPath, onVideoMerged);
       await Promise.race([concatPromise, timeoutPromise]);
       log.log(`成功合成视频:${i + 1}/${outputSegmentList.length}`)
       const backgroundAudioPath = globalConfig.backgroundAudioConfig?.audio.path;
@@ -436,7 +456,7 @@ export function initVideoMixAndCut() {
     // if(dayjs().isAfter(expireDay)) {
     //   throw new Error('日期已失效');
     // }
-    return processVideoClipList(params);
+    return processVideoClipList(params, event);
   })
 
   ipcMain.handle('get-media-duration', async (event, paramsStr: string) => {

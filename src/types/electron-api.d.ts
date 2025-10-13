@@ -1,4 +1,4 @@
-import { TTSRequestParams, TTSResponse } from '../electron/services/aliyun-tts';
+import { EdgeTTSRequestParams } from '../electron/services/ttsservice';
 
 declare global {
   interface Window {
@@ -29,6 +29,12 @@ declare global {
       
       openFile(path: string): Promise<void>;
       text2voice(params: any): Promise<any>;
+      
+      // TTS 管理接口
+      getAvailableVoices(): Promise<Array<{label: string, value: string}>>;
+      setTTSConfig(config: {service: 'edge'}): Promise<{success: boolean, config: any}>;
+      getTTSConfig(): Promise<{service: 'edge'}>;
+      
       videoMixAndCut(params: any): Promise<any>;
       getMediaDuration(path: string): Promise<number>;
       openFileDialog(options: any): Promise<any>;
@@ -41,6 +47,10 @@ declare global {
       apiRequest(params: any): Promise<any>;
       getAppSettings(): Promise<any>;
       saveAppSettings(settings: any): Promise<void>;
+      
+      // 剪辑点数扣除相关接口
+      onDeductEditeCount(callback: (cutCount: number) => void): void;
+      removeDeductEditeCountListener(callback: (cutCount: number) => void): void;
     };
   }
 }

@@ -43,6 +43,12 @@
       <AudioConfig v-if="_value.audioConfig" v-model="_value.audioConfig" />
     </div>
     <template #footer>
+      <a-button @click="handlePreview" :disabled="!hasAudioFiles" :loading="previewLoading">
+        <template #icon>
+          <PlayCircleOutlined />
+        </template>
+        试听
+      </a-button>
       <a-button @click="handleReset">重置</a-button>
       <a-button type="primary" @click="handleSynthesize">合成配音</a-button>
     </template>
@@ -50,8 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue';
-import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { ref, reactive, watch, computed, onUnmounted } from 'vue';
+import { ExclamationCircleOutlined, PlayCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import ConfigPanel from './ConfigPanel.vue';
 import dayjs from 'dayjs';
@@ -71,10 +77,17 @@ const _value = reactive(props.modelValue || {
 const emit = defineEmits(['close', 'update:modelValue']);
 let zimuInputIndex = 0;
 const selectedZimuInputIndex = ref<number>(0);
+const previewLoading = ref(false);
+const currentAudio = ref<HTMLAudioElement | null>(null);
 
 const getZimuInputTitle = () => {
   return '字幕' + (++zimuInputIndex);
 }
+
+// 检查是否有音频文件可以试听
+const hasAudioFiles = computed(() => {
+  return _value.datas.some((data: any) => data.path && data.path.trim() !== '');
+});
 
 const handleDeleteZimuInput = (index: number) => {
   _value.datas.splice(index, 1);
@@ -100,7 +113,7 @@ const handleReset = () => {
     posYPercent: 2/3
   }
   _value.audioConfig = {
-    voice: 'xiaoyun',
+    voice: 'zh-CN-YunxiNeural',
     speech_rate: 0,
     volume: 50,
     pitch_rate: 0
@@ -136,6 +149,51 @@ const handleSynthesize = async() => {
   }
 }
 
+// 试听功能
+const handlePreview = async () => {
+  try {
+    previewLoading.value = true;
+    
+    // 停止当前播放的音频
+    if (currentAudio.value) {
+      currentAudio.value.pause();
+      currentAudio.value = null;
+    }
+    
+    // 获取当前选中的字幕数据
+    const currentData = _value.datas[selectedZimuInputIndex.value];
+    if (!currentData || !currentData.path) {
+      message.warning('请先合成配音');
+      return;
+    }
+    
+    // 创建音频元素并播放
+    const audio = new Audio();
+    audio.src = `file://${currentData.path}`;
+    
+    audio.onloadeddata = () => {
+      message.success('开始试听');
+      audio.play();
+    };
+    
+    audio.onerror = () => {
+      message.error('音频文件加载失败');
+    };
+    
+    audio.onended = () => {
+      message.info('试听结束');
+    };
+    
+    currentAudio.value = audio;
+    
+  } catch (error: any) {
+    console.error('试听失败:', error);
+    message.error('试听失败: ' + error.message);
+  } finally {
+    previewLoading.value = false;
+  }
+}
+
 const handleChangeZimuInput = (index: number, value: string) => {
   _value.datas[index].text = value;
   emit('update:modelValue', _value);
@@ -148,6 +206,14 @@ watch(() => _value, (newVal) => {
 if (_value?.datas.length === 0) {
   handleReset();
 }
+
+// 组件卸载时清理音频
+onUnmounted(() => {
+  if (currentAudio.value) {
+    currentAudio.value.pause();
+    currentAudio.value = null;
+  }
+});
 </script>
 
 <style scoped lang="scss">

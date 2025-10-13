@@ -34,14 +34,52 @@ async function buildMacOptimized() {
       }
     }
     
-    // 2. 运行 macOS 构建
+    // 2. 设置 Python 环境
+    console.log('🐍 设置 Python 环境...');
+    await runCommand('node', ['scripts/setup-python.js', 'setup']);
+    await runCommand('node', ['scripts/setup-python.js', 'portable']);
+    
+    // 3. 运行 macOS 构建
     console.log('🔨 运行 macOS 构建...');
     await runCommand('npm', ['run', 'setup:ffmpeg']);
     await runCommand('npm', ['run', 'build:renderer']);
     await runCommand('npm', ['run', 'build:main']);
-    await runCommand('npx', ['electron-builder', '--mac', '--publish=never']);
     
-    // 3. 恢复备份的文件
+    // 4. 配置 electron-builder 包含 Python 环境
+    console.log('⚙️  配置 Python 环境打包...');
+    const configPath = 'electron-builder.json';
+    const config = await fs.readJson(configPath);
+    
+    // 添加 Python 环境到额外资源（如果存在）
+    if (!config.extraResources) {
+      config.extraResources = [];
+    }
+    
+    // 检查 python-portable 目录是否存在
+    if (await fs.pathExists('python-portable')) {
+      config.extraResources.push({
+        from: 'python-portable',
+        to: 'python',
+        filter: ['**/*']
+      });
+      console.log('✅ 已添加 Python 环境到打包资源');
+    } else {
+      console.log('⚠️  python-portable 目录不存在，跳过 Python 环境打包');
+    }
+    
+    await fs.writeJson(configPath, config, { spaces: 2 });
+    
+    try {
+      await runCommand('npx', ['electron-builder', '--mac', '--publish=never']);
+    } finally {
+      // 恢复配置
+      config.extraResources = config.extraResources.filter(resource => 
+        !resource.from || resource.from !== 'python-portable'
+      );
+      await fs.writeJson(configPath, config, { spaces: 2 });
+    }
+    
+    // 5. 恢复备份的文件
     console.log('🔄 恢复 Windows 专用文件...');
     for (const file of filesToBackup) {
       const backupPath = path.join(backupDir, file);
