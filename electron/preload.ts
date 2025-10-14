@@ -85,4 +85,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeDeductEditeCountListener: (callback: (cutCount: number) => void) => {
     ipcRenderer.removeListener('deduct-edite-count', (_, cutCount) => callback(cutCount))
   },
+  
+  // 缓存路径相关接口
+  getVideoCachePath: () => ipcRenderer.invoke('get-video-cache-path'),
+  clearVideoCache: () => ipcRenderer.invoke('clear-video-cache'),
 });

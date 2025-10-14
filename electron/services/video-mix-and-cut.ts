@@ -1,10 +1,11 @@
 import path from 'path'
 import { getDurationWithFfmpeg, getFontsdir, hasAudio } from '../utils/ffmpeg-utils'
-import { getPlatformAppDataPath } from './default-save-path'
+import { getPlatformAppDataPath, getVideoCachePath, clearVideoCache } from './default-save-path'
 import { ipcMain } from 'electron'
 import { decodeArg, escapedFilePath } from '../utils'
 import log from 'electron-log';
 import { generateAudio } from './ttsservice/tts-manager'
+import { generateAssFileFromConfig } from './video-ass'
 import dayjs from 'dayjs'
 import pLimit from 'p-limit'
 import fs from 'fs';
@@ -198,7 +199,7 @@ async function processSegment(segment: any): Promise<void>  {
   })
 }
 
-async function splitClipToSegments(clip: any, outputDir: string, outputFileName: string, globalConfig: any) {
+async function splitClipToSegments(clip: any, cacheDir: string, outputFileName: string, globalConfig: any) {
   // 获取视频宽高
   const videoRatio = globalConfig.videoRatio;
   const videoResolution = globalConfig.videoResolution;
@@ -208,16 +209,18 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   // 获取音频
   const audio = clip.zimuConfig.datas[0]
   if (!audio.path) {
-    // 如果还没有合成配音，则需要合成配音
+    // 如果还没有合成配音，则需要合成配音（使用缓存路径）
     const audioConfig = clip.zimuConfig.audioConfig;
-    const audioOutputFileName = `${outputFileName}_${clip.name}_${audio.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+    // 使用纯英文文件名避免 FFmpeg 路径问题
+    const audioOutputFileName = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const generateAudioRes: any = await generateAudio({
       text: audio.text,
       voice: audioConfig.voice,
       speech_rate: audioConfig.speech_rate,
       volume: audioConfig.volume,
       pitch_rate: audioConfig.pitch_rate,
-      outputFileName: audioOutputFileName
+      outputFileName: audioOutputFileName,
+      outputDir: cacheDir  // 配音文件保存到缓存目录
     })
     audio.path = generateAudioRes.outputFile;
     audio.duration = generateAudioRes.duration;
@@ -231,7 +234,8 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
   const isOpenOriginAudio = clip.isOpenOriginAudio ?? true;
   // 获取分段列表
   const clipSegments: any[] = [];
-  const tempBaseName = `${outputFileName}_${clip.name}_`;
+  // 使用纯英文文件名避免 FFmpeg 路径问题
+  const tempBaseName = `segment_${Date.now()}_`;
   // 获取字幕文件路径
   const assFilePath = clip.assFilePath;
   for (const video of videoList) {
@@ -239,14 +243,15 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
     const videoDuration = video.duration ?? await getDurationWithFfmpeg(videoPath);
     const segmentDuration = audioDuration;
     const segmentCount = Math.ceil(videoDuration / segmentDuration)
-    const baseName = tempBaseName + path.basename(videoPath, path.extname(videoPath))
+    // 使用简单的命名避免特殊字符
+    const baseName = tempBaseName + Math.random().toString(36).substr(2, 9)
     for (let i = 0; i < segmentCount; i++) {
       const startTime = i * segmentDuration
       const remainingDuration = video.duration - startTime
       const currentDuration = Math.min(segmentDuration, remainingDuration)
       
       const outputPath = path.join(
-        outputDir,
+        cacheDir,  // 分段视频保存到缓存目录
         `${baseName}_part${i + 1}_${startTime}-${startTime + currentDuration}.mp4`
       )
       clipSegments.push({
@@ -263,6 +268,62 @@ async function splitClipToSegments(clip: any, outputDir: string, outputFileName:
     }
   }
   return clipSegments;
+}
+
+/**
+ * 为单个镜头生成字幕文件
+ */
+async function generateClipAssFile(clip: any, cacheDir: string, globalConfig: any) {
+  
+  const videoRatio = globalConfig.videoRatio;
+  const videoResolution = globalConfig.videoResolution;
+  const videoResolutionParts = videoResolution.split('x');
+  const isVerticalVideo = videoRatio === '9:16';
+  const videoWidth = isVerticalVideo ? videoResolutionParts[0] : videoResolutionParts[1];
+  const videoHeight = isVerticalVideo ? videoResolutionParts[1] : videoResolutionParts[0];
+  
+  // 使用纯英文文件名
+  const outputPath = `subtitle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.ass`;
+  
+  // 计算字幕位置
+  if (clip.zimuConfig?.textConfig) {
+    let zimuPosX = videoWidth / 2;
+    let zimuPosY = clip.zimuConfig.textConfig.posYPercent * videoHeight;
+    const zimuTextAlign = clip.zimuConfig?.textConfig.textAlign;
+    if (zimuTextAlign === 'left') {
+      zimuPosX = 30;
+    } else if (zimuTextAlign === 'right') {
+      zimuPosX = videoWidth - 30;
+    }
+    clip.zimuConfig.posX = zimuPosX;
+    clip.zimuConfig.posY = zimuPosY;
+  }
+  
+  // 计算标题位置
+  if (clip.videoTitleConfig?.datas) {
+    const selectedDataIndex = clip.videoTitleConfig.selectedIndex;
+    let titlePosX = videoWidth / 2;
+    const currentTextConfig = clip.videoTitleConfig.datas[selectedDataIndex].textConfig;
+    let titlePosY = currentTextConfig.posYPercent * videoHeight;
+    const titleTextAlign = clip.videoTitleConfig.datas[0].textConfig.textAlign;
+    if (titleTextAlign === 'left') {
+      titlePosX = 30;
+    } else if (titleTextAlign === 'right') {
+      titlePosX = videoWidth - 30;
+    }
+    clip.videoTitleConfig.datas[0].posX = titlePosX;
+    clip.videoTitleConfig.datas[0].posY = titlePosY;
+  }
+  
+  const assFilePath = generateAssFileFromConfig(
+    clip.videoTitleConfig, 
+    clip.zimuConfig, 
+    { ...globalConfig, outputDir: cacheDir },
+    outputPath
+  );
+  
+  clip.assFilePath = assFilePath;
+  log.log(`字幕文件已生成: ${assFilePath}`);
 }
 
 async function concatVideos(videos: string[], outputPath: string, onVideoMerged?: () => Promise<void>): Promise<void> {
@@ -308,9 +369,30 @@ async function processVideoClipList(params, event?: any) {
   const clipList = params.clips;
   const outputFileName = params.outputFileName;
   const globalConfig = params.globalConfig;
+  
+  // 成品保存路径（用户可配置）
   const outputDir = globalConfig.outputDir || getPlatformAppDataPath();
+  
+  // 缓存路径（存放临时文件）
+  const cacheDir = getVideoCachePath();
+  
+  // 清空缓存目录
+  try {
+    log.log('清空缓存目录...');
+    clearVideoCache();
+    log.log('缓存目录已清空');
+  } catch (error) {
+    log.error('清空缓存目录失败:', error);
+  }
+  
+  // 生成字幕文件（在缓存清空之后）
   for (const clip of clipList) {
-    clip.segments = await splitClipToSegments(clip, outputDir, outputFileName, globalConfig);
+    await generateClipAssFile(clip, cacheDir, globalConfig);
+  }
+  
+  for (const clip of clipList) {
+    // 临时文件使用缓存路径
+    clip.segments = await splitClipToSegments(clip, cacheDir, outputFileName, globalConfig);
   }
   log.log('split clip to segments done：')
   log.log(JSON.stringify(clipList));
@@ -325,14 +407,16 @@ async function processVideoClipList(params, event?: any) {
   await Promise.all(processPromiseList);
   log.log('segment process done：')
   log.log(JSON.stringify(segments));
-  // 镜头合成
-  let segmentMinCount = 1;
+  // 镜头合成 - 取所有镜头中分段数的最小值
+  let segmentMinCount = Infinity;
   for (const clip of clipList) {
-    if (segmentMinCount === 1) {
-      segmentMinCount = clip.segments.length;
-    } else if (clip.segments.length > 1 && clip.segments.length < segmentMinCount) {
-      segmentMinCount = clip.segments.length;
+    if (clip.segments && clip.segments.length > 0) {
+      segmentMinCount = Math.min(segmentMinCount, clip.segments.length);
     }
+  }
+  // 如果没有有效的分段，设置为0
+  if (segmentMinCount === Infinity) {
+    segmentMinCount = 0;
   }
   log.log(`we can generate ${segmentMinCount} videos`)
   const outputSegmentList: any[] = [];
@@ -371,7 +455,7 @@ async function processVideoClipList(params, event?: any) {
       // 创建扣除剪辑点数的回调函数
       const onVideoMerged = async () => {
         if (event) {
-          // 通过 IPC 发送事件到前端
+          // 通过 IPC 发送事件到前端，每个合并的视频扣除1个剪辑点数
           event.sender.send('deduct-edite-count', 1);
         }
       };

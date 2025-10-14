@@ -12,10 +12,15 @@
       </div>
       <div class="right-actions">
         <div class="video-create-tip">
-          <span>预计生成</span>
-          <span>{{ estimateGenerateVideoNum || '--' }}</span>
+          <span>剩余剪辑点：</span>
+          <span :style="{ color: currentEditeCount <= 0 ? '#ff4d4f' : '#52c41a', fontWeight: 'bold' }">{{ currentEditeCount }}</span>
+          <span style="margin-left: 15px;">预计合成</span>
+          <span :style="{ color: estimateGenerateVideoNum > currentEditeCount ? '#ff4d4f' : 'inherit' }">{{ estimateGenerateVideoNum || '--' }}</span>
           <span>条</span>
-          <span style="margin-left: 10px;">预计时长</span>
+          <a-tooltip v-if="isEstimatedDuration" title="时长为估算值，实际时长以合成配音后为准">
+            <span style="margin-left: 10px; color: #faad14;">预计时长（估算）</span>
+          </a-tooltip>
+          <span v-else style="margin-left: 10px;">预计时长</span>
           <span>{{ estimateGenerateVideoDurationForShow || '--' }}</span>
           <span>秒</span>
         </div>
@@ -126,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive, computed, nextTick } from 'vue'
+import { onMounted, ref, reactive, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import VideoChooser from '@/components/VideoChooser.vue'
@@ -175,6 +180,21 @@ const estimateGenerateVideoDurationForShow = computed(() => {
   }
 })
 
+// 计算当前剩余剪辑点数
+const currentEditeCount = computed(() => {
+  return userStore.userInfo?.edite_count || 0
+})
+
+// 检查是否所有镜头都已生成实际配音
+const isEstimatedDuration = computed(() => {
+  for (const clip of state.clips) {
+    if (clip.zimuConfig?.datas?.[0]?.text && !clip.zimuConfig?.datas?.[0]?.duration) {
+      return true; // 有字幕但没有实际配音时长，说明是估算值
+    }
+  }
+  return false;
+})
+
 
 const editClipName = (index: number) => {
   state.clips[index].isNameEditing = true
@@ -199,12 +219,19 @@ const checkVideoList = (clips: any) => {
 
 
 const generateAudios = async () => {
-  const outputDir = state.videoConfig.outputDir;
+  // 不需要在前端提前生成配音，后端会自动使用缓存路径生成
+  // 这里仅用于用户在字幕配置面板手动点击"合成配音"时
+  const cacheDir = await window.electronAPI.getVideoCachePath();
   for (let i = 0; i < state.clips.length; i++) {
     const clip = state.clips[i];
     const audio = clip.zimuConfig.datas[0];
+    // 如果已经有配音路径，跳过
+    if (audio.path) {
+      continue;
+    }
     const audioConfig = clip.zimuConfig.audioConfig;
-    const outputFileName = `${videoTitle.value}_${clip.name}_${audio.title}`
+    // 使用纯英文文件名避免 FFmpeg 路径问题
+    const outputFileName = `audio_${Date.now()}_${i}`
       const params = JSON.parse(JSON.stringify({
         text: audio.text,
         voice: audioConfig.voice,
@@ -212,7 +239,7 @@ const generateAudios = async () => {
         volume: audioConfig.volume,
         pitch_rate: audioConfig.pitch_rate,
         outputFileName: outputFileName,
-        outputDir
+        outputDir: cacheDir  // 使用缓存目录
       }))
       console.log('合成配音开始：');
       console.log(params);
@@ -224,58 +251,7 @@ const generateAudios = async () => {
   }
 }
 
-const generateAssFiles = async () => {
-  const videoRatio = state.videoConfig?.videoRatio;
-  const videoResolution = state.videoConfig.videoResolution;
-  const videoResolutionParts = videoResolution.split('x');
-  const isVertical = videoRatio === '9:16';
-  const videoWidth = isVertical ? videoResolutionParts[0] : videoResolutionParts[1];
-  const videoHeight = isVertical ? videoResolutionParts[1] : videoResolutionParts[0];
-  
-  for (let i = 0; i < state.clips.length; i++) {
-    const clip = state.clips[i];
-    const outputPath = `${videoTitle.value}_${i + 1}.ass`;
-    // 标题位置
-    if (clip.videoTitleConfig?.datas) {
-      const selectedDataIndex = clip.videoTitleConfig.selectedIndex;
-      let titlePosX = videoWidth / 2;
-      const currentTextConfig = clip.videoTitleConfig.datas[selectedDataIndex].textConfig;
-      let titlePosY = currentTextConfig.posYPercent * videoHeight;
-      const titleTextAlign = clip.videoTitleConfig.datas[0].textConfig.textAlign;
-      if (titleTextAlign === 'left') {
-        titlePosX = 30;
-      } else if (titleTextAlign === 'right') {
-        titlePosX = videoWidth - 30;
-      }
-      state.clips[i].videoTitleConfig.datas[0].posX = titlePosX;
-      state.clips[i].videoTitleConfig.datas[0].posY = titlePosY;
-    }
-    // 字幕位置
-    if (clip.zimuConfig?.textConfig) {
-      let zimuPosX = videoWidth / 2;
-      let zimuPosY =  clip.zimuConfig.textConfig.posYPercent * videoHeight;
-      const zimuTextAlign = clip.zimuConfig?.textConfig.textAlign
-      if (zimuTextAlign === 'left') {
-        zimuPosX = 30;
-      } else if (zimuTextAlign === 'right') {
-        zimuPosX = videoWidth - 30;
-      }
-      state.clips[i].zimuConfig.posX = zimuPosX;
-      state.clips[i].zimuConfig.posY = zimuPosY;
-    }
-    const params = JSON.parse(JSON.stringify({
-      zimuConfig: clip.zimuConfig,
-      videoTitleConfig: clip.videoTitleConfig,
-      globalConfig: state.videoConfig,
-      outputPath
-    }))
-    console.log('合成字幕文件开始');
-    console.log(params);
-    const res = await window.electronAPI.generateAssFile(params)
-    console.log('合成字幕文件结束');
-    state.clips[i].assFilePath = res;
-  }
-}
+// 字幕文件现在在后端生成（在缓存清空之后），不需要前端提前生成
 
 const checkZimuList = (clips: any[]) => {
   let isZimuListOk = true;
@@ -313,20 +289,27 @@ const generateVideo = async () => {
   }
   
   // 检查本地缓存的剪辑点数
-  const currentEditeCount = userStore.userInfo?.edite_count || 0
-  if (currentEditeCount <= 0) {
-    message.error(`剪辑点位数不足，当前剩余：${currentEditeCount}，无法进行视频合成`)
+  const availableEditeCount = userStore.userInfo?.edite_count || 0
+  if (availableEditeCount <= 0) {
+    message.error(`剪辑点数不足，当前剩余：${availableEditeCount}，无法进行视频合成`)
+    return
+  }
+  
+  // 预估视频生成个数与时长（需要在配音生成后才能准确计算）
+  // 先进行初步检查
+  if (estimateGenerateVideoNum.value > availableEditeCount) {
+    message.error(`剪辑点数不足！预计生成 ${estimateGenerateVideoNum.value} 条视频，但剩余剪辑点数仅 ${availableEditeCount} 个`)
     return
   }
   
   try {
     isGeneratingVideo.value = true;
-    // 为没有合成配音的字幕合成配音
-    await generateAudios();
-    // 预估视频生成个数与时长
-    estimateVideoResult();
-    // 生成字幕与标题的ass文件
-    await generateAssFiles();
+    
+    // 不在前端生成配音和字幕，全部交给后端处理
+    // 后端会在清空缓存后统一生成所有临时文件
+    // await generateAudios();
+    // await generateAssFiles();
+    
     const params = JSON.parse(JSON.stringify({
       globalConfig: state.videoConfig,
       clips: state.clips,
@@ -335,27 +318,50 @@ const generateVideo = async () => {
     console.log('开始合成视频，参数：' + JSON.stringify(params));
     
     // 监听视频合并完成事件，扣除剪辑点数
+    let totalDeducted = 0
+    let isDeducting = false  // 防止重复扣点
+    
     const handleVideoMerged = async (cutCount: number) => {
+      // 防止并发调用导致重复扣点
+      if (isDeducting) {
+        console.log('正在扣点中，跳过重复调用')
+        return
+      }
+      
       try {
+        isDeducting = true
         const { executeWithDeduct } = await import('@/utils/permission-check')
         const result = await executeWithDeduct(cutCount, false) // 不显示提示，静默扣除
         if (result.success) {
-          console.log(`视频合并成功，已扣除 ${cutCount} 个剪辑点数，剩余：${result.newCount}`)
+          totalDeducted += cutCount
+          console.log(`视频合并成功，已扣除 ${cutCount} 个剪辑点数，累计扣除：${totalDeducted}，剩余：${result.newCount}`)
         }
       } catch (error) {
         console.error('扣除剪辑点数失败:', error)
+      } finally {
+        isDeducting = false
       }
     }
+    
+    // 清理之前可能存在的监听器，避免重复注册
+    window.electronAPI.removeAllListeners?.('deduct-edite-count')
     
     // 注册 IPC 监听器
     window.electronAPI.onDeductEditeCount(handleVideoMerged)
     
     const result = await window.electronAPI.videoMixAndCut(params);
-    message.success('合成视频成功')
+    
+    // 显示合成结果和扣点信息
+    if (totalDeducted > 0) {
+      message.success(`合成视频成功！共生成 ${result.length} 个视频，扣除 ${totalDeducted} 个剪辑点数`)
+    } else {
+      message.success('合成视频成功！')
+    }
     console.log('合成视频成功，结果：' + JSON.stringify(result));
+    console.log(`总计扣除剪辑点数：${totalDeducted}`);
     
     // 清理监听器
-    window.electronAPI.removeDeductEditeCountListener(handleVideoMerged)
+    window.electronAPI.removeAllListeners?.('deduct-edite-count')
   } catch (error: any) {
     console.log(error)
     message.error('合成视频失败：' + error.message)
@@ -365,24 +371,87 @@ const generateVideo = async () => {
   }
 }
 
+/**
+ * 估算配音时长（基于文字数量和语速）
+ * @param text 字幕文本
+ * @param speechRate 语速 (-500 到 500)
+ * @returns 估算的时长（秒）
+ */
+const estimateAudioDuration = (text: string, speechRate: number = 0): number => {
+  if (!text || text.trim().length === 0) {
+    return 0;
+  }
+  
+  // 基础语速：每个字约 0.4 秒
+  const baseSecondsPerChar = 0.4;
+  
+  // 根据 speech_rate 调整语速
+  // speech_rate 范围: -500 到 500
+  // -500 最慢（0.5倍速），0 正常（1倍速），500 最快（2倍速）
+  const speedMultiplier = 1 + (speechRate / 1000);
+  
+  // 计算实际每个字的时间
+  const actualSecondsPerChar = baseSecondsPerChar / speedMultiplier;
+  
+  // 计算总时长（去除空格和标点符号）
+  const charCount = text.replace(/[\s\n.,，。！？!?；;：:]/g, '').length;
+  const estimatedDuration = charCount * actualSecondsPerChar;
+  
+  // 返回时长，保留2位小数
+  return Math.ceil(estimatedDuration * 100) / 100;
+}
+
 const estimateVideoResult = () => {
   let totalDuration = 0;
   let totalNum = 0;
-  for (let i = 0; i < state.clips.length; i++) {
-    const clip = state.clips[i];
-    const videoList = clip.videoList;
-    const audioDuration = clip.zimuConfig.datas[0].duration;
-    let segmentsNum = 0;
-    for (let j = 0;j < videoList.length; j++) {
-      const itemVideo = videoList[j];
-      const itemVideoDuration = itemVideo.duration;
-      segmentsNum += Math.ceil(itemVideoDuration / audioDuration);
+  
+  try {
+    for (let i = 0; i < state.clips.length; i++) {
+      const clip = state.clips[i];
+      const videoList = clip.videoList;
+      
+      // 如果没有字幕配置，跳过此镜头
+      if (!clip.zimuConfig?.datas?.[0]) {
+        continue;
+      }
+      
+      const zimuData = clip.zimuConfig.datas[0];
+      
+      // 获取配音时长：优先使用实际时长，否则估算
+      let audioDuration = zimuData.duration;
+      if (!audioDuration && zimuData.text) {
+        const speechRate = clip.zimuConfig?.audioConfig?.speech_rate || 0;
+        audioDuration = estimateAudioDuration(zimuData.text, speechRate);
+      }
+      
+      // 如果仍然没有时长，跳过
+      if (!audioDuration) {
+        continue;
+      }
+      
+      // 计算当前镜头的分段数（所有视频的分段数之和）
+      let clipSegmentsNum = 0;
+      for (let j = 0; j < videoList.length; j++) {
+        const itemVideo = videoList[j];
+        const itemVideoDuration = itemVideo.duration;
+        if (itemVideoDuration && audioDuration) {
+          clipSegmentsNum += Math.ceil(itemVideoDuration / audioDuration);
+        }
+      }
+      
+      // 取所有镜头中分段数的最小值（如果某个镜头只有1个分段，则只能生成1条视频）
+      if (totalNum === 0) {
+        totalNum = clipSegmentsNum;
+      } else {
+        totalNum = Math.min(totalNum, clipSegmentsNum);
+      }
+      
+      totalDuration += audioDuration;
     }
-    if (totalNum === 0 || (segmentsNum > 1 && segmentsNum < totalNum)) {
-      totalNum = segmentsNum;
-    }
-    totalDuration += audioDuration;
+  } catch (error) {
+    console.error('预估视频结果时出错:', error);
   }
+  
   estimateGenerateVideoNum.value = totalNum;
   estimateGenerateVideoDuration.value = totalDuration;
 }
@@ -448,6 +517,12 @@ const changePreviewTitlePosition = (value: number) => {
 addClip();
 addClip();
 getDefaultSavePath();
+
+// 监听 clips 变化，自动重新计算预估结果
+watch(() => state.clips, () => {
+  estimateVideoResult();
+}, { deep: true });
+
 onMounted(async () => {
   
 });

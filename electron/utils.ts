@@ -136,11 +136,17 @@ export function createWebReadableStream(fileStream: fs.ReadStream): ReadableStre
 export function escapedFilePath(filePath: string) {
   // Windows 路径需要特殊处理
   if (process.platform === 'win32') {
-    // 替换反斜杠为双反斜杠，并转义冒号
+    // 统一使用正斜杠，并转义冒号和特殊字符
     return filePath
-      .replace(/\\/g, '\\\\')  // 反斜杠转义
-      .replace(/:/g, '\\:');   // 冒号转义
+      .replace(/\\/g, '/')     // 统一使用正斜杠
+      .replace(/:/g, '\\\\:')  // 冒号需要双反斜杠转义
+      .replace(/'/g, "'\\\\''"); // 单引号
   }
-  // Linux/macOS 只需处理空格等特殊字符
-  return filePath.replace(/(\s)/g, '\\$1');
+  
+  // Linux/macOS 需要转义的特殊字符
+  // FFmpeg subtitles 滤镜中，冒号和单引号是关键需要转义的字符
+  return filePath
+    .replace(/\\/g, '\\\\')      // 反斜杠
+    .replace(/:/g, '\\\\:')      // 冒号（FFmpeg 滤镜参数分隔符）
+    .replace(/'/g, "'\\\\''");   // 单引号：先关闭引号，转义单引号，再开启引号
 }

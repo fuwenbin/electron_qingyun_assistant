@@ -74,8 +74,101 @@ export function ensureAppDataSaveDir() {
   }
 }
 
+/**
+ * 获取视频缓存路径（用于存放临时文件）
+ * 路径结构：
+ * - macOS: ~/Library/Caches/zhushou/.cache
+ * - Windows: %LOCALAPPDATA%/zhushou/.cache
+ * - Linux: ~/.cache/zhushou/.cache
+ */
+export function getVideoCachePath() {
+  let cacheBasePath: string;
+  
+  switch (process.platform) {
+    case 'darwin':
+      // macOS: ~/Library/Caches/zhushou
+      cacheBasePath = path.join(app.getPath('home'), 'Library', 'Caches', APP_NAME);
+      break;
+    case 'win32':
+      // Windows: %LOCALAPPDATA%/zhushou
+      cacheBasePath = path.join(app.getPath('appData'), '..', 'Local', APP_NAME);
+      break;
+    case 'linux':
+      // Linux: ~/.cache/zhushou
+      cacheBasePath = path.join(app.getPath('home'), '.cache', APP_NAME);
+      break;
+    default:
+      // 其他平台使用 temp
+      cacheBasePath = path.join(app.getPath('temp'), APP_NAME);
+  }
+  
+  const cachePath = path.join(cacheBasePath, '.cache');
+  
+  // 确保基础目录存在
+  try {
+    if (!fs.existsSync(cacheBasePath)) {
+      fs.mkdirSync(cacheBasePath, { recursive: true });
+      console.log(`创建缓存基础目录: ${cacheBasePath}`);
+    }
+    
+    // 确保 .cache 目录存在
+    if (!fs.existsSync(cachePath)) {
+      fs.mkdirSync(cachePath, { recursive: true });
+      console.log(`创建缓存目录: ${cachePath}`);
+    }
+  } catch (error) {
+    console.error('创建缓存目录失败:', error);
+    // 如果创建失败，使用临时目录作为后备
+    const fallbackPath = path.join(app.getPath('temp'), APP_NAME, '.cache');
+    if (!fs.existsSync(fallbackPath)) {
+      fs.mkdirSync(fallbackPath, { recursive: true });
+    }
+    return fallbackPath;
+  }
+  
+  return cachePath;
+}
+
+/**
+ * 清空视频缓存目录
+ */
+export function clearVideoCache() {
+  const cachePath = getVideoCachePath();
+  
+  try {
+    if (fs.existsSync(cachePath)) {
+      // 删除目录中的所有文件
+      const files = fs.readdirSync(cachePath);
+      for (const file of files) {
+        const filePath = path.join(cachePath, file);
+        const stat = fs.statSync(filePath);
+        
+        if (stat.isDirectory()) {
+          // 递归删除子目录
+          fs.rmSync(filePath, { recursive: true, force: true });
+        } else {
+          // 删除文件
+          fs.unlinkSync(filePath);
+        }
+      }
+      console.log(`已清空缓存目录: ${cachePath}`);
+    }
+  } catch (error) {
+    console.error('清空缓存目录失败:', error);
+    throw error;
+  }
+}
+
 export function initAppDataSaveDir() {
   ipcMain.handle('get-default-save-path', () => {
     return ensureAppDataSaveDir();
+  });
+  
+  ipcMain.handle('get-video-cache-path', () => {
+    return getVideoCachePath();
+  });
+  
+  ipcMain.handle('clear-video-cache', () => {
+    clearVideoCache();
   });
 }

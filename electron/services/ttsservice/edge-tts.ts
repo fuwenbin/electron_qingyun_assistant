@@ -165,6 +165,9 @@ export async function generateAudioWithEdgeTTS(params: any) {
       edgeTtsProcess.on('close', async (code) => {
         if (code === 0) {
           try {
+            // 等待一小段时间，确保文件写入完成
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             // 检查文件是否生成成功
             if (fs.existsSync(outputFile)) {
               const duration = await getDurationWithFfmpeg(outputFile);
@@ -175,7 +178,9 @@ export async function generateAudioWithEdgeTTS(params: any) {
                 duration: Math.floor(duration * 1000) / 1000 
               });
             } else {
-              reject(new Error('语音文件生成失败：文件不存在'));
+              log.error(`语音文件不存在: ${outputFile}`);
+              log.error(`输出目录内容: ${fs.existsSync(path.dirname(outputFile)) ? fs.readdirSync(path.dirname(outputFile)).join(', ') : '目录不存在'}`);
+              reject(new Error(`语音文件生成失败：文件不存在 - ${outputFile}`));
             }
           } catch (error) {
             log.error('获取音频时长失败:', error);

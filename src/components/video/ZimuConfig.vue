@@ -60,7 +60,6 @@ import { ref, reactive, watch, computed, onUnmounted } from 'vue';
 import { ExclamationCircleOutlined, PlayCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import ConfigPanel from './ConfigPanel.vue';
-import dayjs from 'dayjs';
 import TextConfig from '@/components/media/text/TextConfig.vue';
 import AudioConfig from '@/components/media/audio/AudioConfig.vue';
 
@@ -123,8 +122,12 @@ const handleReset = () => {
 
 const handleSynthesize = async() => {
   try {
-    const resList = await Promise.all(_value.datas.map(async (data: any) => {
-      const outputFileName = `${props.rootName}_${props.title}_${data.title}_${dayjs().format('YYYYMMDDHHmmss')}`
+    // 获取缓存目录
+    const cacheDir = await window.electronAPI.getVideoCachePath();
+    
+    const resList = await Promise.all(_value.datas.map(async (data: any, index: number) => {
+      // 使用纯英文文件名避免 FFmpeg 路径问题
+      const outputFileName = `audio_${Date.now()}_${index}`
       const params = JSON.parse(JSON.stringify({
         text: data.text,
         voice: _value.audioConfig.voice,
@@ -133,7 +136,8 @@ const handleSynthesize = async() => {
         speech_rate: _value.audioConfig.speech_rate,
         volume: _value.audioConfig.volume,
         pitch_rate: _value.audioConfig.pitch_rate,
-        outputFileName: outputFileName
+        outputFileName: outputFileName,
+        outputDir: cacheDir  // 使用缓存目录
       }))
       return await window.electronAPI.text2voice(params);
     }));

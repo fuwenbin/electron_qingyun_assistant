@@ -51,6 +51,10 @@ declare global {
       // 剪辑点数扣除相关接口
       onDeductEditeCount(callback: (cutCount: number) => void): void;
       removeDeductEditeCountListener(callback: (cutCount: number) => void): void;
+      
+      // 缓存路径相关接口
+      getVideoCachePath(): Promise<string>;
+      clearVideoCache(): Promise<void>;
     };
   }
 }

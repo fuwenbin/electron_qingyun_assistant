@@ -92,7 +92,27 @@ ${styleListContent}
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ${dialogueListContent}
   `;
-  fs.writeFileSync(outputPath, assContent.trim());
+  
+  try {
+    // 确保输出目录存在
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+      console.log(`创建ASS文件目录: ${outputDir}`);
+    }
+    
+    fs.writeFileSync(outputPath, assContent.trim());
+    console.log(`ASS文件已生成: ${outputPath}`);
+    
+    // 验证文件是否真的存在
+    if (!fs.existsSync(outputPath)) {
+      throw new Error(`ASS文件生成后不存在: ${outputPath}`);
+    }
+  } catch (error) {
+    console.error(`生成ASS文件失败: ${outputPath}`, error);
+    throw error;
+  }
+  
   return outputPath;
 }
 
