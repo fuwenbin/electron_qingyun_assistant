@@ -40,9 +40,9 @@ const options = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   .chooser-item {
-    font-size: 20px;
-    width: 60px;
-    height: 60px;
+    font-size: 18px;
+    width: 45px;
+    height: 45px;
     display: flex;
     align-items: center;
     justify-content: center;

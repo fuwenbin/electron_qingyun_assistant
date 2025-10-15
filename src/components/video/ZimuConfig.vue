@@ -21,12 +21,29 @@
                 <span>口播时长：</span>
                 <span v-if="data.duration">{{ data.duration || '未知' }}秒</span>
               </div>
-              <a-tooltip title="点击下方合成配音按钮生成口播时长">
-                <ExclamationCircleOutlined />
+              <a-tooltip title="配置配音">
+                <a-button type="text" size="small" @click="handleOpenAudioConfig(index)" class="icon-button">
+                  <template #icon>
+                    <SettingOutlined />
+                  </template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="合成并试听配音">
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  @click="handlePlayAudio(index)" 
+                  :loading="playingIndex === index"
+                  class="icon-button"
+                  :disabled="!data.text || data.text.trim() === ''">
+                  <template #icon>
+                    <PlayCircleOutlined />
+                  </template>
+                </a-button>
               </a-tooltip>
             </div>
             <div class="header-right">
-              <a-button v-if="_value.datas.length > 1 && selectedZimuInputIndex === index" type="text" 
+              <a-button v-if="_value.datas.length > 1" type="text" 
                 @click="handleDeleteZimuInput(index)">删除</a-button>
             </div>
           </div>
@@ -38,26 +55,25 @@
       </div>
     </div>
     <TextConfig v-if="_value.textConfig" v-model="_value.textConfig" />
-    <div class="audio-config-box" style="margin-top: 10px;">
-      <div class="audio-config-box-title" style="margin-bottom: 10px;">配音设置</div>
+    
+    <!-- 配音设置弹窗 -->
+    <a-modal 
+      v-model:open="audioConfigModalVisible" 
+      title="配音设置" 
+      @ok="handleAudioConfigOk"
+      width="600px">
       <AudioConfig v-if="_value.audioConfig" v-model="_value.audioConfig" />
-    </div>
+    </a-modal>
+    
     <template #footer>
-      <a-button @click="handlePreview" :disabled="!hasAudioFiles" :loading="previewLoading">
-        <template #icon>
-          <PlayCircleOutlined />
-        </template>
-        试听
-      </a-button>
       <a-button @click="handleReset">重置</a-button>
-      <a-button type="primary" @click="handleSynthesize">合成配音</a-button>
     </template>
   </config-panel>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onUnmounted } from 'vue';
-import { ExclamationCircleOutlined, PlayCircleOutlined } from '@ant-design/icons-vue';
+import { ref, reactive, watch, onUnmounted } from 'vue';
+import { ExclamationCircleOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import ConfigPanel from './ConfigPanel.vue';
 import TextConfig from '@/components/media/text/TextConfig.vue';
@@ -75,18 +91,26 @@ const _value = reactive(props.modelValue || {
 
 const emit = defineEmits(['close', 'update:modelValue']);
 let zimuInputIndex = 0;
-const selectedZimuInputIndex = ref<number>(0);
-const previewLoading = ref(false);
+const audioConfigModalVisible = ref(false);
+const playingIndex = ref<number | null>(null);
 const currentAudio = ref<HTMLAudioElement | null>(null);
+const currentConfigIndex = ref<number>(0);
 
 const getZimuInputTitle = () => {
   return '字幕' + (++zimuInputIndex);
 }
 
-// 检查是否有音频文件可以试听
-const hasAudioFiles = computed(() => {
-  return _value.datas.some((data: any) => data.path && data.path.trim() !== '');
-});
+// 打开配音配置弹窗
+const handleOpenAudioConfig = (index: number) => {
+  currentConfigIndex.value = index;
+  audioConfigModalVisible.value = true;
+}
+
+// 配音配置弹窗确认
+const handleAudioConfigOk = () => {
+  audioConfigModalVisible.value = false;
+  emit('update:modelValue', _value);
+}
 
 const handleDeleteZimuInput = (index: number) => {
   _value.datas.splice(index, 1);
@@ -120,43 +144,10 @@ const handleReset = () => {
   emit('update:modelValue', undefined);
 }
 
-const handleSynthesize = async() => {
+// 合成并播放指定字幕的配音
+const handlePlayAudio = async (index: number) => {
   try {
-    // 获取缓存目录
-    const cacheDir = await window.electronAPI.getVideoCachePath();
-    
-    const resList = await Promise.all(_value.datas.map(async (data: any, index: number) => {
-      // 使用纯英文文件名避免 FFmpeg 路径问题
-      const outputFileName = `audio_${Date.now()}_${index}`
-      const params = JSON.parse(JSON.stringify({
-        text: data.text,
-        voice: _value.audioConfig.voice,
-        format: 'mp3',
-        sampleRate: 16000,
-        speech_rate: _value.audioConfig.speech_rate,
-        volume: _value.audioConfig.volume,
-        pitch_rate: _value.audioConfig.pitch_rate,
-        outputFileName: outputFileName,
-        outputDir: cacheDir  // 使用缓存目录
-      }))
-      return await window.electronAPI.text2voice(params);
-    }));
-    resList.forEach((res: any, index: number) => {
-      _value.datas[index].path = res.outputFile;
-      _value.datas[index].duration = res.duration;
-      emit('update:modelValue', _value);
-    });
-    message.success('合成配音成功');
-  } catch (err: any) {
-    console.error('合成配音失败:', err);
-    message.error('合成配音失败:' + err.message);
-  }
-}
-
-// 试听功能
-const handlePreview = async () => {
-  try {
-    previewLoading.value = true;
+    playingIndex.value = index;
     
     // 停止当前播放的音频
     if (currentAudio.value) {
@@ -164,19 +155,42 @@ const handlePreview = async () => {
       currentAudio.value = null;
     }
     
-    // 获取当前选中的字幕数据
-    const currentData = _value.datas[selectedZimuInputIndex.value];
-    if (!currentData || !currentData.path) {
-      message.warning('请先合成配音');
+    const data = _value.datas[index];
+    if (!data.text || data.text.trim() === '') {
+      message.warning('请先输入字幕内容');
       return;
     }
     
-    // 创建音频元素并播放
+    // 获取缓存目录
+    const cacheDir = await window.electronAPI.getVideoCachePath();
+    
+    // 合成配音
+    const outputFileName = `audio_${Date.now()}_${index}`;
+    const params = JSON.parse(JSON.stringify({
+      text: data.text,
+      voice: _value.audioConfig.voice,
+      format: 'mp3',
+      sampleRate: 16000,
+      speech_rate: _value.audioConfig.speech_rate,
+      volume: _value.audioConfig.volume,
+      pitch_rate: _value.audioConfig.pitch_rate,
+      outputFileName: outputFileName,
+      outputDir: cacheDir
+    }));
+    
+    const res = await window.electronAPI.text2voice(params);
+    
+    // 更新数据
+    _value.datas[index].path = res.outputFile;
+    _value.datas[index].duration = res.duration;
+    emit('update:modelValue', _value);
+    
+    // 播放音频
     const audio = new Audio();
-    audio.src = `file://${currentData.path}`;
+    audio.src = `file://${res.outputFile}`;
     
     audio.onloadeddata = () => {
-      message.success('开始试听');
+      message.success('开始播放');
       audio.play();
     };
     
@@ -185,16 +199,17 @@ const handlePreview = async () => {
     };
     
     audio.onended = () => {
-      message.info('试听结束');
+      message.info('播放结束');
+      playingIndex.value = null;
     };
     
     currentAudio.value = audio;
     
   } catch (error: any) {
-    console.error('试听失败:', error);
-    message.error('试听失败: ' + error.message);
+    console.error('合成配音失败:', error);
+    message.error('合成配音失败: ' + error.message);
   } finally {
-    previewLoading.value = false;
+    playingIndex.value = null;
   }
 }
 
@@ -267,6 +282,14 @@ onUnmounted(() => {
         border: 1px solid #6c6a6a;
         padding: 4px 8px;
         border-radius: 4px;
+      }
+      .icon-button {
+        padding: 4px 8px;
+        color: #1677ff;
+        &:hover {
+          color: #4096ff;
+          background: rgba(22, 119, 255, 0.1);
+        }
       }
     }
   }

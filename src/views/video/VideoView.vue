@@ -1,7 +1,7 @@
 <template>
   <div class="video-view">
     <div class="content-area">
-      <Sidebar :menu-items="menuItems" />
+      <!-- <Sidebar :menu-items="menuItems" /> -->
       <div class="main-content">
         <router-view></router-view>
       </div>
@@ -10,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import Sidebar from '@/components/layout/Sidebar.vue'
+// import { ref } from 'vue'
+// import Sidebar from '@/components/layout/Sidebar.vue'
 
 interface MenuItem {
   path: string
@@ -20,20 +20,20 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
-const menuItems = ref<MenuItem[]>([
-  {
-    path: '/ai',
-    title: '创作中心',
-    icon: 'fas fa-robot',
-    children: [
-      {
-        path: '/video/edit',
-        title: 'AI混剪',
-        icon: 'fas fa-comments'
-      }
-    ]
-  }
-])
+// const menuItems = ref<MenuItem[]>([
+//   {
+//     path: '/ai',
+//     title: '创作中心',
+//     icon: 'fas fa-robot',
+//     children: [
+//       {
+//         path: '/video/edit',
+//         title: 'AI混剪',
+//         icon: 'fas fa-comments'
+//       }
+//     ]
+//   }
+// ])
 </script>
 
 <style lang="scss" scoped>

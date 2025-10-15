@@ -2,11 +2,11 @@
   <div class="video-edit">
     <!-- 顶部操作栏 -->
     <div class="edit-header">
-      <div class="left-actions">
+      <!-- <div class="left-actions">
         <button class="btn-back" @click="goBack">
           <i class="fas fa-arrow-left"></i>
         </button>
-      </div>
+      </div> -->
       <div class="center-action">
         <q-input v-model="videoTitle" borderless style="width: 200px;" placeholder="视频标题" />
       </div>
@@ -201,9 +201,9 @@ const editClipName = (index: number) => {
 }
 
 // 方法
-const goBack = () => {
-  router.back()
-}
+// const goBack = () => {
+//   router.back()
+// }
 
 const checkVideoList = (clips: any) => {
   let isVideoListOk = true;
@@ -217,39 +217,6 @@ const checkVideoList = (clips: any) => {
   return isVideoListOk;
 }
 
-
-const generateAudios = async () => {
-  // 不需要在前端提前生成配音，后端会自动使用缓存路径生成
-  // 这里仅用于用户在字幕配置面板手动点击"合成配音"时
-  const cacheDir = await window.electronAPI.getVideoCachePath();
-  for (let i = 0; i < state.clips.length; i++) {
-    const clip = state.clips[i];
-    const audio = clip.zimuConfig.datas[0];
-    // 如果已经有配音路径，跳过
-    if (audio.path) {
-      continue;
-    }
-    const audioConfig = clip.zimuConfig.audioConfig;
-    // 使用纯英文文件名避免 FFmpeg 路径问题
-    const outputFileName = `audio_${Date.now()}_${i}`
-      const params = JSON.parse(JSON.stringify({
-        text: audio.text,
-        voice: audioConfig.voice,
-        speech_rate: audioConfig.speech_rate,
-        volume: audioConfig.volume,
-        pitch_rate: audioConfig.pitch_rate,
-        outputFileName: outputFileName,
-        outputDir: cacheDir  // 使用缓存目录
-      }))
-      console.log('合成配音开始：');
-      console.log(params);
-      const generateRes = await window.electronAPI.text2voice(params);
-      console.log('合成配音成功：');
-      console.log(generateRes);
-      state.clips[i].zimuConfig.datas[0].path = generateRes.outputFile;
-      state.clips[i].zimuConfig.datas[0].duration = generateRes.duration;
-  }
-}
 
 // 字幕文件现在在后端生成（在缓存清空之后），不需要前端提前生成
 

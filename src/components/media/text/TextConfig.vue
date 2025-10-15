@@ -1,7 +1,7 @@
 <template>
   <div class="text-config">
     <div class="text-config-item">
-      <div class="item-label">字体设置:</div>
+      <div class="item-label">字体设置</div>
       <div class="item-content">
         <div class="font-basic-config">
           <div class="left-part part-box">
@@ -22,13 +22,13 @@
       </div>
     </div>
     <div class="text-config-item">
-      <div class="item-label">字体样式:</div>
+      <div class="item-label">字体样式</div>
       <div class="item-content">
         <FontLevelChooser :value="_value" @update:value="handleFontLevelChange"/>
       </div>
     </div>
     <div class="text-config-item">
-      <div class="item-label">花字设置:</div>
+      <div class="item-label">花字设置</div>
       <div class="item-content">
         <FontCustomStyleChooser :model-value="_value.customStyle" @update:model-value="(value: string) => handleCustomStyleChange(value)" />
       </div>
