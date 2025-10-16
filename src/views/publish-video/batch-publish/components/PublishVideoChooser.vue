@@ -4,13 +4,14 @@
       <div class="folder-chooser-box" @click="selectFolder">
         <FolderOpenOutlined class="folder-chooser-icon" />
       </div>
-      <div v-if="selectedFolder" class="selected-folder-info">
-        <div class="folder-path">已选择: {{ selectedFolder }}</div>
-        <div class="video-count">
+      <div v-if="selectedFolder || (mode === 'direct' && videoFiles.length)" class="selected-folder-info">
+        <div class="folder-path">
+          {{ mode === 'direct' ? '已选择视频文件: ' : '已选择: ' }}{{ mode === 'direct' ? videoFiles[0]?.fileName : selectedFolder }}
+        </div>
+        <div v-if="mode === 'batch'" class="video-count">
           <div> 文件夹视频总数: {{ videoFiles.length }}</div>
           <div class="unpublished-count">未发布视频数量: {{ unpublishedVideoCount }} </div>
         </div>
-       
       </div>
     </div>
     
@@ -52,6 +53,7 @@ import { FolderOpenOutlined } from '@ant-design/icons-vue';
 const props = defineProps<{
   modelValue: any[];
   selectedFolder?: string;
+  mode?: 'batch' | 'direct'; // 新增mode属性
 }>()
 
 const emit = defineEmits(['update:modelValue', 'folderChange'])
@@ -70,7 +72,19 @@ const getFileName = (filePath: string): string => {
 watch(() => props.selectedFolder, (newFolder) => {
   if (newFolder) {
     selectedFolder.value = newFolder
-    loadVideoFiles()
+    if (props.mode === 'batch') {
+      // 批量模式：加载文件夹中的视频文件
+      loadVideoFiles()
+    } else if (props.mode === 'direct') {
+      // 直接发布模式：处理单个文件
+      const fileName = getFileName(newFolder)
+      const videoFile = {
+        fileName: fileName,
+        filePath: newFolder
+      }
+      videoFiles.value = [videoFile]
+      emit('update:modelValue', videoFiles.value)
+    }
   }else{
     selectedFolder.value = ''
     videoFiles.value = []
@@ -115,22 +129,47 @@ const unpublishedVideoCount = computed(() => {
 
 const selectFolder = async () => {
   try {
-    const folderPath = await window.electronAPI.selectDirectory({
-      title: '选择视频文件夹'
-    })
-    
-    if (folderPath) {
-      selectedFolder.value = folderPath
-      emit('folderChange', folderPath)
-      await loadVideoFiles()
+    if (props.mode === 'direct') {
+      // 直接发布模式：选择单个视频文件
+      const result = await window.electronAPI.openFileDialog({
+        title: '选择视频文件',
+        filters: [
+          { name: '视频文件', extensions: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm'] }
+        ],
+        properties: ['openFile']
+      })
+      
+      if (result && result.length > 0) {
+        const filePath = result[0].path
+        const fileName = getFileName(filePath)
+        const videoFile = {
+          fileName: fileName,
+          filePath: filePath
+        }
+        
+        videoFiles.value = [videoFile]
+        emit('update:modelValue', videoFiles.value)
+        emit('folderChange', filePath)
+      }
+    } else {
+      // 定时批量模式：选择文件夹
+      const folderPath = await window.electronAPI.selectDirectory({
+        title: '选择视频文件夹'
+      })
+      
+      if (folderPath) {
+        selectedFolder.value = folderPath
+        emit('folderChange', folderPath)
+        await loadVideoFiles()
+      }
     }
   } catch (error) {
-    console.error('选择文件夹失败：', error)
+    console.error('选择失败：', error)
   }
 }
 
 const loadVideoFiles = async () => {
-  if (!selectedFolder.value) return
+  if (!selectedFolder.value || props.mode !== 'batch') return
   
   try {
     // Call API to get video files from the selected directory

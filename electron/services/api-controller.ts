@@ -6,9 +6,9 @@ import videoPublishTaskService from './video-publish-task-service';
 import platformAccountSyncTaskService from './platform-account-sync-task-service';
 import { decodeArg } from '../utils';
 import BusinessException from '../exception/business-exception';
-import testService from './test';
 import platfromAccountCommentService from './platform-account-comment-service';
 import { getVideoFilesInDirectory } from '../utils/fs-utils';
+import VideoPublishTask from '../entities/video-publish-task';
 export function initApiController() {
   ipcMain.handle('api-request', async (_, paramsStr) => {
     const params = JSON.parse(decodeArg(paramsStr))
@@ -75,13 +75,39 @@ export function initApiController() {
           data: resData
         }
       } else if (url === '/video-publish-task/publish' && method.toLowerCase() === 'post') {
-        // todo  将用于实时发布任务
-        // const resData = videoPublishTaskService.publish(data)
-        // return {
-        //   code: 0,
-        //   message: 'success',
-        //   data: resData
-        // }
+        // 处理直接发布任务
+        const task = new VideoPublishTask();
+        
+        // 设置基本字段
+        task.filePath = data.filePath || '';
+        task.fileName = data.fileName || '';
+        task.title = data.title || '';
+        task.description = data.description || '';
+        task.topic = (data.topicGroup1 || '') + ' ' + (data.topicGroup2 || '');
+        task.platformData = data.platformData || '{}';
+        task.accountId = data.accountIds || '';
+        task.platformId = data.platformId || 1;
+        task.publishType = data.publishType || 0;
+        task.publishTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        task.scheduledStartTime = task.publishTime;
+        task.startTime = '';
+        task.endTime = '';
+        task.status = 0;
+        task.itemId = '';
+        task.collectCount = 0;
+        task.commentCount = 0;
+        task.diggCount = 0;
+        task.forwardCount = 0;
+        task.liveWatchCount = 0;
+        task.playCount = 0;
+        task.shareCount = 0;
+        
+        const resData = videoPublishTaskService.toSaveTask(task)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
       } else if (url === '/video-publish-task/list' && method.toLowerCase() === 'get') {
         const resData = videoPublishTaskService.listPaged({
           id: data?.id,

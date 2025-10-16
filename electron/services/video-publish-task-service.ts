@@ -39,10 +39,15 @@ export class VideoPublishTaskService {
     return this.dao.findById(id);
   }
 
-  save(entity: VideoPublishTask) {
+  toSaveTask(entity: VideoPublishTask) {
     return this.dao.save(entity);
   }
-
+  updateTask(entity: VideoPublishTask) {
+    return this.dao.update(entity);
+  }
+  deleteTask(id: string) {
+    return this.dao.deleteById(id);
+  }
   async generatePublishTasks(params: any) {
     // Add null/undefined checks and handle both string and array formats
     log.info("publish params: ",params)
@@ -175,7 +180,7 @@ export class VideoPublishTaskService {
           task.playCount = 0;
           task.shareCount = 0;
           
-          const savedTask = this.save(task);
+          const savedTask = this.toSaveTask(task);
           generatedTaskIds.push(savedTask.id); // Collect generated task ID
           taskIndex++;
         } catch (error: any) {

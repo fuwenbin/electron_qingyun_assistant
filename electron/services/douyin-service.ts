@@ -136,7 +136,7 @@ export class DouyinService {
     const task = videoPublishTaskService.findById(taskId);
     task.status = 1;
     task.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    videoPublishTaskService.save(task);
+    videoPublishTaskService.updateTask(task);
     
     // 从设置中获取是否显示浏览器的配置
     const settings = appSettingsService.getSettings();
@@ -147,7 +147,7 @@ export class DouyinService {
     
     const platformId = payload.platformId;
     const platform = platformService.findById(platformId);
-    // 读取保存的状态
+    // 读取保存的账号状态
     const stateStr = platformAccountService.getStateData(payload.accountId)
     const context = await browser.newContext({
       storageState: JSON.parse(stateStr)
@@ -285,46 +285,12 @@ export class DouyinService {
           log.info('Continuing with immediate publish instead...');
         }
       }
-      const publishButtonElement = await page.waitForSelector('button:text("发布")');
-      log.info('Clicking publish button...');
-      await publishButtonElement.click();
-      
-      // Wait for publish response with more flexible conditions
-      log.info('Waiting for publish API response...');
-      const publishResponse = await page.waitForResponse((response) => {
-        const url = response.url();
-        const status = response.status();
-        log.debug(`Response received: ${url} - Status: ${status}`);
-        return url.includes('/api/media/aweme/create_v2') && (status === 200 || status === 201);
-      }, { timeout: 60000 });
-      
-      let publishResponseJson;
-      try {
-        const responseText = await publishResponse.text();
-        log.info('Publish response text:', responseText);
-        
-        if (!responseText || responseText.trim() === '') {
-          log.warn('Empty response received from publish API');
-          publishResponseJson = null;
-        } else {
-          publishResponseJson = JSON.parse(responseText);
-        }
-      } catch (jsonError) {
-        log.error('Failed to parse JSON response:', jsonError);
-        log.info('Raw response status:', publishResponse.status());
-        log.info('Raw response headers:', await publishResponse.allHeaders());
-        publishResponseJson = null;
-      }
-
-      if (publishResponseJson?.status_code === 0) {
-        const item_id = publishResponseJson?.item_id;
-        log.info('发布成功，平台id：' + item_id)
-        task.itemId = item_id;
-      } else {
-        log.warn('Publish response did not indicate success:', publishResponseJson);
-      }
-      
-      // Wait for navigation to management page with more flexible timeout
+      // 点击发布按钮，并获取返回的item_id
+      // const item_id = await this._clickPublishButton(page);
+      // if (item_id) {
+      //   task.itemId = item_id;
+      // }
+      // 等待发布后的页面跳转检查
       log.info('Waiting for navigation to management page...');
       try {
         await page.waitForURL('https://creator.douyin.com/creator-micro/content/manage**', {
@@ -338,12 +304,12 @@ export class DouyinService {
       }
       task.status = 2;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-      videoPublishTaskService.save(task);
+      videoPublishTaskService.updateTask(task);
     } catch (error) {
       log.error('Error during video publishing:', error);
       task.status = 3;
       task.endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-      videoPublishTaskService.save(task);
+      videoPublishTaskService.updateTask(task);
       // throw error;
     } finally {
       await page?.close().catch(() => {});
@@ -351,7 +317,48 @@ export class DouyinService {
       await browser?.close().catch(() => {});
     }
   }
+  async _clickPublishButton(page: any) {
+    const publishButtonElement = await page.waitForSelector('button:text("发布")');
+    log.info('Clicking publish button...');
+    await publishButtonElement.click();
+    
+    // Wait for publish response with more flexible conditions
+    log.info('Waiting for publish API response...');
+    const publishResponse = await page.waitForResponse((response) => {
+      const url = response.url();
+      const status = response.status();
+      log.debug(`Response received: ${url} - Status: ${status}`);
+      return url.includes('/api/media/aweme/create_v2') && (status === 200 || status === 201);
+    }, { timeout: 60000 });
+    
+    let publishResponseJson;
+    try {
+      const responseText = await publishResponse.text();
+      log.info('Publish response text:', responseText);
+      
+      if (!responseText || responseText.trim() === '') {
+        log.warn('Empty response received from publish API');
+        publishResponseJson = null;
+      } else {
+        publishResponseJson = JSON.parse(responseText);
+      }
+    } catch (jsonError) {
+      log.error('Failed to parse JSON response:', jsonError);
+      log.info('Raw response status:', publishResponse.status());
+      log.info('Raw response headers:', await publishResponse.allHeaders());
+      publishResponseJson = null;
+    }
 
+    if (publishResponseJson?.status_code === 0) {
+      const item_id = publishResponseJson?.item_id;
+      log.info('发布成功，平台id：' + item_id)
+      return item_id;
+    } else {
+      log.warn('Publish response did not indicate success:', publishResponseJson);
+      return null;
+    }
+    
+  }
   async syncAccount(accountId: string) {
     log.info('开始同步账号信息：' + accountId)
     const browser = await getBrowser(true);

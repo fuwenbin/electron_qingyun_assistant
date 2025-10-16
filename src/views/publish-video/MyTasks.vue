@@ -31,7 +31,7 @@
       rowKey="id"
       :scroll="{ y: tableScrollY }"
     >
-      <a-table-column key="index" title="ID" :width="50">
+      <a-table-column key="index" title="ID" :width="80">
         <template #default="{record}">
           <div>{{ record.id }}</div>
         </template>
@@ -93,6 +93,21 @@
           </a-popover>
         </template>
       </a-table-column>
+      <a-table-column key="actions" title="操作" :width="80">
+        <template #default="{record}">
+          <div class="action-buttons">
+            <a-button 
+              type="text" 
+              danger 
+              size="small"
+              :disabled="record.status === 1"
+              @click="handleDelete(record)"
+            >
+              删除
+            </a-button>
+          </div>
+        </template>
+      </a-table-column>
       <!-- <a-table-column key="startTime" title="实际发布开始时间">
         <template #default="{record}">
           <div>{{ record.startTime }}</div>
@@ -141,7 +156,7 @@
 
 <script lang="ts" setup>
 import {  ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import CommentListDialog from './components/CommentListDialog.vue'
 
 const dataList = ref<any[]>([])
@@ -245,6 +260,42 @@ const getStatusName = (status: number) => {
   }
 }
 
+// 删除任务处理函数
+const handleDelete = (record: any) => {
+  // 检查状态，发布中不允许删除
+  if (record.status === 1) {
+    message.warning('发布中的任务不允许删除')
+    return
+  }
+  
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除任务 ID: ${record.id} 吗？`,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await window.electronAPI.apiRequest({
+          url: '/video-publish-task/delete',
+          method: 'POST',
+          data: { id: record.id }
+        })
+        
+        if (res.code === 0) {
+          message.success('删除成功')
+          // 重新获取数据列表
+          await getDataList()
+        } else {
+          throw new Error(res.message)
+        }
+      } catch (error: any) {
+        console.error('删除任务失败：', error.message)
+        message.error('删除失败：' + error.message)
+      }
+    }
+  })
+}
+
 const refresh  = () => {
   if (!refreshTimeout.value) {
     refreshTimeout.value = setTimeout(async () => {
@@ -323,5 +374,11 @@ onBeforeUnmount(() => {
 .details-tag {
   cursor: pointer;
   font-size: 12px !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 </style>

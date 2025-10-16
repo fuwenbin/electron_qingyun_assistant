@@ -39,11 +39,11 @@ const router = createRouter({
         },
       ]
     },
-    {
-      path: '/workspace',
-      name: 'workspace',
-      component: () => import('../views/WorkspaceView.vue')
-    },
+    // {
+    //   path: '/workspace',
+    //   name: 'workspace',
+    //   component: () => import('../views/WorkspaceView.vue')
+    // },
     {
       path: '/video',
       name: 'video',

@@ -4,7 +4,22 @@
       <div class="publish-base-content">
         <!-- <div class="base-content-title">视频发布配置</div> -->
         <div class="base-content-form">
+          <!-- 发布方式选择 -->
           <div class="form-item">
+            <div class="item-label">
+              <div class="label-name">发布方式</div>
+              <div class="label-tip">选择视频发布的方式</div>
+            </div>
+            <div class="item-input">
+              <a-radio-group v-model:value="publishMode">
+                <a-radio value="batch">定时批量</a-radio>
+                <a-radio value="direct">直接发布</a-radio>
+              </a-radio-group>
+            </div>
+          </div>
+          
+          <!-- 定时发布设置 - 仅在定时批量模式下显示 -->
+          <div class="form-item" v-if="publishMode === 'batch'">
             <div class="item-label">
               <div class="label-name">定时发布设置</div>
               <div class="label-tip">设置视频发布的时间间隔（支持2小时后及14天内的定时发布）</div>
@@ -45,13 +60,20 @@
               </div>
             </div>
           </div>
+          
+          <!-- 视频选择 - 根据发布方式显示不同的选择器 -->
           <div class="form-item">
             <div class="item-label">
-              <div class="label-name">选择视频文件夹</div>
-              <div class="label-tip">选择包含视频文件的文件夹</div>
+              <div class="label-name">{{ publishMode === 'batch' ? '选择视频文件夹' : '选择视频文件' }}</div>
+              <div class="label-tip">{{ publishMode === 'batch' ? '选择包含视频文件的文件夹' : '选择要发布的单个视频文件' }}</div>
             </div>
             <div class="item-input">
-              <PublishVideoChooser v-model="selectedVideos" :selectedFolder="selectedFolder" @folderChange="handleFolderChange"/>
+              <PublishVideoChooser 
+                v-model="selectedVideos" 
+                :selectedFolder="selectedFolder" 
+                :mode="publishMode"
+                @folderChange="handleFolderChange"
+              />
             </div>
           </div>
           <div class="form-item">
@@ -155,7 +177,7 @@
       </div>
     </div>
     <div class="page-footer">
-      <a-button @click="saveConfiguration(-1)" style="margin-right: 10px;">保存配置</a-button>
+      <a-button v-if="publishMode === 'batch'" @click="saveConfiguration(-1)" style="margin-right: 10px;">保存配置</a-button>
       <a-button @click="resetForm" style="margin-right: 10px;">重置表单</a-button>
       <a-button type="primary" @click="saveConfiguration(0)">发布</a-button>
     </div>
@@ -172,9 +194,16 @@ import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
 const selectedVideos = ref<any[]>([])
 const selectedFolder = ref<string>('')
+const publishMode = ref<'batch' | 'direct'>('batch') // 发布方式：batch-定时批量，direct-直接发布
 
 // 缓存键名常量
 const CACHE_KEY = 'batch_publish_form_cache'
+
+// Helper function to get filename from full path
+const getFileName = (filePath: string): string => {
+  const parts = filePath.replace(/\\/g, '/').split('/')
+  return parts[parts.length - 1]
+}
 
 // Schedule configuration
 const scheduleConfig = reactive({
@@ -210,6 +239,7 @@ const saveFormCache = () => {
     const cacheData = {
       selectedVideos: selectedVideos.value,
       selectedFolder: selectedFolder.value,
+      publishMode: publishMode.value,
       scheduleConfig: {
         frequency: scheduleConfig.frequency,
         value: scheduleConfig.value,
@@ -255,6 +285,10 @@ const loadFormCache = async () => {
     }
 
     // 恢复数据
+    if (cacheData.publishMode) {
+      publishMode.value = cacheData.publishMode
+    }
+    
     if (cacheData.selectedVideos) {
       selectedVideos.value = cacheData.selectedVideos
     }
@@ -370,22 +404,7 @@ const handleAccountCheckChange = (item: any) => {
   }
 }
 
-// 监听数据变化，自动保存缓存
-// watch (selectedVideos, (newValue) => {
-//   if (newValue && newValue.length) {
-//     baseContentData.filePathList = newValue.map(v => v.filePath || v.path)
-//   } else {
-//     baseContentData.filePathList = []
-//   }
-//   saveFormCache()
-// })
 
-// 监听其他关键数据变化
-// watch(selectedFolder, () => saveFormCache())
-// watch(scheduleConfig, () => saveFormCache(), { deep: true })
-// watch(baseContentData, () => saveFormCache(), { deep: true })
-// watch(selectedAccountList, () => saveFormCache(), { deep: true })
-// watch(selectedPlatformId, () => saveFormCache())
 
 const getPlatformList = async () => {
   const res = await window.electronAPI.apiRequest({
@@ -463,30 +482,37 @@ const saveConfiguration = async (status: number) => {
     return false
   }
   
-  if (!selectedFolder.value) {
-    message.error("请选择视频文件夹")
-    return false
+  // 根据发布方式进行不同的验证
+  if (publishMode.value === 'batch') {
+    // 定时批量模式验证
+    if (!selectedFolder.value) {
+      message.error("请选择视频文件夹")
+      return false
+    }
+    
+    // Validate schedule configuration
+    if (scheduleConfig.frequency === 'minutes' && (!scheduleConfig.value || scheduleConfig.value < 5 || scheduleConfig.value > 59)) {
+      message.error("分钟间隔必须在5-59之间")
+      return false
+    }
+    
+    if (scheduleConfig.frequency === 'hours' && (!scheduleConfig.value || scheduleConfig.value < 1 || scheduleConfig.value > 24)) {
+      message.error("小时间隔必须在1-24之间")
+      return false
+    }
+    
+    if (scheduleConfig.frequency === 'time' && !scheduleConfig.timeValue) {
+      message.error("请选择每日发布时间")
+      return false
+    }
+  } else {
+    // 直接发布模式验证
+    if (selectedVideos.value.length === 0) {
+      message.error('请选择视频文件')
+      return false
+    }
   }
   
-  // Validate schedule configuration
-  if (scheduleConfig.frequency === 'minutes' && (!scheduleConfig.value || scheduleConfig.value < 5 || scheduleConfig.value > 59)) {
-    message.error("分钟间隔必须在5-59之间")
-    return false
-  }
-  
-  if (scheduleConfig.frequency === 'hours' && (!scheduleConfig.value || scheduleConfig.value < 1 || scheduleConfig.value > 24)) {
-    message.error("小时间隔必须在1-24之间")
-    return false
-  }
-  
-  if (scheduleConfig.frequency === 'time' && !scheduleConfig.timeValue) {
-    message.error("请选择每日发布时间")
-    return
-  }
-  if (selectedVideos.value.length === 0 && !selectedFolder.value) {
-    message.error('请选择视频文件夹或视频文件')
-    return false
-  }
   if (baseContentData.titleList.length === 0) {
     message.error('请填写至少一个标题')
     return false
@@ -495,38 +521,79 @@ const saveConfiguration = async (status: number) => {
     message.error('请填写至少一个视频简介')
     return false
   }
-  const data = {
-    filePath: selectedFolder.value || baseContentData.filePathList.join('_,_'),
-    title: baseContentData.titleList.join('_,_'),
-    description: baseContentData.descriptionList.join('_,_'),
-    topicGroup1: baseContentData.topicGroup1.join(','),
-    topicGroup2: baseContentData.topicGroup2.join(','),
-    platformData: JSON.stringify({}),
-    frequency: scheduleConfig.frequency,
-    frequencyValue: scheduleConfig.value,
-    dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
-    accountIds: selectedAccountList.value.map(account => account.id).join(','),
-    platformId: selectedPlatformId.value,
-    status: status
-  }
-  try {
-    const res = await window.electronAPI.apiRequest({
-      url: '/video-publish-setting/save',
-      method: 'POST',
-      data
-    })
-    if (res.code === 0) {
-      message.success('配置保存成功', 2)
-      resetForm()
-      return true;
-    } else {
-      throw new Error( res.message)
+  
+  // 根据发布方式调用不同的API
+  if (publishMode.value === 'direct' && status === 0) {
+    // 直接发布模式，调用发布API
+    const publishData = {
+      filePath: selectedVideos.value.map(v => v.filePath || v.path).join('_,_'),
+      fileName: selectedVideos.value.map(v => v.fileName || getFileName(v.filePath || v.path)).join('_,_'),
+      title: baseContentData.titleList[0] || '', // 直接发布时只取第一个标题
+      description: baseContentData.descriptionList[0] || '', // 直接发布时只取第一个简介
+      topicGroup1: baseContentData.topicGroup1[0] || '', // 直接发布时只取第一个话题1
+      topicGroup2: baseContentData.topicGroup2[0] || '', // 直接发布时只取第一个话题2
+      platformData: JSON.stringify({}),
+      accountIds: selectedAccountList.value.map(account => account.id).join(','),
+      platformId: selectedPlatformId.value,
+      publishType: 0 // 直接发布
     }
- } catch (error: any) {
-  console.error('保存失败：' + error.message)
-  message.error('保存失败：' + error.message)
-  return false;
- }
+    
+    try {
+      console.info('直接发布参数：', publishData)
+      const res = await window.electronAPI.apiRequest({
+        url: '/video-publish-task/publish',
+        method: 'POST',
+        data: publishData
+      })
+      console.log(res)
+      if (res.code === 0) {
+        message.success("发布成功")
+        resetForm()
+        return true
+      } else {
+        throw new Error(res.message)
+      }
+    } catch (error: any) {
+      console.error('发布失败：' + error.message)
+      message.error('发布失败：' + error.message)
+      return false
+    }
+  } else {
+    // 定时批量模式，调用配置保存API
+    const data = {
+      filePath: selectedFolder.value || baseContentData.filePathList.join('_,_'),
+      title: baseContentData.titleList.join('_,_'),
+      description: baseContentData.descriptionList.join('_,_'),
+      topicGroup1: baseContentData.topicGroup1.join(','),
+      topicGroup2: baseContentData.topicGroup2.join(','),
+      platformData: JSON.stringify({}),
+      frequency: scheduleConfig.frequency,
+      frequencyValue: scheduleConfig.value,
+      dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
+      accountIds: selectedAccountList.value.map(account => account.id).join(','),
+      platformId: selectedPlatformId.value,
+      status: status
+    }
+    
+    try {
+      const res = await window.electronAPI.apiRequest({
+        url: '/video-publish-setting/save',
+        method: 'POST',
+        data
+      })
+      if (res.code === 0) {
+        message.success('配置保存成功', 2)
+        resetForm()
+        return true;
+      } else {
+        throw new Error( res.message)
+      }
+   } catch (error: any) {
+    console.error('保存失败：' + error.message)
+    message.error('保存失败：' + error.message)
+    return false;
+   }
+  }
 }
 
 const handletopicGroup1InputConfirm = (e: any) => {
@@ -559,6 +626,7 @@ const handletopicGroup2InputConfirm = (e: any) => {
 const resetForm = () => {
   selectedVideos.value = []
   selectedFolder.value = ''
+  publishMode.value = 'batch' // 重置为默认的定时批量模式
   baseContentData.titleList = []
   baseContentData.filePathList = []
   baseContentData.descriptionList = []
