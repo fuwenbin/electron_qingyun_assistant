@@ -87,7 +87,7 @@
                   :closable="true" @close="handleTitleClose(item)">{{ item }}
                 </a-tag>
                 <a-input v-model:value="titleInputValue" placeholder="请输入标题（1-30字）"
-                  type="text" size="small" :style="{ width: '200px' }" :maxlength="30"
+                  type="text" size="small" :style="{ width: '200px',marginTop:'5px' }" :maxlength="30"
                   @blur="handleTitleInputConfirm"
                   @keyup.enter="handleTitleInputConfirm"
                 />
@@ -106,7 +106,7 @@
                 :closable="true" @close="handleDescriptionClose(item)">{{ item }}
               </a-tag>
               <a-textarea v-model:value="descriptionInputValue" placeholder="请输入简介（最多1000字）"
-                size="small" :style="{ width: '300px' }" :rows="2" :maxlength="1000"
+                size="small" :style="{ width: '300px' ,marginTop:'5px' }" :rows="2" :maxlength="1000"
                 @blur="handleDescriptionInputConfirm"
                 @keyup.enter="handleDescriptionInputConfirm"
               />
@@ -124,7 +124,7 @@
                 :closable="true" @close="handletopicGroup1Close(item)">{{ item }}
               </a-tag>
               <a-input v-model:value="topicGroup1InputValue" placeholder="请输入标签"
-                type="text" size="small" :style="{ width: '100px' }"
+                type="text" size="small" :style="{ width: '100px',marginTop:'5px' }"
                 @blur="handletopicGroup1InputConfirm"
                 @keyup.enter="handletopicGroup1InputConfirm"
               />
@@ -142,7 +142,7 @@
                 :closable="true" @close="handletopicGroup2Close(item)">{{ item }}
               </a-tag>
               <a-input v-model:value="topicGroup2InputValue" placeholder="请输入标签"
-                type="text" size="small" :style="{ width: '100px' }"
+                type="text" size="small" :style="{ width: '100px' ,marginTop:'5px' }"
                 @blur="handletopicGroup2InputConfirm"
                 @keyup.enter="handletopicGroup2InputConfirm"
               />
@@ -804,7 +804,11 @@ onUnmounted(() => {
   }
     
 }
-
+.input-content{
+  .ant-tag {
+    margin-top: 5px;
+  }
+}
 .base-content-title {
   font-size: 18px;
   font-weight: bold;
