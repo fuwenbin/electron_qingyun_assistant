@@ -22,6 +22,8 @@ export default class VideoPublishTask {
   liveWatchCount: number;
   playCount: number;
   shareCount: number;
+  cityName: string;
+  tagName: string;
   createdAt: string;
   updatedAt: string;
 }

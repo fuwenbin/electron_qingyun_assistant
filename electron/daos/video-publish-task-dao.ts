@@ -11,7 +11,7 @@ const BASE_SELECT = `SELECT id,
   status, item_id as itemId,
   collect_count as collectCount, comment_count as commentCount, digg_count as diggCount,
   play_count as playCount, share_count as shareCount, live_watch_count as liveWatchCount,
-  forward_count as forwardCount,
+  forward_count as forwardCount, city_name as cityName, tag_name as tagName,
   created_at as createdAt, updated_at as updatedAt`;
 
 export default class VideoPublishTaskDao extends BaseDao {
@@ -44,6 +44,8 @@ export default class VideoPublishTaskDao extends BaseDao {
       "live_watch_count",
       "play_count",
       "share_count",
+      "city_name",
+      "tag_name",
       "created_at",
       "updated_at"
     ];
@@ -70,6 +72,8 @@ export default class VideoPublishTaskDao extends BaseDao {
       entity.liveWatchCount,
       entity.playCount,
       entity.shareCount,
+      entity.cityName || '',
+      entity.tagName || '',
       currentTime,
       currentTime
     ];

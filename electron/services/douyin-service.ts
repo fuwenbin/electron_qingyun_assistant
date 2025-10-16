@@ -219,13 +219,42 @@ export class DouyinService {
       await waitForRandomTimeout(page, 1000);
       
       // 填写作品描述
-      log.info('Filling description:', payload.description);
+      log.info('Filling description:', payload.description, payload.cityName, payload.tagName);
       const descriptionLineElement = await page.locator('.zone-container .ace-line');
       await descriptionLineElement.click();
       await page.keyboard.type(payload.description);
       await waitForRandomTimeout(page, 1000);
       await page.mouse.wheel(0, 600);
-      
+      // 添加地址标签，如果有
+      if(payload.tagName){
+        log.info('Adding location tag:', payload.cityName, payload.tagName);
+         // 点击douyin_creator_pc_anchor_jump 下的 input 元素
+        const douyinCreatorPcAnchorJumpElement = await page.waitForSelector('#douyin_creator_pc_anchor_jump')
+        log.info("douyinCreatorPcAnchorJumpElement:",);
+        await douyinCreatorPcAnchorJumpElement.click();
+        await waitForRandomTimeout(page, 1000);
+        // 选择城市 点击 #scrollContainer 下包含text=payload.cityName的元素
+        const locationItemElement = await page.waitForSelector(`#\\00003${payload.cityName}00`)
+        log.info("locationItemElement:",);
+        await locationItemElement.click();
+        // 输入标签值
+        const locationInputElement = await page.waitForSelector('#douyin_creator_pc_anchor_jump input')
+        log.info("locationInputElement:", );
+        await locationInputElement.fill(payload.tagName);
+        await waitForRandomTimeout(page, 5000);
+
+        // 选择下拉列表的第一项
+        const semiPortalInnerElement = page.locator('#douyin_creator_pc_anchor_jump .semi-select-option-list .semi-select-option')
+        const count = await semiPortalInnerElement.count()
+        log.info("semiPortalInnerElement count:", count);
+        if (count > 0) {
+          await semiPortalInnerElement.nth(0).click();
+        }
+        await waitForRandomTimeout(page, 1000);
+
+       
+      }
+
       // 1. 先检查进度条，如果有进度条，则打印进度条值的文本，2.如果没有进度条就检查是否上传失败文本，如果有上传失败则重新上传，3.如果上传成功则继续下一步
       // https://creator.douyin.com/web/api/media/upload/auth/v5
       const processSelector = '[class^="upload-progress-inner-"] [class^="text-"]'

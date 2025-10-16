@@ -101,6 +101,8 @@ export function initApiController() {
         task.liveWatchCount = 0;
         task.playCount = 0;
         task.shareCount = 0;
+        task.cityName = data.cityName || '';
+        task.tagName = data.tagName || '';
         
         const resData = videoPublishTaskService.toSaveTask(task)
         return {
@@ -123,6 +125,13 @@ export function initApiController() {
         }
       } else if (url === '/video-publish-task/statistic-by-filename' && method.toLowerCase() === 'get') {
         const resData = videoPublishTaskService.statisticVideoPublishPlatform(data)
+        return {
+          code: 0,
+          message: 'success',
+          data: resData
+        }
+      } else if (url === '/video-publish-task/delete' && method.toLowerCase() === 'post') {
+        const resData = videoPublishTaskService.deleteTask(data?.id)
         return {
           code: 0,
           message: 'success',

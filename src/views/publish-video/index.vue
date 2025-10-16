@@ -26,10 +26,6 @@ const menuItems = ref<any[]>([
     path: '/publish-video/my-tasks',
     title: '我的发布'
   },
-  {
-    path: '/video/edit',
-    title: 'AI混剪'
-  }
 ])
 </script>
 

@@ -166,6 +166,12 @@
             </a-tag>
           </div>
         </div>
+        <div class="detail-item" v-if="selectedDetail.cityName || selectedDetail.tagName">
+          <label>位置标签:</label>
+          <div class="list-content">
+            <span>{{ getCityNameByCode(selectedDetail.cityName) }}{{ selectedDetail.tagName ? ' - ' + selectedDetail.tagName : '' }}</span>
+          </div>
+        </div>
       </div>
       
       <div class="detail-section" v-if="selectedDetail.platformId || selectedDetail.accountIds">
@@ -212,6 +218,24 @@ const detailModalOpen = ref(false)
 const selectedDetail = ref<any>(null)
 const platformList = ref<any[]>([])
 const accountList = ref<any[]>([])
+const cityData = ref<any[]>([])
+
+// 加载城市数据
+const loadCityData = async () => {
+  try {
+    const response = await fetch('/data/simple_cities.json')
+    const data = await response.json()
+    cityData.value = data
+  } catch (error) {
+    console.error('加载城市数据失败:', error)
+  }
+}
+
+// 根据城市代码获取城市名称
+const getCityNameByCode = (code: string): string => {
+  const city = cityData.value.find((city: any) => city.code === code)
+  return city ? city.name : code
+}
 const getDataList = async () => {
   try {
     const res = await window.electronAPI.apiRequest({
@@ -493,6 +517,7 @@ const handleDelete = async (record: any) => {
 
 onMounted(async () => {
   console.log('MySettings onMounted')
+  await loadCityData()
   await getDataList()
   await getPlatformList()
   await getAccountList()

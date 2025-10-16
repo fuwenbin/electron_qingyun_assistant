@@ -110,6 +110,15 @@ class DatabaseService {
       this.addColumnIfNotExists('video_publish_settings', 'task_ids', 'TEXT DEFAULT \'\'');
       this.addColumnIfNotExists('video_publish_settings', 'account_ids', 'TEXT DEFAULT \'\'');
       this.addColumnIfNotExists('video_publish_settings', 'platform_id', 'INTEGER');
+      
+      // Add location fields to video_publish_tasks table
+      this.addColumnIfNotExists('video_publish_tasks', 'city_name', 'TEXT');
+      this.addColumnIfNotExists('video_publish_tasks', 'tag_name', 'TEXT');
+      
+      // Add location fields to video_publish_settings table
+      this.addColumnIfNotExists('video_publish_settings', 'city_name', 'TEXT');
+      this.addColumnIfNotExists('video_publish_settings', 'tag_name', 'TEXT');
+      
       log.log('Migrations completed successfully');
     } catch (err) {
       log.error('Migration error:', err);

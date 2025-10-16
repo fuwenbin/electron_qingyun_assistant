@@ -13,7 +13,7 @@
           <router-link to="/publish-video" class="nav-link">发视频</router-link>
         </nav>
         <nav class="nav-links">
-          <router-link to="/video/edit" class="nav-link">AI创作</router-link>
+          <router-link to="/video/edit" class="nav-link">AI视频混剪</router-link>
         </nav>
         <!-- <nav class="nav-links">
           <router-link to="/test" class="nav-link">测试</router-link>

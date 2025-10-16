@@ -83,7 +83,14 @@
             </div>
             <div class="item-input">
               <div class="input-content">
-                <BatchPublishTitle v-model="baseContentData.titleList"/>
+                <a-tag v-for="item in baseContentData.titleList" :key="item" 
+                  :closable="true" @close="handleTitleClose(item)">{{ item }}
+                </a-tag>
+                <a-input v-model:value="titleInputValue" placeholder="请输入标题（1-30字）"
+                  type="text" size="small" :style="{ width: '200px' }" :maxlength="30"
+                  @blur="handleTitleInputConfirm"
+                  @keyup.enter="handleTitleInputConfirm"
+                />
               </div>
             </div>
           </div>
@@ -95,7 +102,14 @@
           </div>
           <div class="item-input">
             <div class="input-content">
-              <BatchPublishDescription v-model="baseContentData.descriptionList"/>
+              <a-tag v-for="item in baseContentData.descriptionList" :key="item" 
+                :closable="true" @close="handleDescriptionClose(item)">{{ item }}
+              </a-tag>
+              <a-textarea v-model:value="descriptionInputValue" placeholder="请输入简介（最多1000字）"
+                size="small" :style="{ width: '300px' }" :rows="2" :maxlength="1000"
+                @blur="handleDescriptionInputConfirm"
+                @keyup.enter="handleDescriptionInputConfirm"
+              />
             </div>
           </div>
         </div>
@@ -131,6 +145,31 @@
                 type="text" size="small" :style="{ width: '100px' }"
                 @blur="handletopicGroup2InputConfirm"
                 @keyup.enter="handletopicGroup2InputConfirm"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="form-item">
+          <div class="item-label">
+            <div class="label-name">位置标签</div>
+            <div class="label-tip">可选，设置视频发布的位置信息</div>
+          </div>
+          <div class="item-input">
+            <div class="location-input-group">
+              <a-select
+                v-model:value="locationData.cityName"
+                placeholder="请选择城市"
+                show-search
+                :filter-option="filterCityOption"
+                :options="cityOptions"
+                style="width: 200px; margin-right: 10px;"
+                allow-clear
+              />
+              <a-input
+                v-if="locationData.cityName"
+                v-model:value="locationData.tagName"
+                placeholder="请输入地址标签"
+                style="width: 200px;"
               />
             </div>
           </div>
@@ -188,8 +227,6 @@
 import { onMounted, reactive, ref, computed, onUnmounted, nextTick } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
-import BatchPublishTitle from './components/BatchPublishTitle.vue'
-import BatchPublishDescription from './components/BatchPublishDescription.vue'
 import PublishVideoChooser from './components/PublishVideoChooser.vue'
 
 const selectedVideos = ref<any[]>([])
@@ -226,12 +263,24 @@ const baseContentData = reactive<{
   topicGroup1: [],
   topicGroup2: []
 })
+
+// 位置标签数据
+const locationData = reactive({
+  cityName: '',
+  tagName: ''
+})
+
+// 城市数据
+const cityOptions = ref<any[]>([])
+const cityData = ref<any[]>([])
 const platformList = ref<any[]>([])
 const selectedPlatformId = ref()
 
 const selectedAccountList = ref<any[]>([])
 const topicGroup1InputValue = ref('')
 const topicGroup2InputValue = ref('')
+const titleInputValue = ref('')
+const descriptionInputValue = ref('')
 
 // 缓存管理函数
 const saveFormCache = () => {
@@ -251,6 +300,10 @@ const saveFormCache = () => {
         topicGroup1: baseContentData.topicGroup1,
         topicGroup2: baseContentData.topicGroup2,
         filePathList: baseContentData.filePathList
+      },
+      locationData: {
+        cityName: locationData.cityName,
+        tagName: locationData.tagName
       },
       selectedAccountList: selectedAccountList.value.map(account => ({
         id: account.id,
@@ -320,6 +373,11 @@ const loadFormCache = async () => {
         topicGroup2: cacheData.baseContentData.topicGroup2 || [],
         filePathList: cacheData.baseContentData.filePathList || []
       })
+    }
+    
+    if (cacheData.locationData) {
+      locationData.cityName = cacheData.locationData.cityName || ''
+      locationData.tagName = cacheData.locationData.tagName || ''
     }
     
     if (cacheData.selectedPlatformId) {
@@ -428,53 +486,6 @@ const getAccountList = async () => {
 }
 
 
-// const handlePublish = async () => {
-//   
-//   // First save the configuration
-//   const saveResult = await saveConfiguration();
-//   if (!saveResult) {
-//     return;
-//   }
-//   
-//   console.info("提交数据: ", baseContentData)
-//   
-//   const data = JSON.parse(JSON.stringify({
-//     filePath: baseContentData.filePathList,
-//     title: baseContentData.titleList,
-//     description: baseContentData.descriptionList,
-//     topicGroup1: baseContentData.topicGroup1,
-//     topicGroup2: baseContentData.topicGroup2,
-//     platformAccountList: selectedAccountList.value.map(v => v.id),
-//     publishType: 1, // Fixed to 1 for timing publish
-//     frequency: scheduleConfig.frequency,
-//     frequencyValue: scheduleConfig.value,
-//     dailyTime: scheduleConfig.frequency === 'time' ? scheduleConfig.timeValue?.format('HH:mm') : undefined,
-//     directoryPath: selectedFolder.value
-//   }))
-//   
-//   try {
-//     console.info('发布任务参数：', data)
-//     const res = await window.electronAPI.apiRequest({
-//       url: '/video-publish-task/publish',
-//       method: 'POST',
-//       data
-//     })
-//     console.log(res)
-//     if (res.code === 0) {
-//       message.success("创建发布任务成功")
-//       
-//       // 发布成功后清空缓存和表单
-//       // clearFormCache()
-//       resetForm()
-//     } else {
-//       throw new Error(res.message)
-//     }
-//   } catch (error: any) {
-//     console.error('创建发布任务失败：' + error.message);
-//     message.error('创建发布任务失败：' + error.message)
-//   }
-// }
-
 // Separate save configuration function
 const saveConfiguration = async (status: number) => {
   if (selectedAccountList.value.length === 0) {
@@ -532,6 +543,8 @@ const saveConfiguration = async (status: number) => {
       description: baseContentData.descriptionList[0] || '', // 直接发布时只取第一个简介
       topicGroup1: baseContentData.topicGroup1[0] || '', // 直接发布时只取第一个话题1
       topicGroup2: baseContentData.topicGroup2[0] || '', // 直接发布时只取第一个话题2
+      cityName: locationData.cityName || '',
+      tagName: locationData.tagName || '',
       platformData: JSON.stringify({}),
       accountIds: selectedAccountList.value.map(account => account.id).join(','),
       platformId: selectedPlatformId.value,
@@ -566,6 +579,8 @@ const saveConfiguration = async (status: number) => {
       description: baseContentData.descriptionList.join('_,_'),
       topicGroup1: baseContentData.topicGroup1.join(','),
       topicGroup2: baseContentData.topicGroup2.join(','),
+      cityName: locationData.cityName || '',
+      tagName: locationData.tagName || '',
       platformData: JSON.stringify({}),
       frequency: scheduleConfig.frequency,
       frequencyValue: scheduleConfig.value,
@@ -622,6 +637,67 @@ const handletopicGroup2InputConfirm = (e: any) => {
   topicGroup2InputValue.value = ''
 }
 
+// 标题处理函数
+const handleTitleClose = (value: string) => {
+  baseContentData.titleList = baseContentData.titleList.filter(item => item !== value)
+}
+
+const handleTitleInputConfirm = (e: any) => {
+  const value = e.target.value?.trim()
+  if (value && !baseContentData.titleList.includes(value)) {
+
+    if (value.length > 30) {
+      message.warning('标题不能超过30个字符')
+      return
+    }
+    baseContentData.titleList = [...baseContentData.titleList, value]
+  }
+  titleInputValue.value = ''
+}
+
+// 简介处理函数
+const handleDescriptionClose = (value: string) => {
+  baseContentData.descriptionList = baseContentData.descriptionList.filter(item => item !== value)
+}
+
+const handleDescriptionInputConfirm = (e: any) => {
+  const value = e.target.value?.trim()
+  if (value && !baseContentData.descriptionList.includes(value)) {
+    if (value.length > 1000) {
+      message.warning('简介不能超过1000个字符')
+      return
+    }
+    baseContentData.descriptionList = [...baseContentData.descriptionList, value]
+  }
+  descriptionInputValue.value = ''
+}
+
+// 加载城市数据
+const loadCityData = async () => {
+  try {
+    const response = await fetch('/data/simple_cities.json')
+    const data = await response.json()
+    cityData.value = data
+    cityOptions.value = data.map((city: any) => ({
+      label: city.name,
+      value: city.code
+    }))
+  } catch (error) {
+    console.error('加载城市数据失败:', error)
+  }
+}
+
+// 城市搜索过滤
+const filterCityOption = (input: string, option: any) => {
+  return option.label.toLowerCase().includes(input.toLowerCase())
+}
+
+// 根据城市代码获取城市名称
+const getCityNameByCode = (code: string): string => {
+  const city = cityData.value.find((city: any) => city.code === code)
+  return city ? city.name : code
+}
+
 // 重置表单函数
 const resetForm = () => {
   selectedVideos.value = []
@@ -632,12 +708,16 @@ const resetForm = () => {
   baseContentData.descriptionList = []
   baseContentData.topicGroup1 = []
   baseContentData.topicGroup2 = []
+  locationData.cityName = ''
+  locationData.tagName = ''
   selectedAccountList.value = []
   scheduleConfig.frequency = 'minutes'
   scheduleConfig.value = 5
   scheduleConfig.timeValue = undefined
   topicGroup1InputValue.value = ''
   topicGroup2InputValue.value = ''
+  titleInputValue.value = ''
+  descriptionInputValue.value = ''
   clearFormCache()
 }
 
@@ -659,6 +739,7 @@ onMounted(async () => {
   // 获取基础数据
   await getPlatformList()
   await getAccountList()
+  await loadCityData()
 
   // 加载缓存数据
   await loadFormCache()
@@ -843,5 +924,11 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
   }
+}
+
+.location-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>

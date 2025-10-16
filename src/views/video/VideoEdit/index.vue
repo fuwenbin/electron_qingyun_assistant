@@ -2,13 +2,15 @@
   <div class="video-edit">
     <!-- 顶部操作栏 -->
     <div class="edit-header">
-      <!-- <div class="left-actions">
-        <button class="btn-back" @click="goBack">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-      </div> -->
-      <div class="center-action">
-        <q-input v-model="videoTitle" borderless style="width: 200px;" placeholder="视频标题" />
+      <div class="left-actions">
+        <q-input 
+          v-model="videoTitle" 
+          style="width: 200px;" 
+          placeholder="视频标题"
+          clearable
+          dense
+          @blur="handleTitleBlur"
+        />
       </div>
       <div class="right-actions">
         <div class="video-create-tip">
@@ -25,6 +27,11 @@
           <span>秒</span>
         </div>
         <a-button type="primary" @click="generateVideo" :loading="isGeneratingVideo">合成视频</a-button>
+        <a-button type="text" @click="showHelpModal" style="margin-left: 8px;">
+          <template #icon>
+            <QuestionCircleOutlined />
+          </template>
+        </a-button>
       </div>
     </div>
 
@@ -127,15 +134,74 @@
         </template>
       </div>
     </div>
+
+    <!-- 帮助说明弹窗 -->
+    <a-modal
+      v-model:open="helpModalVisible"
+      title="合成视频使用说明"
+      :width="800"
+      :footer="null"
+      :body-style="{ maxHeight: '600px', overflowY: 'auto' }"
+    >
+      <div class="help-content">
+        <h3>🎬 合成视频逻辑说明</h3>
+        <div class="help-section">
+          <h4>📋 基本流程</h4>
+          <ol>
+            <li><strong>添加镜头</strong>：点击"添加镜头"按钮，选择视频文件添加到剪辑列表</li>
+            <li><strong>配置参数</strong>：为每个镜头设置标题、字幕、时长等参数</li>
+            <li><strong>全局设置</strong>：配置视频分辨率、比例、输出格式等全局参数</li>
+            <li><strong>合成视频</strong>：点击"合成视频"按钮开始批量生成</li>
+          </ol>
+        </div>
+
+        <div class="help-section">
+          <h4>⚙️ 合成逻辑</h4>
+          <ul>
+            <li><strong>批量生成</strong>：系统会根据镜头数量自动生成多个视频组合</li>
+            <li><strong>智能组合</strong>：每个镜头都会与其他镜头进行组合，生成不同的视频版本</li>
+            <li><strong>参数继承</strong>：每个镜头会继承全局配置，同时保留自身特殊设置</li>
+            <li><strong>时长控制</strong>：根据设置的时长参数自动裁剪或循环视频内容</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>💡 使用技巧</h4>
+          <ul>
+            <li><strong>镜头顺序</strong>：调整镜头顺序会影响最终视频的组合效果</li>
+            <li><strong>时长设置</strong>：合理设置每个镜头的时长，避免视频过长或过短</li>
+            <li><strong>标题字幕</strong>：为每个镜头设置不同的标题和字幕，增加视频多样性</li>
+            <li><strong>预览功能</strong>：合成前可以预览效果，确保配置正确</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>📊 剪辑点说明</h4>
+          <ul>
+            <li><strong>消耗机制</strong>：每个生成的视频会消耗相应的剪辑点数</li>
+            <li><strong>预估显示</strong>：系统会显示预计生成的视频数量和消耗的剪辑点数</li>
+            <li><strong>余额提醒</strong>：剪辑点不足时会显示警告，请及时充值</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>🎯 输出说明</h4>
+          <ul>
+            <li><strong>文件命名</strong>：输出文件会以"视频标题_组合编号"的格式命名</li>
+            <li><strong>保存位置</strong>：合成完成后会提示保存位置，可自定义输出目录</li>
+            <li><strong>格式支持</strong>：支持MP4、AVI等主流视频格式输出</li>
+          </ul>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, reactive, computed, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import VideoChooser from '@/components/VideoChooser.vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import ZimuConfig from '@/components/video/ZimuConfig.vue'
 import GlobalConfig from '@/components/video/GlobalConfig.vue'
@@ -145,7 +211,6 @@ import { formatDuration } from '@/utils/common-utils'
 import VideoEditPreview from '@/components/video/VideoEditPreview.vue'
 import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
 const userStore = useUserStore()
 
 // 创建默认的视频配置
@@ -158,8 +223,24 @@ const createDefaultVideoConfig = () => ({
   outputDir: undefined
 })
 
+const defaultVideoTitle = '批量混剪_' + dayjs().format('YYYYMMDDHHmm')
+
+// 处理标题输入框失去焦点
+const handleTitleBlur = () => {
+  if (!videoTitle.value || videoTitle.value.trim() === '') {
+    videoTitle.value = defaultVideoTitle
+  }
+}
+
 // 状态
-const videoTitle = ref('批量混剪_' + dayjs().format('YYYYMMDDHHmm'))
+const videoTitle = ref(defaultVideoTitle)
+
+// 帮助弹窗
+const helpModalVisible = ref(false)
+const showHelpModal = () => {
+  helpModalVisible.value = true
+}
+
 const state = reactive<any>({
   clips: [],
   videoConfig: createDefaultVideoConfig()
@@ -497,4 +578,41 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 @use './index.scss' as *;
+.left-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.help-content {
+  h3 {
+    color: #1890ff;
+    margin-bottom: 20px;
+    font-size: 18px;
+  }
+  
+  .help-section {
+    margin-bottom: 20px;
+    
+    h4 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    ol, ul {
+      margin-left: 20px;
+      
+      li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+        
+        strong {
+          color: #1890ff;
+        }
+      }
+    }
+  }
+}
 </style> 

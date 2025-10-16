@@ -86,6 +86,7 @@
                 <div><strong>开始/结束：</strong>{{ record.startTime }} / {{ record.endTime }}</div>
                 <div><strong>ItemId：</strong>{{ record.itemId }}</div>
                 <div><strong>统计：</strong>播 {{ record.playCount }} · 赞 {{ record.diggCount }} · 评 {{ record.commentCount }} · 转 {{ record.shareCount }}</div>
+                <div v-if="record.cityName || record.tagName"><strong>位置标签：</strong>{{ getCityNameByCode(record.cityName) }}{{ record.tagName ? ' - ' + record.tagName : '' }}</div>
                 <div><strong>创建/更新：</strong>{{ record.createdAt }} / {{ record.updatedAt }}</div>
               </div>
             </template>
@@ -176,6 +177,24 @@ const filters = reactive<{ id?: number | undefined, status?: number | undefined,
 const refreshTimeout = ref<any>(null)
 const commentListDialogOpen = ref(false)
 const commentTask = ref<any>(null)
+const cityData = ref<any[]>([])
+
+// 加载城市数据
+const loadCityData = async () => {
+  try {
+    const response = await fetch('/data/simple_cities.json')
+    const data = await response.json()
+    cityData.value = data
+  } catch (error) {
+    console.error('加载城市数据失败:', error)
+  }
+}
+
+// 根据城市代码获取城市名称
+const getCityNameByCode = (code: string): string => {
+  const city = cityData.value.find((city: any) => city.code === code)
+  return city ? city.name : code
+}
 
 
 const getDataList = async () => {
@@ -316,6 +335,7 @@ const refresh  = () => {
 
 onMounted(async () => {
   console.log('MyTasks onMounted')
+  await loadCityData()
   await getDataList();
   await nextTick()
   recalcTableHeight()

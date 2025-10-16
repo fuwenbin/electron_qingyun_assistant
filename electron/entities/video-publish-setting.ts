@@ -13,6 +13,8 @@ export default class VideoPublishBaseSetting {
   taskIds: string;
   accountIds: string;
   platformId: number;
+  cityName: string;
+  tagName: string;
   createdAt: string;
   updatedAt: string;
 }
