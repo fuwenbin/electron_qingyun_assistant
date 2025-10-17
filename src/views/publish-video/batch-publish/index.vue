@@ -701,10 +701,10 @@ const filterCityOption = (input: string, option: any) => {
 }
 
 // 根据城市代码获取城市名称
-const getCityNameByCode = (code: string): string => {
-  const city = cityData.value.find((city: any) => city.code === code)
-  return city ? city.name : code
-}
+// const getCityNameByCode = (code: string): string => {
+//   const city = cityData.value.find((city: any) => city.code === code)
+//   return city ? city.name : code
+// }
 
 // 重置表单函数
 const resetForm = () => {

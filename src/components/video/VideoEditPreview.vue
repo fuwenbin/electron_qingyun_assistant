@@ -38,10 +38,8 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { FileSearchOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
 import VideoEditPreviewBox from './VideoEditPreviewBox.vue';
-import { executeWithDeduct } from '@/utils/permission-check';
-import { useUserStore } from '@/stores/user';
+
 
 const props = defineProps<{
   videoConfig: any;
@@ -66,18 +64,6 @@ const previewBoxDirection = computed(() => {
   return videoRatio === '9:16' ? 'vertical' : 'horizontal'
 })
 
-
-// 处理预览按钮点击
-// const handlePreview = async () => {
-//   try {
-//     console.info('预览成功')
-//   } catch (error) {
-//     console.error('预览失败:', error)
-//     // 错误提示已在 request.ts 拦截器中处理
-//   } finally {
-//     previewLoading.value = false
-//   }
-// }
 
 </script>
 

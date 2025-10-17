@@ -13,12 +13,12 @@
 // import { ref } from 'vue'
 // import Sidebar from '@/components/layout/Sidebar.vue'
 
-interface MenuItem {
-  path: string
-  title: string
-  icon: string
-  children?: MenuItem[]
-}
+// interface MenuItem {
+//   path: string
+//   title: string
+//   icon: string
+//   children?: MenuItem[]
+// }
 
 // const menuItems = ref<MenuItem[]>([
 //   {
