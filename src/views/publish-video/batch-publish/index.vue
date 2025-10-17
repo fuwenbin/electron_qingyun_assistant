@@ -7,22 +7,22 @@
           <!-- 发布方式选择 -->
           <div class="form-item">
             <div class="item-label">
-              <div class="label-name">发布方式</div>
-              <div class="label-tip">选择视频发布的方式</div>
-            </div>
-            <div class="item-input">
+              <div class="label-name">发布方式：</div>
+              <div class="item-input">
               <a-radio-group v-model:value="publishMode">
                 <a-radio value="batch">定时批量</a-radio>
                 <a-radio value="direct">直接发布</a-radio>
               </a-radio-group>
             </div>
+            </div>
+            
           </div>
           
           <!-- 定时发布设置 - 仅在定时批量模式下显示 -->
           <div class="form-item" v-if="publishMode === 'batch'">
             <div class="item-label">
-              <div class="label-name">定时发布设置</div>
-              <div class="label-tip">设置视频发布的时间间隔（支持2小时后及14天内的定时发布）</div>
+              <div class="label-name">定时发布设置：</div>
+              <div class="label-tip">支持2小时后及14天内的定时发布</div>
             </div>
             <div class="item-input">
               <div class="timing-schedule-config">
@@ -64,7 +64,7 @@
           <!-- 视频选择 - 根据发布方式显示不同的选择器 -->
           <div class="form-item">
             <div class="item-label">
-              <div class="label-name">{{ publishMode === 'batch' ? '选择视频文件夹' : '选择视频文件' }}</div>
+              <div class="label-name">{{ publishMode === 'batch' ? '选择视频文件夹：' : '选择视频文件：' }}</div>
               <div class="label-tip">{{ publishMode === 'batch' ? '选择包含视频文件的文件夹' : '选择要发布的单个视频文件' }}</div>
             </div>
             <div class="item-input">
@@ -78,7 +78,7 @@
           </div>
           <div class="form-item">
             <div class="item-label">
-              <div class="label-name">标题</div>
+              <div class="label-name">标题：</div>
               <div class="label-tip">如果添加多个标题，发布时会随机从中选择一个</div>
             </div>
             <div class="item-input">
@@ -97,16 +97,16 @@
         </div>
         <div class="form-item">
           <div class="item-label">
-            <div class="label-name">视频简介</div>
+            <div class="label-name">视频简介：</div>
             <div class="label-tip">如果添加多个简介，发布时会随机从中选择一个</div>
           </div>
           <div class="item-input">
             <div class="input-content">
               <a-tag v-for="item in baseContentData.descriptionList" :key="item" 
-                :closable="true" @close="handleDescriptionClose(item)">{{ item }}
+                :closable="true" @close="handleDescriptionClose(item)">{{ item.length > 50 ? item.substring(0, 50) + '...' : item }}
               </a-tag>
               <a-textarea v-model:value="descriptionInputValue" placeholder="请输入简介（最多1000字）"
-                size="small" :style="{ width: '300px' ,marginTop:'5px' }" :rows="2" :maxlength="1000"
+                size="small" :style="{ width: '200px' ,marginTop:'5px' }" :rows="2" :maxlength="1000"
                 @blur="handleDescriptionInputConfirm"
                 @keyup.enter="handleDescriptionInputConfirm"
               />
@@ -115,7 +115,7 @@
         </div>
         <div class="form-item">
           <div class="item-label">
-            <div class="label-name">话题1</div>
+            <div class="label-name">话题1：</div>
             <div class="label-tip">发布时会从其中随机选择最多4个话题</div>
           </div>
           <div class="item-input">
@@ -133,7 +133,7 @@
         </div>
         <div class="form-item">
           <div class="item-label">
-            <div class="label-name">话题2</div>
+            <div class="label-name">话题2：</div>
             <div class="label-tip">发布时会从其中随机选择1个话题</div>
           </div>
           <div class="item-input">
@@ -151,7 +151,7 @@
         </div>
         <div class="form-item">
           <div class="item-label">
-            <div class="label-name">位置标签</div>
+            <div class="label-name">位置标签：</div>
             <div class="label-tip">可选，设置视频发布的位置信息</div>
           </div>
           <div class="item-input">
@@ -176,7 +176,7 @@
         </div>
           <div class="form-item">
             <div class="item-label">
-              <div class="label-name">选择发布账号</div>
+              <div class="label-name">选择发布账号：</div>
               <div class="label-tip">选择要发布视频的账号</div>
                <div class="select-all ">
                 <a-checkbox :checked="isAccountAllSelected" @change="selectAllAccount">全选</a-checkbox>
@@ -224,7 +224,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, reactive, ref, computed, onUnmounted, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, onUnmounted, nextTick, watch } from 'vue'
 import logoDouyin from '@/assets/images/platform-logos/douyin.jpeg'
 import { message } from 'ant-design-vue'
 import PublishVideoChooser from './components/PublishVideoChooser.vue'
@@ -232,6 +232,14 @@ import PublishVideoChooser from './components/PublishVideoChooser.vue'
 const selectedVideos = ref<any[]>([])
 const selectedFolder = ref<string>('')
 const publishMode = ref<'batch' | 'direct'>('batch') // 发布方式：batch-定时批量，direct-直接发布
+
+// 监听发布方式变化，重置选中的视频
+watch(publishMode, (newMode, oldMode) => {
+  if (newMode !== oldMode) {
+    selectedVideos.value = []
+    selectedFolder.value = ''
+  }
+})
 
 // 缓存键名常量
 const CACHE_KEY = 'batch_publish_form_cache'
@@ -773,7 +781,8 @@ onUnmounted(() => {
   overflow: hidden;
   .publish-base-content {
     flex: 1;
-    padding: 20px;
+    margin: 5px;
+    padding: 15px;
     overflow-y: auto;
     height: calc(100vh - 100px); /* Subtract footer height */
   }
@@ -827,7 +836,7 @@ onUnmounted(() => {
       color: #111;
     }
     .label-tip {
-      color: #1677ff;
+      color: #787878;
       margin-left: 10px;
     }
     .select-all {

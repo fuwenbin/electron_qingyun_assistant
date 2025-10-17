@@ -432,7 +432,7 @@ export class DouyinService {
           task.liveWatchCount = work.statistics.live_watch_count;
           task.playCount = work.statistics.play_count;
           task.shareCount = work.statistics.share_count;
-          videoPublishTaskService.save(task);
+          videoPublishTaskService.updateTask(task);
         }
       }
     } catch (error: any) {
