@@ -36,6 +36,7 @@ async function buildWinPortable() {
     // 3. 运行构建步骤
     console.log('🔨 运行构建步骤...');
     await runCommand('npm', ['run', 'setup:ffmpeg']);
+    await runCommand('npm', ['run', 'setup:python:portable']);
     await runCommand('npm', ['run', 'build:renderer']);
     await runCommand('npm', ['run', 'build:main']);
     

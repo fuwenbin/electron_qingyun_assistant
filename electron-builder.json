@@ -50,6 +50,13 @@
     {
       "from": "bin/ffplay.exe",
       "to": "ffplay.exe"
+    },
+    {
+      "from": "python-portable",
+      "to": "python-portable",
+      "filter": [
+        "**/*"
+      ]
     }
   ],
   "mac": {

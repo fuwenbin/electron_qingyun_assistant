@@ -98,13 +98,25 @@ function getEdgeTTSPath(): string {
     const edgeTtsPath = path.join(resourcesPath, 'python', 'Scripts', 'edge-tts.exe');
     const edgeTtsPathUnix = path.join(resourcesPath, 'python', 'bin', 'edge-tts');
     
-    if (process.platform === 'win32' && fs.existsSync(edgeTtsPath)) {
-      return edgeTtsPath;
-    } else if (fs.existsSync(edgeTtsPathUnix)) {
-      return edgeTtsPathUnix;
-    } else {
-      return 'edge-tts';
+    // 检查多个可能的路径
+    const possiblePaths = [
+      edgeTtsPath,
+      edgeTtsPathUnix,
+      path.join(resourcesPath, 'python-portable', 'bin', 'edge-tts'),
+      path.join(resourcesPath, 'python-portable', 'Scripts', 'edge-tts.exe'),
+      path.join(__dirname, '../../../python-portable/bin/edge-tts'),
+      path.join(__dirname, '../../../python-portable/Scripts/edge-tts.exe')
+    ];
+    
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        log.log(`找到 Edge TTS: ${possiblePath}`);
+        return possiblePath;
+      }
     }
+    
+    log.warn('未找到打包的 Edge TTS，尝试使用系统 edge-tts');
+    return 'edge-tts';
   }
 }
 
@@ -145,6 +157,11 @@ export async function generateAudioWithEdgeTTS(params: any) {
 
       const edgeTtsPath = getEdgeTTSPath();
       log.log(`执行命令: ${edgeTtsPath} ${args.join(' ')}`);
+
+      // 检查 edge-tts 是否存在
+      if (!fs.existsSync(edgeTtsPath) && !edgeTtsPath.includes('edge-tts')) {
+        throw new Error(`Edge TTS 可执行文件不存在: ${edgeTtsPath}`);
+      }
 
       // 执行 edge-tts 命令
       const edgeTtsProcess = spawn(edgeTtsPath, args, {
@@ -193,9 +210,17 @@ export async function generateAudioWithEdgeTTS(params: any) {
         }
       });
 
-      edgeTtsProcess.on('error', (error) => {
+      edgeTtsProcess.on('error', (error: any) => {
         log.error('Edge TTS 进程启动失败:', error);
-        reject(new Error(`Edge TTS 进程启动失败: ${error.message}`));
+        
+        // 特殊处理 ENOENT 错误（找不到命令）
+        if (error.code === 'ENOENT') {
+          const errorMsg = `Edge TTS 命令未找到: ${edgeTtsPath}\n\n解决方案：\n1. 确保已安装 Edge TTS\n2. 检查 Python 环境是否正确配置\n3. 重新运行 npm run setup:python`;
+          log.error(errorMsg);
+          reject(new Error(errorMsg));
+        } else {
+          reject(new Error(`Edge TTS 进程启动失败: ${error.message}`));
+        }
       });
 
       // 设置超时
