@@ -11,7 +11,6 @@
     "electron:build": "npm run setup:ffmpeg && npm run setup:python:portable && npm run build:renderer && npm run build:main && electron-builder",
     "electron:build:mac": "npm run setup:ffmpeg && npm run setup:python:portable && npm run build:renderer && npm run build:main && electron-builder --mac",
     "electron:build:mac:optimized": "node scripts/build-mac-optimized.js",
-    "electron:build:win": "npm run setup:ffmpeg && npm run setup:python:portable && npm run build:renderer && npm run build:main && electron-builder --win",
     "electron:build:win:optimized": "node scripts/build-win-optimized.js",
     "electron:build:win:portable": "node scripts/build-win-portable.js",
     "electron:preview": "npm run build:renderer && npm run build:main && electron .",
