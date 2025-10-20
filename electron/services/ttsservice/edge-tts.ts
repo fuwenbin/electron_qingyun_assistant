@@ -105,14 +105,33 @@ function getEdgeTTSPath(): string {
       path.join(resourcesPath, 'python-portable', 'bin', 'edge-tts'),
       path.join(resourcesPath, 'python-portable', 'Scripts', 'edge-tts.exe'),
       path.join(__dirname, '../../../python-portable/bin/edge-tts'),
-      path.join(__dirname, '../../../python-portable/Scripts/edge-tts.exe')
+      path.join(__dirname, '../../../python-portable/Scripts/edge-tts.exe'),
+      // 添加更多可能的路径
+      path.join(resourcesPath, 'python-portable', 'bin', 'edge-tts.exe'),
+      path.join(resourcesPath, 'python-portable', 'Scripts', 'edge-tts'),
+      // 直接使用相对路径
+      path.join(process.cwd(), 'python-portable', 'bin', 'edge-tts'),
+      path.join(process.cwd(), 'python-portable', 'Scripts', 'edge-tts.exe')
     ];
     
+    log.log(`检查 Edge TTS 路径，resourcesPath: ${resourcesPath}`);
     for (const possiblePath of possiblePaths) {
+      log.log(`检查路径: ${possiblePath}, 存在: ${fs.existsSync(possiblePath)}`);
       if (fs.existsSync(possiblePath)) {
         log.log(`找到 Edge TTS: ${possiblePath}`);
         return possiblePath;
       }
+    }
+    
+    // 如果找不到 edge-tts 可执行文件，尝试使用 python-portable 中的 Python 来运行
+    const pythonPortablePath = path.join(resourcesPath, 'python-portable');
+    const pythonExe = process.platform === 'win32' 
+      ? path.join(pythonPortablePath, 'Scripts', 'python.exe')
+      : path.join(pythonPortablePath, 'bin', 'python');
+    
+    if (fs.existsSync(pythonExe)) {
+      log.log(`使用 Python 运行 edge-tts: ${pythonExe} -m edge_tts`);
+      return pythonExe; // 返回 Python 路径，稍后在参数中指定 -m edge_tts
     }
     
     log.warn('未找到打包的 Edge TTS，尝试使用系统 edge-tts');
@@ -145,8 +164,10 @@ export async function generateAudioWithEdgeTTS(params: any) {
     log.log(`参数: ${JSON.stringify(options)}`);
 
     return new Promise((resolve, reject) => {
+      const edgeTtsPath = getEdgeTTSPath();
+      
       // 构建 edge-tts 命令
-      const args = [
+      let args = [
         '--text', options.text,
         '--voice', options.voice,
         '--rate', options.rate,
@@ -154,8 +175,13 @@ export async function generateAudioWithEdgeTTS(params: any) {
         '--volume', options.volume,
         '--write-media', outputFile
       ];
-
-      const edgeTtsPath = getEdgeTTSPath();
+      
+      // 如果使用 Python 运行，添加 -m edge_tts 参数
+      if (edgeTtsPath.includes('python') && !edgeTtsPath.includes('edge-tts')) {
+        args = ['-m', 'edge_tts', ...args];
+        log.log(`使用 Python 模块运行: ${edgeTtsPath} -m edge_tts`);
+      }
+      
       log.log(`执行命令: ${edgeTtsPath} ${args.join(' ')}`);
 
       // 检查 edge-tts 是否存在
@@ -242,7 +268,16 @@ export async function generateAudioWithEdgeTTS(params: any) {
 export async function getAvailableVoices() {
   return new Promise((resolve, reject) => {
     const edgeTtsPath = getEdgeTTSPath();
-    const edgeTtsProcess = spawn(edgeTtsPath, ['--list-voices'], {
+    
+    // 构建参数
+    let args = ['--list-voices'];
+    
+    // 如果使用 Python 运行，添加 -m edge_tts 参数
+    if (edgeTtsPath.includes('python') && !edgeTtsPath.includes('edge-tts')) {
+      args = ['-m', 'edge_tts', ...args];
+    }
+    
+    const edgeTtsProcess = spawn(edgeTtsPath, args, {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
