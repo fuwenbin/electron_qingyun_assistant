@@ -98,20 +98,20 @@ function getEdgeTTSPath(): string {
     const edgeTtsPath = path.join(resourcesPath, 'python', 'Scripts', 'edge-tts.exe');
     const edgeTtsPathUnix = path.join(resourcesPath, 'python', 'bin', 'edge-tts');
     
-    // 检查多个可能的路径
+    // 检查多个可能的路径，优先使用 python-portable
     const possiblePaths = [
-      edgeTtsPath,
-      edgeTtsPathUnix,
+      // 优先使用 python-portable 路径
       path.join(resourcesPath, 'python-portable', 'bin', 'edge-tts'),
       path.join(resourcesPath, 'python-portable', 'Scripts', 'edge-tts.exe'),
-      path.join(__dirname, '../../../python-portable/bin/edge-tts'),
-      path.join(__dirname, '../../../python-portable/Scripts/edge-tts.exe'),
-      // 添加更多可能的路径
       path.join(resourcesPath, 'python-portable', 'bin', 'edge-tts.exe'),
       path.join(resourcesPath, 'python-portable', 'Scripts', 'edge-tts'),
-      // 直接使用相对路径
+      path.join(__dirname, '../../../python-portable/bin/edge-tts'),
+      path.join(__dirname, '../../../python-portable/Scripts/edge-tts.exe'),
       path.join(process.cwd(), 'python-portable', 'bin', 'edge-tts'),
-      path.join(process.cwd(), 'python-portable', 'Scripts', 'edge-tts.exe')
+      path.join(process.cwd(), 'python-portable', 'Scripts', 'edge-tts.exe'),
+      // 然后使用 python 路径
+      edgeTtsPath,
+      edgeTtsPathUnix
     ];
     
     log.log(`检查 Edge TTS 路径，resourcesPath: ${resourcesPath}`);
