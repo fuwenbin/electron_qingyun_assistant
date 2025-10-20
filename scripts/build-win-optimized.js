@@ -54,8 +54,8 @@ async function buildWinOptimized() {
     
     // 4. 设置 Python 环境
     console.log('🐍 设置 Python 环境...');
-    await runCommand('node', ['scripts/setup-python.js', 'setup']);
-    await runCommand('node', ['scripts/setup-python.js', 'portable']);
+    await runCommand('npm', ['run', 'setup:python']);
+    await runCommand('npm', ['run', 'setup:python:portable']);
     
     // 5. 运行构建步骤
     console.log('🔨 运行 Windows 构建...');

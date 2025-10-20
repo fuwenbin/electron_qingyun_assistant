@@ -36,8 +36,8 @@ async function buildMacOptimized() {
     
     // 2. 设置 Python 环境
     console.log('🐍 设置 Python 环境...');
-    await runCommand('node', ['scripts/setup-python.js', 'setup']);
-    await runCommand('node', ['scripts/setup-python.js', 'portable']);
+    await runCommand('npm', ['run', 'setup:python']);
+    await runCommand('npm', ['run', 'setup:python:portable']);
     
     // 3. 运行 macOS 构建
     console.log('🔨 运行 macOS 构建...');
